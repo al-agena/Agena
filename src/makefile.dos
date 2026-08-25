@@ -1,0 +1,306 @@
+# makefile for building Agena in DOS with DJGPP (GCC)
+
+# Rename this file from `makefile.dos` to `makefile` and then compile Agena in the
+# src directory with the following two statements (make -f makefile.dos will not work !):
+#      del *.o
+#      make config
+#      make dos
+
+# Before building Agena:
+# a) You need to download the MAPM library available at
+#    https://sourceforge.net/projects/agena/files/Packages/mapmagena-1.1.2a.tar.gz/download
+#    and compile it before compiling Agena. You also have the zlib library installed with DJGPP.
+#    Make sure that libmapm.a and the MAPM header files m_apm_lc.h & m_apm.h are in the src folder
+#    before compiling Agena.
+# b) You need to download the ival library available at
+#    https://sourceforge.net/projects/agena/files/Packages/ival.tar.gz/download
+#    and compile it before compiling Agena. You also have the zlib library installed with DJGPP.
+#    Make sure that fi_lib.a and the MAPM header file fi_lib.h are in the src folder before
+#    compiling Agena.
+
+# == CHANGE THE SETTINGS BELOW TO SUIT YOUR ENVIRONMENT =======================
+
+# Your platform. See PLATS for possible values.
+PLAT= none
+
+CC= gcc
+CFLAGS= -Wno-address -Wno-attributes -Wno-strict-aliasing -fgnu89-inline \
+		-D_DIRENT_HAVE_D_TYPE $(MYCFLAGS)
+
+# These flags are ONLY for dd.c
+# -ffloat-store: Prevents the CPU from keeping floating-point variables in high-precision registers
+# (like the 80-bit registers in old x86 chips) and forces them back to 64-bit memory. This ensures consistency.
+# -fno-builtin: Prevents GCC from replacing your math functions with its own "optimized" versions.
+# -fno-unsafe-math-optimizations: Stops the compiler from reordering math operations in a way that might lose precision.
+DDMATHFLAGS=	-fno-builtin -ffloat-store -fno-unsafe-math-optimizations
+AR= ar rcu
+RANLIB= ranlib
+RM= rm -f
+LIBS= -lm -lmapm -lz -lreadline -lhistory -lpdcurses -lexpat -lmpfr -lgmp -liconv -lpcre2-posix -lpcre2-8\
+	-lsqlite3 -l:fi_lib.a $(MYLIBS)
+
+MYCFLAGS=
+MYLDFLAGS=
+MYLIBS=
+
+# == END OF USER SETTINGS. NO NEED TO CHANGE ANYTHING BELOW THIS LINE =========
+
+PLATS= dos
+
+LUA_A=  libagena.a
+CORE_O= lapi.o lcode.o ldebug.o ldo.o ldump.o lfunc.o lgc.o llex.o lmem.o lobject.o lopcodes.o \
+	lparser.o lstate.o lstring.o ltable.o ltm.o lundump.o lvm.o lzio.o lset.o lseq.o lpair.o \
+	agnhlps.o iniparse.o lreg.o
+LIB_O=  agnxlib.o lbaselib.o ldblib.o liolib.o lmathlib.o loslib.o ltablib.o lrtable.o agnt64.o \
+	lenviron.o lstrlib.o utils.o units.o loadlib.o linit.o stats.o combinat.o numtheory.o ads.o \
+	fractals.o bags.o lookup.o cephes.o calc.o linalg.o binio.o mapm.o sqlite.o xbase.o sofa.o interp.o \
+	moon.o sunriset.o sdncal.o astro.o curses.o skycrane.o gzip.o llist.o cordic.o lreglib.o xml.o \
+	hashes.o numarray.o registry.o zx.o stack.o intvec.o dblvec.o vecoff64.o bloom.o cuckoo.o clock.o \
+	factory.o bytes.o fastmath.o semalib.o sema.o dual.o utf8.o iconv.o gmp.o mpfr.o charbuf.o memfile.o \
+	luasys.o com.o heaps.o lseqlib.o lsetlib.o bfield.o long.o ints.o tuples.o jwent.o fzy.o \
+	regex.o regex_f.o regexcom.o testlib.o double.o rbtree.o vecint.o bimaps.o jbmath.o \
+	ival.o miniz.o minizip.o fifo.o lifo.o trie.o ints.o dblhash.o numcuckoo.o numfilter.o dcastro.o \
+	dd.o ddmath.o pbl.o pblhash.o pblkf.o keyfile.o abci.o strhash.o strmap.o intmap.o uintmap.o \
+	dblmap.o divsufsort.o sssort.o trsort.o suffix.o
+
+LUA_T=  agena.exe
+LUA_O=  agena.o
+
+ALL_O= $(CORE_O) $(LIB_O) $(LUA_O) $(LUAC_O)
+ALL_T= $(LUA_A) $(LUA_T)
+ALL_A= $(LUA_A)
+
+default: $(PLAT)
+
+# Explicit rule for ddmath.o and dd.o with strict math flags
+dd.o: dd.c ddmath.h
+	$(CC) $(CFLAGS) $(DDMATHFLAGS) $(MYCFLAGS) -c dd.c -o dd.o
+
+ddmath.o: ddmath.c ddmath.h
+	$(CC) $(CFLAGS) $(DDMATHFLAGS) $(MYCFLAGS) -c ddmath.c -o ddmath.o
+
+# This rule tells GCC to only compile changed .c files into .o files
+%.o: %.c
+	$(CC) $(CFLAGS) $(MYCFLAGS) -c $< -o $@
+
+all:    $(ALL_T)
+
+o:      $(ALL_O)
+
+a:      $(ALL_A)
+
+$(LUA_A): $(CORE_O) $(LIB_O)
+	$(RM) $@
+	$(AR) $@ $(CORE_O) $(LIB_O)
+	$(RANLIB) $@
+
+$(LUA_T): $(LUA_O) $(LUA_A)
+	$(CC) -o $@ $(MYLDFLAGS) $(LUA_O) $(LUA_A) $(LIBS)
+
+$(LUAC_T): $(LUAC_O) $(LUA_A)
+	$(CC) -o $@ $(MYLDFLAGS) $(LUAC_O) $(LUA_A) $(LIBS)
+
+clean:
+	$(RM) *.exe *.o
+	$(RM) agncfg.h config
+
+config: config.c
+	$(CC) $(CFLAGS) -o config.exe config.c
+	config.exe agncfg.h
+
+depend:
+	@$(CC) $(CFLAGS) -MM l*.c
+
+echo:
+	@echo "PLAT = $(PLAT)"
+	@echo "CC = $(CC)"
+	@echo "CFLAGS = $(CFLAGS)"
+	@echo "AR = $(AR)"
+	@echo "RANLIB = $(RANLIB)"
+	@echo "RM = $(RM)"
+	@echo "MYCFLAGS = $(MYCFLAGS)"
+	@echo "MYLDFLAGS = $(MYLDFLAGS)"
+	@echo "MYLIBS = $(MYLIBS)"
+
+none:
+	@echo "Please choose a platform:"
+	@echo "   $(PLATS)"
+
+dos:
+	$(MAKE) all PLAT=dos MYCFLAGS="-O2 -DLUA_ANSI -DPROPCMPLX -DLUA_USE_READLINE -DLUA_USE_POPEN"
+	strip $(LUA_T)
+	strip $(LUA_A)
+
+#install:
+#       cp ./agena.exe /usr/local/bin
+
+# list targets that do not create files (but not all makes understand .PHONY)
+.PHONY: all $(PLATS) default o a clean depend echo none
+
+# DO NOT DELETE
+
+lapi.o: lapi.c agena.h agncmpt.h agnconf.h agnhlps.h lapi.h lobject.h llimits.h \
+	ldebug.h lstate.h ltm.h lundump.h lzio.h lmem.h ldo.h lfunc.h lgc.h lstring.h \
+	ltable.h agenalib.h
+agnxlib.o: agnxlib.c agena.h agnconf.h agnxlib.h agnhlps.h
+lbaselib.o: lbaselib.c agena.h agnconf.h agncmpt.h agnxlib.h agenalib.h
+lcode.o: lcode.c agena.h agnconf.h lcode.h llex.h lobject.h llimits.h \
+  lzio.h lmem.h lopcodes.h lparser.h ldebug.h lstate.h ltm.h ldo.h lgc.h \
+  ltable.h
+ldblib.o: ldblib.c agena.h agnconf.h agnxlib.h agenalib.h
+ldebug.o: ldebug.c agena.h agnconf.h lapi.h lobject.h llimits.h lcode.h \
+  llex.h lzio.h lmem.h lopcodes.h lparser.h ldebug.h lstate.h ltm.h ldo.h \
+  lfunc.h lstring.h lgc.h ltable.h lvm.h
+ldo.o: ldo.c agena.h agnconf.h ldebug.h lstate.h lobject.h llimits.h ltm.h \
+  lzio.h lmem.h ldo.h lfunc.h lgc.h lopcodes.h lparser.h lstring.h \
+  ltable.h lundump.h lvm.h
+ldump.o: ldump.c agena.h agnconf.h lobject.h llimits.h lstate.h ltm.h \
+  lzio.h lmem.h lundump.h
+lfunc.o: lfunc.c agena.h agnconf.h lfunc.h lobject.h llimits.h lgc.h lmem.h \
+  lstate.h ltm.h lzio.h
+lgc.o: lgc.c agena.h agnconf.h ldebug.h lstate.h lobject.h llimits.h ltm.h \
+  lzio.h lmem.h ldo.h lfunc.h lgc.h lstring.h ltable.h
+linit.o: linit.c agena.h agnconf.h agenalib.h agnxlib.h
+liolib.o: liolib.c agena.h agnconf.h agnxlib.h agenalib.h
+llex.o: llex.c agena.h agnconf.h ldo.h lobject.h llimits.h lstate.h ltm.h \
+  lzio.h lmem.h llex.h lparser.h lstring.h lgc.h ltable.h
+lmathlib.o: lmathlib.c agena.h agnxlib.h agenalib.h agncmpt.h sunpro.h
+lmem.o: lmem.c agena.h agnconf.h ldebug.h lstate.h lobject.h llimits.h \
+  ltm.h lzio.h lmem.h ldo.h
+loadlib.o: loadlib.c agnxlib.h agena.h agnconf.h lobject.h llimits.h \
+  agenalib.h
+lobject.o: lobject.c agena.h agnconf.h ldo.h lobject.h llimits.h lstate.h \
+  ltm.h lzio.h lmem.h lstring.h lgc.h lvm.h
+lopcodes.o: lopcodes.c lopcodes.h llimits.h agena.h agnconf.h
+loslib.o: loslib.c agena.h agnconf.h agnxlib.h agenalib.h sofa.h
+lparser.o: lparser.c agena.h agnconf.h lcode.h llex.h lobject.h llimits.h \
+  lzio.h lmem.h lopcodes.h lparser.h ldebug.h lstate.h ltm.h ldo.h \
+  lfunc.h lstring.h lgc.h ltable.h
+lrtable.o:	lrtable.c agena.h agnxlib.h agenalib.h
+lenviron.o:	lenviron.c agena.h agnxlib.h agenalib.h
+lstate.o: lstate.c agena.h agnconf.h ldebug.h lstate.h lobject.h llimits.h \
+  ltm.h lzio.h lmem.h ldo.h lfunc.h lgc.h llex.h lstring.h ltable.h
+lstring.o: lstring.c agena.h agnconf.h lmem.h llimits.h lobject.h lstate.h \
+  ltm.h lzio.h lstring.h lgc.h
+lstrlib.o: lstrlib.c agena.h agnconf.h agnxlib.h agenalib.h lstrlib.h
+ltable.o: ltable.c agena.h agnconf.h ldebug.h lstate.h lobject.h llimits.h \
+  ltm.h lzio.h lmem.h ldo.h lgc.h ltable.h
+ltablib.o: ltablib.c agena.h agnconf.h agnxlib.h agenalib.h
+lreglib.o: lreglib.c agena.h agnconf.h agnxlib.h agenalib.h
+lseqlib.o: lseqlib.c agena.h agnconf.h agnxlib.h agenalib.h
+lsetlib.o: lsetlib.c agena.h agnconf.h agnxlib.h agenalib.h
+ltm.o: ltm.c agena.h agnconf.h lobject.h llimits.h lstate.h ltm.h lzio.h \
+  lmem.h lstring.h lgc.h ltable.h
+agena.o: agena.c agena.h agncmpt.h agnconf.h agnxlib.h agenalib.h agnhlps.h
+lundump.o: lundump.c agena.h agnconf.h ldebug.h lstate.h lobject.h \
+  llimits.h ltm.h lzio.h lmem.h ldo.h lfunc.h lstring.h lgc.h lundump.h
+lvm.o: lvm.c agena.h agnconf.h ldebug.h lstate.h lobject.h llimits.h ltm.h \
+  lzio.h lmem.h ldo.h lfunc.h lgc.h lopcodes.h lstring.h ltable.h lset.h lvm.h
+lzio.o: lzio.c agena.h agnconf.h llimits.h lmem.h lstate.h lobject.h ltm.h \
+  lzio.h
+utils.o: utils.c agena.h agnxlib.h agenalib.h
+units.o: units.c agena.h agnxlib.h agenalib.h
+agnhlps.o: agnhlps.c agnhlps.h agncmpt.h agnconf.h sunpro.h
+cephes.o: cephes.c cephes.h
+jbmath.o:	jbmath.c jbmath.h
+agnt64.o: agnt64.c agnt64_l.h agnt64_c.h
+intvec.o:	intvec.c intvec.h agnhlps.h
+dblvec.o:	dblvec.c dblvec.h agnhlps.h
+vecoff64.o: vecoff64.c vecoff64.h agnhlps.h agncmpt.h
+charbuf.o:	charbuf.c charbuf.h agnhlps.h
+iniparse.o:	iniparse.c iniparse.h
+moon.o: moon.c moon.h
+sunriset.o: sunriset.c sunriset.h
+semalib.o:	semalib.c semalib.h
+lset.o: lset.c agena.h ldebug.h lstate.h lobject.h \
+  lmem.h ldo.h lgc.h lset.h
+lseq.o: lseq.c agena.h ldebug.h lstate.h lobject.h lmem.h ldo.h lgc.h \
+  lseq.h
+lreg.o: lreg.c agena.h ldebug.h lstate.h lobject.h lmem.h ldo.h lgc.h \
+	lreg.h
+lpair.o: lpair.c agena.h ldebug.h lstate.h lobject.h lmem.h ldo.h lgc.h \
+  lpair.h
+binio.o: binio.c agena.h agnxlib.h agenalib.h
+miniz.o:	miniz.c miniz.h
+minizip.o:	minizip.c miniz.h agena.h agnxlib.h agenalib.h
+curses.o:	curses.c agena.h agnxlib.h agnhlps.h agenalib.h
+sqlite.o:	sqlite.c agena.h agnxlib.h agenalib.h
+regex.o:	regex.c regex.h agena.h agnxlib.h agenalib.h regex_f.c \
+	regexcom.c regexcom.h regexalg.h
+ads.o: ads.c agena.h agnxlib.h agenalib.h agncfg.h agnhlps.h
+sofa.o: sofa.c sofa.h
+moon.o: moon.c moon.h
+sunriset.o: sunriset.c sunriset.h
+dcastro.o:	dcastro.c dcastro.h
+astro.o: astro.c moon.h sunriset.h sdncal.h dcastro.h agena.h agnxlib.h agenalib.h agnxlib.h
+calc.o: calc.c cephes.h interp.c jbmath.h ddmath.h agena.h agnxlib.h agenalib.h
+bags.o: bags.c agena.h agnxlib.h agenalib.h
+lookup.o: lookup.c agena.h agnxlib.h agenalib.h
+linalg.o: linalg.c agena.h agnxlib.h agenalib.h
+stats.o: stats.c cephes.h jbmath.h agena.h agnxlib.h agenalib.h
+combinat.o: combinat.c agena.h agnxlib.h agenalib.h
+numtheory.o: numtheory.c agena.h agnxlib.h agenalib.h
+#phq.o: phq.c agena.h agnxlib.h agenalib.h utils.h
+ival.o:	ival.c agena.h agnxlib.h agnhlps.h agenalib.h
+ints.o:	ints.c agena.h agnxlib.h agnhlps.h agenalib.h
+mapm.o:	mapm.c agena.h agnxlib.h agenalib.h m_apm.h
+xml.o:	xml.c agena.h agnxlib.h agenalib.h
+xbase.o: xbase.c agena.h agnxlib.h agenalib.h
+skycrane.o: skycrane.c agena.h agnxlib.h agenalib.h
+gzip.o:	gzip.c agena.h agnxlib.h agenalib.h
+llist.o:	llist.c agena.h agnxlib.h agenalib.h
+cordic.o:	cordic.c agena.h agnxlib.h agenalib.h
+hashes.o:	hashes.c agena.h agnxlib.h agenalib.h
+numarray.o:	numarray.c agena.h agnxlib.h agenalib.h agnhlps.h
+registry.o: registry.c agena.h agnxlib.h agenalib.h agncmpt.h
+stack.o: stack.c agena.h agnxlib.h agenalib.h
+zx.o:	zx.c agena.h agnxlib.h agenalib.h agnhlps.h
+bloom.o:	bloom.c agena.h agnxlib.h agenalib.h agnhlps.h
+cuckoo.o:	cuckoo.c agena.h agnxlib.h agenalib.h agnhlps.h
+clock.o:	clock.c agena.h agnxlib.h agenalib.h agnhlps.h
+factory.o:	factory.c agena.h agnxlib.h agenalib.h agnhlps.h
+bytes.o:	bytes.c agena.h agnxlib.h agenalib.h agnhlps.h
+fastmath.o:	fastmath.c agena.h agnxlib.h agenalib.h agnhlps.h
+sema.o:	sema.c agena.h agnxlib.h agenalib.h agnhlps.h semalib.h
+dual.o:	dual.c agena.h agnxlib.h agenalib.h agnhlps.h
+utf8.o: utf8.c lprefix.h agena.h agnconf.h agnxlib.h agenalib.h
+iconv.o: iconv.c agena.h agnconf.h agnxlib.h agenalib.h
+gmp.o: gmp.c agena.h agnconf.h agnxlib.h agenalib.h
+mpfr.o: mpfr.c agena.h agnconf.h agnxlib.h agenalib.h
+memfile.o:	memfile.c agena.h agnxlib.h agenalib.h agnhlps.h charbuf.h
+bfield.o: bfield.c agena.h agnxlib.h agenalib.h
+com.o:	com.c agena.h agnxlib.h agenalib.h agnhlps.h luasys.h charbuf.h
+long.o:	long.c agena.h agnxlib.h agenalib.h agnhlps.h
+ints.o:	ints.c agena.h agnxlib.h agenalib.h agnhlps.h
+double.o:	double.c agena.h agnxlib.h agenalib.h agnhlps.h
+fractals.o:	fractals.c agena.h agncmpt.h agnxlib.h agenalib.h agnhlps.h
+heaps.o:	heaps.c agena.h agnxlib.h agenalib.h agnhlps.h
+tuples.o:	tuples.c agena.h agnxlib.h agenalib.h agnhlps.h
+jwent.o: jwent.c jwent.h
+divsufsort.o:	divsufsort.c divsufsort.h divsufsort_private.h
+sssort.o: sssort.c divsufsort.h divsufsort_private.h
+trsort.o: trsort.c divsufsort.h divsufsort_private.h
+suffix.o: suffix.c agena.h agnxlib.h agenalib.h
+fzy.o:	fzy.c fzy.h agena.h agnxlib.h agenalib.h lucase.def
+testlib.o: testlib.c agena.h agnxlib.h agenalib.h agnhlps.h
+rbtree.o:	rbtree.c rbtree.h
+bimaps.o:	bimaps.c agena.h agnxlib.h agenalib.h
+fifo.o:	fifo.c agena.h agnxlib.h agenalib.h
+lifo.o:	lifo.c agena.h agnxlib.h agenalib.h
+trie.o:	trie.c agena.h agnxlib.h agenalib.h
+vecint.o:	vecint.c vecint.h intvec.h agena.h agnxlib.h agenalib.h agnhlps.h
+dblhash.o:	dblhash.c agena.h agnxlib.h agenalib.h dblhash.h
+numcuckoo.o:	numcuckoo.c agena.h agnxlib.h agenalib.h
+numfilter.o:	numfilter.c agena.h agnxlib.h agenalib.h
+pbl.o:	pbl.c pbl.h
+pblhash.o:	pblhash.c pbl.h
+pblkf.o:	pblkf.c pbl.h
+keyfile.o:	keyfile.c agena.h agnxlib.h agenalib.h pbl.h
+abci.o:	abci.c agena.h agnxlib.h agenalib.h
+strhash.o:	strhash.c agena.h agnxlib.h agenalib.h agnhlps.h khash.h
+strmap.o:	strmap.c agena.h agnxlib.h agenalib.h agnhlps.h khash.h
+intmap.o:	intmap.c agena.h agnxlib.h agenalib.h agnhlps.h khash.h
+uintmap.o:	uintmap.c agena.h agnxlib.h agenalib.h agnhlps.h khash.h
+dblmap.o:	dblmap.c agena.h agnxlib.h agenalib.h agnhlps.h khash.h
+
+# (end of Makefile)

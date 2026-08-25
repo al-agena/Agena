@@ -1,0 +1,242 @@
+# Makefile for Agena plus packages
+# Originally created by Gemini AI, 21/03/2026
+# For the regular build, deployment:
+# make -f makefile.pluswin
+# For Dr. Memory:
+# make -f makefile.pluswin DEBUG_BUILD=1
+
+CC = gcc
+STRIP = strip --strip-unneeded
+LIB_DIR = ../lib
+
+# --- Flag Definitions ---
+BASE_FLAGS = -pipe -fgnu89-inline -Wno-attributes -fno-omit-frame-pointer $(SSE_FLAGS)
+OFFS = -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast
+
+# Conditional flags configuration based on build type
+ifdef DEBUG_BUILD
+  # Dr. Memory configuration: -O0 guarantees non-scrambled line mapping
+  # Removed -ffunction-sections and -fdata-sections to avoid memory block splitting
+  OPT_FLAGS    = -O0 -g
+  LINK_G_FLAG  = -g
+  STRIP        = @echo Skipping strip for debug:
+else
+  # Production configuration: High optimization and aggressive sections pruning
+  OPT_FLAGS    = -O3 -ffunction-sections -fdata-sections
+  LINK_G_FLAG  =
+  STRIP        = strip --strip-unneeded
+endif
+
+# Composite flags injected into rules
+COMMON_FLAGS = $(OPT_FLAGS) $(BASE_FLAGS)
+CFLAGS_DLL   = $(COMMON_FLAGS) $(LINK_G_FLAG) -I. -shared -Wl,--gc-sections
+CFLAGS_OBJ   = $(COMMON_FLAGS) -c -DLUA_BUILD_AS_DLL -fcommon -Wno-inline
+DD_FLAGS     = -ffloat-store -fno-unsafe-math-optimizations -fno-associative-math -fno-builtin
+
+AG_LIBS = -L. -lagena
+
+# --- Target Lists ---
+DLLS = abci.dll ads.dll astro.dll com.dll cordic.dll curses.dll ddhash.dll \
+	double.dll fastmath.dll fractals.dll gmp.dll gzip.dll iconv.dll ival.dll \
+	mapm.dll minizip.dll mpfr.dll net.dll skycrane.dll strhash.dll strmap.dll \
+	testlib.dll zx.dll
+
+OBJS = abci.o ads.o agnt64.o astro.o cordic.o curses.o dcastro.o ival.o \
+	miniz.o moon.o net.o network.o sdncal.o sofa.o sunriset.o vecoff64.o
+
+all: $(DLLS)
+	@echo [SUCCESS] Libraries built and linked against agena.dll
+
+# --- Compilation Rules ---
+
+abci.dll: abci.c
+	@rm -f $@
+	$(CC) $(CFLAGS_DLL) -o $@ $^ $(AG_LIBS)
+	$(STRIP) $@
+	@mv -f $@ $(LIB_DIR)
+
+ads.dll: ads.o vecoff64.o
+	@rm -f $@
+	$(CC) $(CFLAGS_DLL) -o $@ $^ $(AG_LIBS)
+	$(STRIP) $@
+	@mv -f $@ $(LIB_DIR)
+
+astro.dll: astro.o agnt64.o sofa.o sdncal.o moon.o sunriset.o dcastro.o
+	@rm -f $@
+	$(CC) $(CFLAGS_DLL) -shared -static-libgcc -fpic -o $@ $^ $(AG_LIBS) -lkernel32
+	$(STRIP) $@
+	@mv -f $@ $(LIB_DIR)
+
+com.dll: com.c luasys.c charbuf.c
+	@rm -f $@
+	$(CC) $(CFLAGS_DLL) -DPLUS -o $@ $^ -lwsock32 -lwininet -lmswsock -lws2_32 $(AG_LIBS)
+	$(STRIP) $@
+	@mv -f $@ $(LIB_DIR)
+
+cordic.dll: cordic.o
+	@rm -f $@
+	$(CC) $(CFLAGS_DLL) -o $@ $^ $(AG_LIBS)
+	$(STRIP) $@
+	@mv -f $@ $(LIB_DIR)
+
+curses.dll: curses.o
+	@rm -f $@
+	$(CC) $(CFLAGS_DLL) -o $@ $< -lncurses $(AG_LIBS)
+	$(STRIP) $@
+	@mv -f $@ $(LIB_DIR)
+
+ddhash.dll: ddhash.c
+	@rm -f $@
+	$(CC) $(CFLAGS_DLL) -o $@ $< $(AG_LIBS)
+	$(STRIP) $@
+	@mv -f $@ $(LIB_DIR)
+
+double.dll: double.c
+	@rm -f $@
+	$(CC) $(CFLAGS_DLL) -o $@ $< $(AG_LIBS)
+	$(STRIP) $@
+	@mv -f $@ $(LIB_DIR)
+
+fastmath.dll: fastmath.c
+	@rm -f $@
+	$(CC) $(CFLAGS_DLL) -Wno-strict-aliasing -o $@ $< $(AG_LIBS)
+	$(STRIP) $@
+	@mv -f $@ $(LIB_DIR)
+
+fractals.dll: fractals.c
+	@rm -f $@
+	$(CC) $(CFLAGS_DLL) -o $@ $< $(AG_LIBS)
+	$(STRIP) $@
+	@mv -f $@ $(LIB_DIR)
+
+gmp.dll: gmp.c
+	@rm -f $@.tmp
+	$(CC) $(CFLAGS_DLL) -o $@.tmp $< -lgmp $(AG_LIBS)
+	$(STRIP) $@.tmp
+	@mv -f $@.tmp $(LIB_DIR)/$@
+
+gzip.dll: gzip.c
+	@rm -f $@
+	$(CC) $(CFLAGS_DLL) -o $@ $< -lz $(AG_LIBS)
+	$(STRIP) $@
+	@mv -f $@ $(LIB_DIR)
+
+iconv.dll: iconv.c
+	@rm -f $@.tmp
+	$(CC) $(CFLAGS_DLL) -o $@.tmp $< -liconv $(AG_LIBS)
+	$(STRIP) $@.tmp
+	@mv -f $@.tmp $(LIB_DIR)/$@
+
+ival.dll: ival.o
+	@rm -f $@
+	$(CC) $(CFLAGS_DLL) -o $@ $< ../ports/ival/src/fi_lib.a $(AG_LIBS)
+	$(STRIP) $@
+	@mv -f $@ $(LIB_DIR)
+
+mapm.dll: mapm.c
+	@rm -f mapm.tmp
+	$(CC) $(CFLAGS_DLL) -o mapm.tmp $< -lmapm $(AG_LIBS)
+	$(STRIP) mapm.tmp
+	@rm -f $@
+	@mv -f mapm.tmp $(LIB_DIR)/$@
+
+minizip.dll: minizip.c miniz.o
+	@rm -f $@
+	$(CC) $(CFLAGS_DLL) -o $@ $^ $(AG_LIBS)
+	$(STRIP) $@
+	@mv -f $@ $(LIB_DIR)
+
+mpfr.dll: mpfr.c
+	@rm -f $@.tmp
+	$(CC) $(CFLAGS_DLL) -o $@.tmp $< -lmpfr -lgmp $(AG_LIBS)
+	$(STRIP) $@.tmp
+	@mv -f $@.tmp $(LIB_DIR)/$@
+
+net.dll: net.o network.o
+	@rm -f $@
+	$(CC) $(CFLAGS_DLL) -o $@ $^ -lwsock32 -lwininet -lmswsock -lWs2_32 $(AG_LIBS)
+	$(STRIP) $@
+	@mv -f $@ $(LIB_DIR)
+
+strhash.dll: strhash.c
+	@rm -f $@
+	$(CC) $(CFLAGS_DLL) -o $@ $< $(AG_LIBS)
+	$(STRIP) $@
+	@mv -f $@ $(LIB_DIR)
+
+strmap.dll: strmap.c
+	@rm -f $@
+	$(CC) $(CFLAGS_DLL) -o $@ $< $(AG_LIBS)
+	$(STRIP) $@
+	@mv -f $@ $(LIB_DIR)
+
+skycrane.dll: skycrane.c
+	@rm -f $@
+	$(CC) $(CFLAGS_DLL) -o $@ $< $(AG_LIBS)
+	$(STRIP) $@
+	@mv -f $@ $(LIB_DIR)
+
+testlib.dll: testlib.c
+	@rm -f $@
+	$(CC) $(CFLAGS_DLL) -o $@ $< $(AG_LIBS)
+	$(STRIP) $@
+	@mv -f $@ $(LIB_DIR)
+
+zx.dll: zx.c
+	@rm -f $@
+	$(CC) $(CFLAGS_DLL) -o $@ $< $(AG_LIBS)
+	$(STRIP) $@
+	@mv -f $@ $(LIB_DIR)
+
+# --- Object Rules ---
+
+cordic.o: cordic.c
+	$(CC) $(CFLAGS_OBJ) -o $@ $<
+
+agnt64.o: agnt64.c
+	$(CC) $(CFLAGS_OBJ) -o $@ $<
+
+sofa.o: sofa.c
+	$(CC) $(CFLAGS_OBJ) -o $@ $<
+
+sdncal.o: sdncal.c
+	$(CC) $(CFLAGS_OBJ) -o $@ $<
+
+ival.o: ival.c
+	$(CC) $(CFLAGS_OBJ) -o $@ $<
+
+vecoff64.o: vecoff64.c
+	$(CC) $(CFLAGS_OBJ) -o $@ $<
+
+ads.o: ads.c
+	$(CC) $(OFFS) $(CFLAGS_OBJ) -o $@ $<
+
+sunriset.o: sunriset.c
+	$(CC) $(CFLAGS_OBJ) -o $@ $<
+
+moon.o: moon.c
+	$(CC) $(CFLAGS_OBJ) -o $@ $<
+
+astro.o: astro.c
+	$(CC) $(CFLAGS_OBJ) -o $@ $<
+
+miniz.o: miniz.c
+	$(CC) $(CFLAGS_OBJ) -o $@ $<
+
+network.o: network.c
+	$(CC) $(CFLAGS_OBJ) -o $@ $<
+
+net.o: net.c
+	$(CC) $(CFLAGS_OBJ) -o $@ $<
+
+curses.o: curses.c
+	$(CC) $(COMMON_FLAGS) -DLUA_BUILD_AS_DLL -DHAVE_NCURSES_H -c -o $@ $<
+
+dcastro.o: dcastro.c
+	$(CC) $(CFLAGS_OBJ) -fno-fast-math -o $@ $<
+
+# --- Targeted Clean ---
+clean:
+	rm -f $(OBJS)
+
+.PHONY: all clean distclean
