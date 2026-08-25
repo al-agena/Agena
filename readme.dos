@@ -1,0 +1,75 @@
+Installing the DOS version
+--------------------------
+
+In DOS, create a folder called 'agena' anywhere on your drive, change into this
+directory and decompress the agena.zip file into this folder preserving the
+subdirectory structure of the ZIP file.
+
+Now set the environment variable AGENAPATH in the autoexec.bat file. Use a text
+editor for this. For example, if you installed Agena into the folder c:\agena,
+and the library.agn file is in the lib subfolder, enter the following line into
+the autoexec.bat file (without the quotes):
+
+           'set AGENAPATH=c:/agena/lib'
+
+Note the forward slash in the path and the variable name in capital letters.
+
+Also append the path to the folder where the agena.exe binary resides to the PATH
+system variable using backslashes, so that the entry looks something like this
+(without using quotes):
+
+           'PATH C:\;C:\NWDOS;C:\AGENA\BIN'
+
+
+Running Agena in DOS
+--------------------
+
+At least with Novell DOS 7, you must install CWSDPMI.EXE delivered with the DJPGG edition
+of GCC as a TSR program before starting Agena. The binary can be found in the DJGPP
+distribution available at http://www.delorie.com/djgpp.
+
+In order to always load this TSR when booting your computer, open the autoexec.bat file
+with a text editor. Assuming the CWSDPMI.EXE file is in the c:\tools folder, add the
+following line (without the quotes):
+
+           'loadhigh c:\tools\cwsdpmi.exe -p'
+
+Novell DOS's command line history works correctly on the Agena prompt.
+
+Have fun !
+
+
+
+Compiling Agena in DOS
+----------------------
+
+The sources have been compiled successfully with DJGPP v2 for DOS.
+
+CD into the src subdirectory.
+
+Backup the file called 'makefile', and rename the file `makefile.dos`
+to `makefile`.
+
+First configure your installation by typing (without the quotes):
+
+           'make config'
+
+Now enter the statement to compile the sources (without the quotes):
+
+           'make dos'
+
+
+Compatibility
+-------------
+
+Agena runs successfully at least on the following DOS-based operating systems:
+
+Novell DOS 7 update 14
+FreeDOS 1.0 (*)
+FreeDOS 1.1 (*)
+FreeDOS 1.2 & 1.3 RC3
+
+It should run on all other DOS systems, as well.
+
+
+(*): Run in Sun VirtualBox 2.0.6 on Sun Solaris 10 x86.
