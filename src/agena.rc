@@ -1,0 +1,35 @@
+1 ICON "../share/icons/agenasmall.ico"
+
+#include <windows.h>
+#define AGN_VERSION  "7.9.2"
+#define AGN_VERSION0  7,9,2,0
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     AGN_VERSION0
+PRODUCTVERSION  AGN_VERSION0
+FILEFLAGSMASK   0x3fL
+FILEFLAGS       0x0L
+FILEOS      VOS_NT
+FILETYPE    VFT_APP
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "080904E4"
+    BEGIN
+      VALUE "Comments", "http://agena.sourceforge.net"
+      VALUE "CompanyName", "Alexander Walz"
+      VALUE "FileDescription", "The Agena Programming Language"
+      VALUE "FileVersion", AGN_VERSION
+      VALUE "InternalName", "Deimos"
+      VALUE "LegalCopyright", "Alexander Walz"
+      VALUE "LegalTrademarks", "(c) 2006-2026 by Alexander Walz. All rights reserved."
+      VALUE "OriginalFilename", "agena.exe"
+      VALUE "ProductName", "Agena"
+      VALUE "ProductVersion", AGN_VERSION
+    END
+  END
+
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x809, 1252  // English (UK), codepage 1252
+  END
+END
