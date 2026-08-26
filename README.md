@@ -4,6 +4,8 @@ Agena is an easy-to-learn procedural programming language designed for scientifi
 
 Its syntax resembles a highly simplified Algol 68 with structural elements inspired by Maple, Lua and SQL.
 
+Agena has been implemented on the ANSI C sources of Lua 5.1.
+
 ## Key Features
 
 * **Advanced Mathematics:** Fast real and complex arithmetic operations.
