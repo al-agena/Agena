@@ -1,0 +1,210 @@
+keywords :=
+            'as,boolean,bottom,break,by,case,clear,cls,complex,create,dec,delete,dict,do,elif,else,end,' &
+            'enum,epocs,esac,' &
+            'external,fi,for,from,global,if,inc,infinity,insert,into,keys,lightuserdata,local,nargs,number,' &
+            'od,of,pair,pop,proc,procedure,quit,reshuffle,return,scope,seq,sequence,set,si,skip,string,' &
+            'table,then,thread,to,top,try,undefined,userdata,using,varargs,while';
+
+operators :=
+            'abs,assigned,atendof,char,copy,cos,entier,even,exp,filled,final,finite,imag,in,instr,int,' &
+            'intersect,is,join,left,ln,lngamma,lower,ltrim,minus,qsadd,real,replace,right,rtrim,' &
+            'sadd,shift,sign,sin,size,split,sqrt,tan,trim,type,typeof,unassigned,union,unique,upper,' &
+            'arccos,arcsin,arctan,cosh,sinh,tanh';
+
+logical :=  'and,fail,false,not,null,or,subset,true,xor,xsubset,<>,<=,>=,=,<,>';
+
+baselib :=  'anames,approx,assume,bintersect,bminus,bisequal,close,concat,countitems,csch,defaults,error,flush,' &
+            'gc,getentry,getenv,getkey,getmeta,getmetatable,gettype,globals,gtrap,has,hasrtable,isselfref,' &
+            'init,input,io,isequal,lines,load,loadclib,loadfile,loadstring,map,maptoset,op,open,ops,' &
+            'pairs,pcall,print,printf,purge,put,' &
+            'rdelete,read,readlib,readlines,register,remember,rget,rset,restart,rinit,roinit,run,' &
+            'save,select,setbit,setfenv,setmeta,setmetatable,settype,sort,time,tonumber,toset,toseq,tostring,' &
+            'totable,unpack,used,userinfo,whereis,with,write,writeline,' &
+            'arccosh,arccsch,arccoth,arcsech,arcsinh,arctan2,arctanh,argument,besselj,bessely,beta,binomial,' &
+            'ceil,conjugate,cot,coth,csc,erf,erfc,fact,fma,frac,frexp,heaviside,hypot,irem,ldexp,' &
+            'log,log10,modf,roundf,sec,sech,arccot,arccsc,arcsec,gamma,root,' &
+            'isboolean,isnumber,isstring,istable,isset,ispair,issequence,isstructure,isposint,isnegint,' &
+            'isnonnegint,isnumeric,iscomplex';
+
+adslib :=   'ads,attrib,closebase,closeall,clean,comment,createbase,createseq,createdict,' &
+            'expand,fastclose,fastopen,fastread,fastseek,filepos,getall,getkeys,getvalues,' &
+            'index,indices,invalid,iterate,lookup,openbase,opendict,peek,'&
+            'rawsearch,readbase,remove,retrieve,search,seqtolist,setdesc,sizeof,sync,writebase';
+
+biniolib := 'binio,close,filepos,length,make,open,readbytes,readchar,readlong,readnumber,' &
+            'readobject,readshortstring,readstring,rewind,seek,sync,toend,' &
+            'writebytes,writechar,writelong,writenumber,writeobject,writeshortstring,writestring';
+
+calclib :=  'calc,diff,fseq,fsum,interp,maximum,minimum,regulafalsi,sections,xpdiff,zero,Ci,Chi,' &
+            'Si,Shi,Ssi,intde,intdei,intdeo,integral';
+
+fractalslib :=
+            'fractals,draw,paint,mandel,lsin,lcos,lcosxx,lbea,newton,esctime,markmand,bea,cosxx,' &
+            'flip,mandelbrot,mandelbrotfast,lambdafn';
+
+gdilib :=   'gdi,autoflush,background,checkoptions,COLOURS,line,mouse,options,plot,plotfn,point,setinfo,' &
+            'setoptions,structure,newline,setline';
+
+iolib :=    'io,anykey,close,flush,getkey,input,isfdesc,lines,lock,open,output,pcall,popen,' &
+            'read,readlines,seek,setvbuf,tmpfile,unlock,write';
+
+linalglib := 'linalg,add,augment,backsubs,checkmatrix,checksquare,checkvector,coldim,coldim,column,crossprod,' &
+            'det,diagonal,dim,dotprod,hilbert,identity,inverse,isantisymmetric,isdiagonal,isidentity,' &
+            'ismatrix,issquare,issymmetric,isvector,ludecomp,matrix,mmap,mmul,mzip,rowdim,scalarmul,' &
+            'stack,sub,swapcol,swaprow,transpose,vector,vmap,vzip,zero';
+
+mathlib :=  'math,convertbase,expx2,fraction,gcd,isprime,lcm,max,min,nextafter,norm,Phi,random,randomseed,' &
+            'toDecimal,toRadians,zeroin,nextprime,prevprime';
+
+oslib :=     'os,alldirs,beep,cd,computername,date,difftime,endian,execute,exit,fexists,freemem,fstat,' &
+             'getenv,isDOS,isLinux,isMac,isOS2,isSolaris,isUNIX,isWin,login,ls,lscore,md,memstate,pwd,rd,' &
+             'rename,rm,setlocale,system,time,tmpname';
+
+statslib := 'stats,ios,max,median,mean,min,minmax,qmean,sd,tovals,var';
+
+stringslib :=
+            'strings,c2f,diamap,dump,f2c,find,format,gfind,gmatch,gmatches,gsub,hits,isabbrev,' &
+            'isalpha,isalphanumeric,isalphaspace,isending,isfloat,islatin,isloweralpha,islowerlatin,' &
+            'ismagic,isnumber,isnumberspace,isupperalpha,isupperlatin,ltrim,match,' &
+            'repeat,reverse,rseek,rtrim,seek,subs,tobytes,tochars,words';
+
+tableslib :=
+            'tables,allocate,duplicates,entries,indices,seqt';
+
+utilslib := 'utils,arraysize,ascii,beep,calendar,convertText,CtoF,endian,eval,getarray,getkeys,' &
+            'getwholearray,isleapyear,newarray,notLowerLatin,readcsv,rm,searcharray,seqt,setarray,' &
+            'singlesubs,switch,text,wait,weekday,writecsv,writeTable';
+
+libs := [ tableslib, stringslib, mathlib, calclib, statslib, linalglib, oslib, iolib, biniolib, fractalslib,
+adslib, utilslib, gdilib ];
+
+
+# GEDIT 2.2+
+#    <context id="keywords" style-ref="keyword">
+makegedit := proc()
+   print('    <context id="keywords" style-ref="keyword">');
+   for i in keywords split ',' do
+      print('         <keyword>' & i & '</keyword>')
+   od;
+   print('    </context>\n');
+   #    <context id="functions" style-ref="function">
+   print('    <context id="functions" style-ref="function">');
+   for i in baselib split ',' do
+      print('         <keyword>' & i & '</keyword>')
+   od;
+   print('    </context>\n');
+   #    <context id="boolean" style-ref="boolean">
+   print('    <context id="boolean" style-ref="boolean">');
+   for i in logical split ',' do
+      print('         <keyword>' & i & '</keyword>')
+   od;
+   print('    </context>\n');
+end;
+
+
+
+makenedit := proc()
+   print('Keywords:"<(');
+   for i in keywords split ',' do
+      display(i & '|')
+   od;
+   display('\b)>":::Keyword::D\\n\\\n');
+   print('Agena Ops:"<(');
+   for i in operators split ',' do
+      display(i & '|')
+   od;
+   display('\b)>":::Agena Op::D\\n\\\n');
+   print('Library:"<(');
+   for i in baselib split ',' do
+      display(i & '|')
+   od;
+   display('\b)>":::Library::D\\n\\\n');
+end;
+
+
+
+makejedit := proc()
+   local prefix, library;
+   library := keywords split ',';
+   sort(library);
+   print('      <!-- keywords -->')
+   for i in library do
+      print('      <KEYWORD1>' & i & '</KEYWORD1>')
+   od;
+   # logical operators
+   print('      <!-- logical operators -->')
+   for i in logical split ',' do
+      item := replace(i, seq('<':'&lt;', '>':'&gt;'));
+      print('      <KEYWORD1>' & item & '</KEYWORD1>')
+   od;
+   # operators
+   print('      <!-- operators -->')
+   library := operators split ',';
+   sort(library);
+   for i in library do
+      print('      <KEYWORD1>' & i & '</KEYWORD1>')
+   od;
+   print('      <!-- baselib functions -->')
+   library := baselib split ',';
+   sort(library);
+   for i in library do
+      print('      <KEYWORD2>' & i & '</KEYWORD2>')
+   od;
+   # print library functions
+   print('      <!-- library functions -->')
+   for i in libs do
+      library := i split ',';
+      prefix := library[1];
+      pop bottom from library;
+      for j in library do
+         print('      <KEYWORD>' & prefix & '.' & j & '</KEYWORD3>')
+      od
+   od;
+end;
+
+
+makexml := proc()
+   local prefix, library;
+   library := keywords split ',';
+   sort(library);
+   print('   <keyword-list _name = "Keywords" style = "Keyword" case-sensitive="TRUE">')
+   for i in library do
+      print('      <keyword>' & i & '</keyword>')
+   od;
+   print('   </keyword-list>');
+   # logical operators
+   print('\n   <keyword-list _name = "Logical Operators" style = "Logical" case-sensitive="TRUE">')
+   for i in logical split ',' do
+      item := replace(i, seq('<':'&lt;', '>':'&gt;'));
+      print('      <keyword>' & item & '</keyword>')
+   od;
+   print('   </keyword-list>');
+   # operators
+   print('\n   <keyword-list _name = "Operators" style = "Keyword" case-sensitive="TRUE">')
+   library := operators split ',';
+   sort(library);
+   for i in library do
+      print('      <keyword>' & i & '</keyword>')
+   od;
+   print('   </keyword-list>');
+   # baselib
+   print('\n   <keyword-list _name = "Functions" style = "Other" case-sensitive="TRUE">')
+   library := baselib split ',';
+   sort(library);
+   for i in library do
+      print('      <keyword>' & i & '</keyword>')
+   od;
+   print('   </keyword-list>');
+   # print library functions
+   #print('      <!-- library functions -->')
+   for i in libs do
+      library := i split ',';
+      prefix := library[1];
+      pop bottom from library;
+      for j in library do
+   #      print('      <KEYWORD>' & prefix & '.' & j & '</KEYWORD3>')
+      od
+   od;
+end;
+
+
