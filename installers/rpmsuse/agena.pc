@@ -1,0 +1,12 @@
+V= 7.9
+prefix= /usr
+exec_prefix=${prefix}
+libdir=/usr/lib
+includedir=${prefix}/include
+
+Name: Agena
+Description: Agena is a procedural programming language
+Version: ${V}
+Requires:
+Libs: -L${libdir} -lagena -lm -lreadline -ldl
+Cflags: -I${includedir}
