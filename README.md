@@ -4,14 +4,14 @@ Agena is an easy-to-learn procedural programming language designed for scientifi
 
 Its syntax resembles a highly simplified Algol 68 with structural elements inspired by Maple, Lua and SQL.
 
-## ?? Key Features
+## Key Features
 
 * **Advanced Mathematics:** Fast real and complex arithmetic operations.
 * **Text Processing:** Efficient string manipulation and textual data parsing.
 * **Data Structures:** Flexible, dynamic, and easy-to-manage data arrangements.
 * **Smart Architecture:** Intelligent procedures, easy package management, and deeply customizable configurations.
 
-## ?? Supported Platforms
+## Supported Platforms
 
 This repository includes compilation scripts for various operating systems and architectures:
 * DOS
@@ -21,5 +21,5 @@ This repository includes compilation scripts for various operating systems and a
 * Solaris 10
 * Windows 2000 and higher
 
-## ?? License
+## License
 This project is licensed under the MIT License.
