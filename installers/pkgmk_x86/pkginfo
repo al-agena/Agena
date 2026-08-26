@@ -1,0 +1,12 @@
+PKG=SMCagena
+NAME=The Agena Programming Language
+DESC=Agena is an easy-to-learn procedural programming language.
+ARCH=x86
+VERSION=7.9.2
+LANG=C
+CATEGORY=application
+# change the post install message if you change BASEDIR
+BASEDIR=/usr/
+VENDOR=Alexander Walz
+HOTLINE=http://agena.sourceforge.net
+EMAIL=<see agena.sourceforge.net>

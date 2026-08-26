@@ -1,0 +1,11 @@
+P SMCreadl readline library for command line history, see sunfreeware.com
+P SMCncurs ncurses library for command line history, see sunfreeware.com
+P CSWiconv libiconv library for command line history, see sunfreeware.com
+P SUNWfreetype2 FreeType2 Font library, see sunfreeware.com
+P SUNWfontconfig Fontconfig library, see sunfreeware.com
+P SMClintl libintl library, see sunfreeware.com
+P SUNWpng Portable Network Graphics library, see sunfreeware.com
+P SUNWzlib Zip compression library, see sunfreeware.com
+P SUNWlexpt libexpat - XML parser library, see sunfreeware.com
+P SUNWjpg jpeg - The Independent JPEG Groups JPEG software, see sunfreeware.com
+P SMCgd gd, see sunfreeware.com

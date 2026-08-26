@@ -1,0 +1,12 @@
+# postinstall file for the Solaris package manager
+# DO NOT ADD a #/bin/sh statement into this file (including the first line)
+#echo "\nBe sure to permanently set an environment variable called AGENAPATH"
+#echo "to the absolute path of the lib subdirectory in the Agena folder.\n"
+#echo "To do this, add the entry\n"
+#echo "   export AGENAPATH='/usr/agena/lib'\n"
+#echo "to your profile or .bashrc file. Do not set the path to the Agena"
+#echo "executable. See the PDF manual in /usr/agena/doc for further details.\n"
+echo "\nThe Agena binary has been put in the /usr/bin folder.\n"
+echo "The Agena library files libagena.* have been put in the /usr/lib folder.\n"
+echo "All other Agena files including the manual may be found in /usr/agena.\n"
+echo "The main Agena library folder is /usr/agena/lib."
