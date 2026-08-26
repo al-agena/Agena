@@ -1,0 +1,42 @@
+Sunspots 1700 to 2024
+---------------------
+
+Taken from the Royal Observatory of Belgium website: https://www.sidc.be/SILSO/infosnytot,
+file `SN_y_tot_V2.0.csv`.
+
+Contents:
+
+Column 1: Gregorian calendar year (mid-year date)
+Column 2: Yearly mean total sunspot number.
+Column 3: Yearly mean standard deviation of the input sunspot numbers from individual stations.
+Column 4: Number of observations used to compute the yearly mean total sunspot number.
+Column 5: Definitive/provisional marker. '1' indicates that the value is definitive. '0'
+          indicates that the value is still provisional.
+
+No further information has been given on the data: location, technology/technologies used,
+environmental conditions at the time of measurement.
+
+In 1808, there was an eruption of unknown location "half the magnitude of Mount Tambora"
+(Wikipedia) of 1815.
+
+-------------------------------------------------------------------------------
+LICENSE
+-------------------------------------------------------------------------------
+SILSO data is under CC BY-NC4.0 license (https://goo.gl/PXrLYd) which means you can :
+
+Share — copy and redistribute the material in any medium or format
+Adapt — remix, transform, and build upon the material
+
+As long as you follow the license terms:
+
+Attribution — You must give appropriate credit, provide a link to the license, and indicate if changes were made. You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use.
+NonCommercial — You may not use the material for commercial purposes.
+No additional restrictions — You may not apply legal terms or technological measures that legally restrict others from doing anything the license permits.
+
+
+To import, issue:
+> L := utils.readcsv('c:/agena/data/sunspots.csv', delim = ';', header = false);
+
+For the sunspots:
+> sunspots := columns(L, 2);
+

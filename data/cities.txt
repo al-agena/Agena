@@ -1,0 +1,2 @@
+The data in cities.kdx, cities.dbf, timezone.csv and country.csv has been compiled from files available at GeoNames,
+https://download.geonames.org/export/dump/, made available under the Creative Commons Attribution 4.0 License.

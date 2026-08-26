@@ -1,0 +1,87 @@
+C
+C  Viking Lander 2 Binned and Splined data         Rev 2.2 97/6/19, JET
+C                                                  97/6/24,97/6/25, JET
+C
+C                  J. E. Tillman, Dir.  Viking Comp
+C                  N. C. Johnson
+C                  Dept. Atmospheric Sciences
+C                  University of Washington
+C
+C       Data set created between July 1982 and August 1983.
+C
+C       It was provided to Planetary Data Systems, Atmospheres Node.
+C
+C	=============================================================
+C
+C           Solar               Wind   Wind  Pressure  Temperature
+C           Longitude           Speed  Dir
+C   Year    L_s (deg.) Sol      m/sec  deg.     mb      F.      C.
+C
+C
+C        1   97.196    1.02     1.2     176    7.71  -108.90  -78.28
+C	=============================================================
+C
+C       A "C" or other character in column 1 indicates that the row
+C       contains text or other, information.
+C       Column 2 is reserved for special flags which can be:
+C               data quality indicators for a row with problems;
+C               an indicator to reject one or more variables in
+C               the row, e.g., wind is bad but pressure and temperature
+C               are good, etc.
+C               These will be defined as necessary.
+C
+C       Rows will not be blank; there will always be at least a "C" in
+C       column 1
+C
+C       Column 3 is always blank.
+C
+C	Definitions
+C	===========
+C
+C	Year			Mars year, approximately 687 Earth days
+C	Solar Longitude,	Angular direction from Mars to the Sun
+C		L_s;		0 to 360 degrees
+C		Deg.		90 = summer, 180 = autumn, 270 = winter
+C				0 or 360 = spring in northern hemisphere
+C	Sol			Martian days after landing; 1 sol is
+C					Viking landed on sol 0
+C					One sol is 24.62 hours
+C	Wind speed		Meters per second
+C	Wind direction		Degrees, (direction from which the
+C				wind blows)
+C	Pressure		mb = millibars, 1 mb = 100 hPa, where
+C				hPa = hecta Pascals
+C	Temperature		Degrees; C = Centigrade; F = Fahrenheit
+C
+C	=================================================================
+C
+C	These rows of data are formed by checking for bad data,
+C	removing or reprocessing them, collecting the points into one
+C	of 25 equal length intervals, "bins", in each sol, and then
+C	averaging each bin. When no data exist in one to a few bins,
+C	a value is interpolated, ( using a cubic spline technique,,
+C	which is not described here.)
+C
+C	=================================================================
+C
+C           Solar               Wind   Wind  Pressure  Temperature
+C           Longitude           Speed  Dir
+C   Year    L_s (deg.) Sol      m/sec  deg.     mb      F.      C.
+
+To read in the `viking2.csv` file, split the contents into its fields and ignore offline times, type:
+
+> L := utils.readcsv('c:/agena/data/viking2.csv',
+          delim = ';',    # optional, the field delimiter
+          header = true,  # skip the header
+          ignore = <: x -> x[1] = 'C' or  # ignore false datasets
+                      strings.fields(x, 9, ';') = '-273.15' :>
+);
+
+The result will be a two-dimensional sequence with each row representing one dataset. The first one,
+for example, can be accessed as follows:
+
+> L[1]:
+seq(T, 1, 118.012, 1.06, 1.5, 79, 7.82, -97.69, -72.05)
+
+> L[1, 3]:
+118.012

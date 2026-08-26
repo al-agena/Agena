@@ -1,0 +1,12 @@
+Airline Passengers 1949 to 1960
+-------------------------------
+
+Taken from John Burkardt's website,
+https://people.sc.fsu.edu/~jburkardt/datasets/time_series/airline_passengers.txt
+
+John Burkhardt on the data:
+
+"AIRLINE_PASSENGERS is a table of 3 columns and 144 rows. Column 1 is the year,
+from 1949 to 1960, column 2 is the month, from 1 to 12, and column 3 is the number 
+of international airline passengers in thousands. This data was presented as series 
+G by Box, Jenkins and Reinsel, 1976.
