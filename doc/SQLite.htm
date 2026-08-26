@@ -1,0 +1,2096 @@
+<!DOCTYPE html>
+<html><head>
+
+
+
+  
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+
+  
+  <meta charset="UTF-8"><!-- base href="https://lua.sqlite.org/home/doc/tip/doc/lsqlite3.wiki" -->
+
+
+  
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; script-src 'self' 'nonce-7eaa8e07f159fab70c0764bc98d45aeaeb75e371e04b637f'; style-src 'self' 'unsafe-inline'; img-src * data:">
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>LuaSQLite3: Documentation</title>
+  
+
+  
+  
+  <link rel="alternate" type="application/rss+xml" title="RSS Feed" href="https://lua.sqlite.org/home/timeline.rss">
+
+  
+  <link rel="stylesheet" href="LuaSQLite3_%20Documentation_files/style.css" type="text/css"></head><body class="doc rpage-doc cpage-doc">
+<header> </header>
+<div class="title">
+<h1>SQLite</h1>
+Documentation</div>
+
+<div class="status"> <a href="https://lua.sqlite.org/home/login">Login</a>
+</div>
+
+<nav class="mainmenu" title="Main Menu"> <a id="hbbtn" href="https://lua.sqlite.org/home/sitemap" aria-label="Site Map">☰</a><a href="https://lua.sqlite.org/home/home" class="">Home</a>
+<a href="https://lua.sqlite.org/home/timeline" class="">Timeline</a>
+<a href="https://lua.sqlite.org/home/dir?ci=tip" class="desktoponly">Files</a>
+<a href="https://lua.sqlite.org/home/brlist" class="wideonly">Branches</a>
+<a href="https://lua.sqlite.org/home/taglist" class="wideonly">Tags</a>
+<a href="https://lua.sqlite.org/home/ticket" class="wideonly">Tickets</a>
+<a href="https://lua.sqlite.org/home/wiki" class="wideonly">Wiki</a>
+<a href="https://lua.sqlite.org/home/login" class="wideonly">Login</a>
+</nav><nav id="hbdrop" class="hbdrop" title="sitemap"></nav>
+<div class="content"><span id="debugMsg"></span>
+<div name="index">
+<p><a name="__index__"></a></p>
+<ul>
+  <li><a href="#name">NAME</a></li>
+  <li><a href="#overview">OVERVIEW</a></li>
+  <li><a href="#download">DOWNLOAD</a></li>
+  <li><a href="#installation">INSTALLATION</a></li>
+  <li><a href="#examples">EXAMPLES</a></li>
+  <li><a href="#verification_tests">VERIFICATION TESTS</a></li>
+  <li><a href="#reference">REFERENCE</a></li>
+  <li><a href="#sqlite3_functions">SQLite3 functions</a></li>
+  <ul>
+    <li><a href="#sqlite3_complete">sqlite.complete</a></li>
+    <li><a href="#sqlite3_lversion">sqlite.lversion</a></li>
+    <li><a href="#sqlite3_open">sqlite.open</a></li>
+    <li><a href="#sqlite3_open_memory">sqlite.open_memory</a></li>
+    <li><a href="#sqlite3_open_ptr">sqlite.open_ptr</a></li>
+    <li><a href="#sqlite3_backup_init">sqlite.backup_init</a></li>
+    <li><a href="#sqlite3_temp_directory">sqlite.temp_directory</a></li>
+    <li><a href="#sqlite3_version">sqlite.version</a></li>
+  </ul>
+  <li><a href="#database_methods">Database methods</a></li>
+  <ul>
+    <li><a href="#db_busy_handler">db@@busy_handler</a></li>
+    <li><a href="#db_busy_timeout">db@@busy_timeout</a></li>
+    <li><a href="#db_changes">db@@changes</a></li>
+    <li><a href="#db_close">db@@close</a></li>
+    <li><a href="#db_close_vm">db@@close_vm</a></li>
+    <li><a href="#db_get_ptr">db@@get_ptr</a></li>
+    <li><a href="#db_commit_hook">db@@commit_hook</a></li>
+    <li><a href="#db_create_aggregate">db@@create_aggregate</a></li>
+    <li><a href="#db_create_collation">db@@create_collation</a></li>
+    <li><a href="#db_create_function">db@@create_function</a></li>
+    <li><a href="#db_errcode">db@@errcode</a></li>
+    <li><a href="#db_errmsg">db@@errmsg</a></li>
+    <li><a href="#db_exec">db@@exec</a></li>
+    <li><a href="#db_interrupt">db@@interrupt</a></li>
+    <li><a href="#db_db_filename">db@@db_filename</a></li>
+    <li><a href="#db_isopen">db@@isopen</a></li>
+    <li><a href="#db_last_insert_rowid">db@@last_insert_rowid</a></li>
+    <li><a href="#db_load_extension">db@@load_extension</a></li>
+    <li><a href="#db_nrows">db@@nrows</a></li>
+    <li><a href="#db_prepare">db@@prepare</a></li>
+    <li><a href="#db_progress_handler">db@@progress_handler</a></li>
+    <li><a href="#db_rollback_hook">db@@rollback_hook</a></li>
+    <li><a href="#db_rows">db@@rows</a></li>
+    <li><a href="#db_total_changes">db@@total_changes</a></li>
+    <li><a href="#db_trace">db@@trace</a></li>
+    <li><a href="#db_update_hook">db@@update_hook</a></li>
+    <li><a href="#db_urows">db@@urows</a></li>
+  </ul>
+  <li><a href="#methods_for_prepared_statements">Methods for prepared
+statements</a></li>
+  <ul>
+    <li><a href="#stmt_bind">stmt@@bind</a></li>
+    <li><a href="#stmt_bind_blob">stmt@@bind_blob</a></li>
+    <li><a href="#stmt_bind_names">stmt@@bind_names</a></li>
+    <li><a href="#stmt_bind_parameter_count">stmt@@bind_parameter_count</a></li>
+    <li><a href="#stmt_bind_parameter_name">stmt@@bind_parameter_name</a></li>
+    <li><a href="#stmt_bind_values">stmt@@bind_values</a></li>
+    <li><a href="#stmt_columns">stmt@@columns</a></li>
+    <li><a href="#stmt_finalize">stmt@@finalize</a></li>
+    <li><a href="#stmt_get_name">stmt@@get_name</a></li>
+    <li><a href="#stmt_get_named_types">stmt@@get_named_types</a></li>
+    <li><a href="#stmt_get_named_values">stmt@@get_named_values</a></li>
+    <li><a href="#stmt_get_names">stmt@@get_names</a></li>
+    <li><a href="#stmt_get_type">stmt@@get_type</a></li>
+    <li><a href="#stmt_get_types">stmt@@get_types</a></li>
+    <li><a href="#stmt_get_unames">stmt@@get_unames</a></li>
+    <li><a href="#stmt_get_utypes">stmt@@get_utypes</a></li>
+    <li><a href="#stmt_get_uvalues">stmt@@get_uvalues</a></li>
+    <li><a href="#stmt_get_value">stmt@@get_value</a></li>
+    <li><a href="#stmt_get_values">stmt@@get_values</a></li>
+    <li><a href="#stmt_isopen">stmt@@isopen</a></li>
+    <li><a href="#stmt_last_insert_rowid">stmt@@last_insert_rowid</a></li>
+    <li><a href="#stmt_nrows">stmt@@nrows</a></li>
+    <li><a href="#stmt_reset">stmt@@reset</a></li>
+    <li><a href="#stmt_rows">stmt@@rows</a></li>
+    <li><a href="#stmt_step">stmt@@step</a></li>
+    <li><a href="#stmt_urows">stmt@@urows</a></li>
+  </ul>
+  <li><a href="#methods_for_callback_contexts">Methods for callback
+contexts</a></li>
+  <ul>
+    <li><a href="#context_aggregate_count">context@@aggregate_count</a></li>
+    <li><a href="#context_get_aggregate_data">context@@get_aggregate_data</a></li>
+    <li><a href="#context_set_aggregate_data">context@@set_aggregate_data</a></li>
+    <li><a href="#context_result">context@@result</a></li>
+    <li><a href="#context_result_null">context@@result_null</a></li>
+    <li><a href="#context_result_number">context@@result_number</a></li>
+    <li><a href="#context_result_int">context@@result_int</a></li>
+    <li><a href="#context_result_text">context@@result_text</a></li>
+    <li><a href="#context_result_blob">context@@result_blob</a></li>
+    <li><a href="#context_result_error">context@@result_error</a></li>
+    <li><a href="#context_user_data">context@@user_data</a></li>
+  </ul>
+  <li><a href="#methods_for_online_backup">Methods for Online Backup</a></li>
+  <ul>
+    <li><a href="#bu_step">backup@@step</a></li>
+    <li><a href="#bu_remaining">backup@@remaining</a></li>
+    <li><a href="#bu_pagecount">backup@@pagecount</a></li>
+    <li><a href="#bu_finish">backup@@finish</a></li>
+  </ul>
+  <li><a href="#numerical_error_and_result_codes">Numerical error and
+result codes</a></li>
+  <li><a href="#version">VERSION</a></li>
+  <li><a href="#credits">CREDITS</a></li>
+  <li><a href="#license">LICENSE</a></li>
+</ul>
+<hr name="index">
+</div>
+<p>
+</p>
+<hr>
+<h1><a name="name">NAME</a></h1>
+<p><strong>SQLite</strong> - an Agena wrapper for the
+SQLite3 library. The wrapper has been written by Tiago Dionizio and
+Doug Currie and ported from LuaSQLite3 for Lua 5.1 to
+5.3,&nbsp;Copyright (C) 2002-2016 Tiago Dionizio, Doug Currie;
+MIT-licenced. The Agena port features some few additional safeguards to
+prevent segmentation faults in case previously executed SQL statementsfailed or could not be executed at all. <br>
+</p>
+<p>
+</p>
+<hr>
+<h1><a name="overview">OVERVIEW</a></h1>
+<p><strong>SQLite</strong> is a thin wrapper around the public
+domain SQLite3
+database engine.</p>
+
+
+<p>The module <code>sqlite</code> links SQLite3 statically.
+The SQLite3 amalgamation source code is included in the source code
+distribution. This can simplify deployment, but might
+result in more than one copy of the SQLite library if other parts
+of the code also include it. See
+<a href="http://www.sqlite.org/howtocorrupt.html#multiple_copies_of_sqlite_linked_into_the_same_application">http://www.sqlite.org/howtocorrupt.html</a>
+for an explanation on why it would be a bad idea.</p>
+<p>The module supports the creation and manipulation of SQLite3
+databases. After an</p>
+<p>&gt; <code>import sqlite</code> <br>
+</p>
+<p>the exported functions are called
+with prefix <code>sqlite.</code>
+However, most sqlite3 functions are
+called via an object-oriented interface to either database or SQL
+statement objects; see below for details. For some examples, check the
+file `SQLite.agn` in the `doc` folder of your Agena installation.<br>
+</p>
+
+<p>This documentation does not attempt to describe how SQLite3 itself
+works, it just describes the Agenaa binding and the available functions.
+For more information about the SQL features supported by SQLite3 and
+details about the syntax of SQL statements and queries, please see the
+<strong>SQLite3 documentation</strong> <a href="http://www.sqlite.org/">http://www.sqlite.org/</a>.
+Using some of the
+advanced features (how to use callbacks, for instance) will require
+some familiarity with the SQLite3 API.</p>
+<hr>
+<h1><a name="examples">EXAMPLES</a></h1>
+<p>The distribution contains an <em>examples</em> directory. The unit
+tests
+also show some example use.</p>
+<p>
+</p>
+<hr>
+<h1><a name="verification_tests">VERIFICATION TESTS</a></h1>
+<p>The distribution contains a <em>tests</em> directory with some
+units tests using an enhanced version of Michael Roth's <code>lunit</code>
+called <code>lunitx</code>. Some of the tests were also derived from
+Michael's <strong>lua-sqlite3</strong> module, and more unit tests
+added by Doug Currie. Get <code>lunitx</code> using Luarocks.</p>
+<p>The distribution also contains some functional tests by Tiago.</p>
+<p>This version of <code>sqlite</code> was tested with SQLite 3.50.3.</p>
+<p>
+</p>
+<hr>
+<h1><a name="reference">REFERENCE</a></h1>
+<p>
+</p>
+<hr>
+<h1><a name="sqlite3_functions">SQLite3 functions</a></h1>
+<p>
+</p>
+<h2><a name="sqlite3_complete">sqlite.complete</a></h2>
+<pre>        sqlite.complete(sql)</pre>
+<p>Returns true if the string <code>sql</code> comprises one or more
+complete SQL
+statements and false otherwise.</p>
+<p>
+</p>
+<h2><a name="sqlite3_open">sqlite.open</a></h2>
+<pre>        sqlite.open(filename)</pre>
+<p>Opens (or creates if it does not exist) an SQLite database with name
+<code>filename</code> and returns its handle as userdata (the returned
+object should be used for all further method calls in connection with
+this specific database, see <a href="#database_methods">Database
+methods</a>). Example:</p>
+<pre>        myDB := sqlite.open('MyDatabase.sqlite3')  # open<br>        # do some database calls...<br>        mydb@@close()  # close</pre>
+<p>In case of an error, the function returns nil, an error code and an
+error message.</p>
+<p>Since 0.9.4, there is a second optional flags argument to <code>sqlite.open</code>.
+</p>
+<pre>        sqlite.open(filename, flags)</pre>
+<p>
+See <a href="https://www.sqlite.org/c3ref/open.html">sqlite3_open_v2</a>
+for an explanation of
+these flags and options.</p>
+<p>
+Example:
+</p>
+<pre>        local db := sqlite.open('foo.db', sqlite.OPEN_READWRITE + sqlite.OPEN_CREATE + sqlite.OPEN_SHAREDCACHE)<br></pre>
+The default value for flags is <code>sqlite.OPEN_READWRITE + sqlite.OPEN_CREATE</code>.
+<p>
+</p>
+<h2><a name="sqlite3_open_memory">sqlite.open_memory</a></h2>
+<pre>        sqlite.open_memory()</pre>
+<p>Opens an SQLite database <strong>in memory</strong> and returns its
+handle as
+userdata. In case of an error, the function returns nil, an error code
+and an error message. (In-memory databases are volatile as they are
+never stored on disk.)</p>
+<p>
+</p>
+<h2><a name="sqlite3_open_ptr">sqlite.open_ptr</a></h2>
+<pre>        sqlite.open_ptr(db_ptr)</pre>
+<p>Opens the SQLite database corresponding to the light userdata <code>db_ptr</code>
+and returns its handle as userdata. Use <a href="#db_get_ptr"><code>db@@get_ptr</code></a>
+to get a <code>db_ptr</code> for an open database.</p>
+<p>
+</p>
+<h2><a name="sqlite3_backup_init">sqlite.backup_init</a></h2>
+<pre>        sqlite.backup_init(target_db, target_name, source_db, source_name)</pre>
+<p>Starts an SQLite Online Backup from <code>source_db</code> to <code>target_db</code>
+and returns its handle as userdata. The <code>source_db</code> and <code>target_db</code>
+are
+open databases; they may be in-memory or file-based databases. The <code>target_name</code>
+and
+<code>source_name</code> are "main" for the main database, "temp" for
+the temporary database, or the name specified after the AS keyword in
+an ATTACH statement for an attached database.</p>
+<p>The source and target databases must be different, or else the init
+call will fail with an error. A call to <code>sqlite.backup_init</code>
+will fail, returning NULL, if there is already a read or read-write
+transaction open on the target database.
+</p>
+<p>If an error occurs within <code>sqlite.backup_init</code>, then
+NULL is returned, and an error code and error message are stored in <code>target_db</code>.
+The error code and message for the failed call can be retrieved using
+the <a href="#db_errcode"><code>db@@errcode</code></a>, or <a href="#db_errmsg"><code>db@@errmsg</code></a>.</p>
+<p>
+</p>
+<h2><a name="sqlite3_temp_directory">sqlite.temp_directory</a></h2>
+<pre>        sqlite.temp_directory([temp])</pre>
+<p>Sets or queries the directory used by SQLite for temporary files. If
+string <code>temp</code> is a directory name or nil, the temporary
+directory is set accordingly and the old value is returned. If <code>temp</code>
+is missing, the function simply returns the current temporary directory.</p>
+<p>
+</p>
+<h2><a name="sqlite3_version">sqlite.version</a></h2>
+<pre>        sqlite.version()</pre>
+<p>Returns a string with SQLite version information, in the form
+'x.y[.z[.p]]'.</p>
+<p>
+</p>
+<h2><a name="sqlite3_lversion">sqlite.lversion</a></h2>
+<pre>        sqlite.lversion()</pre>
+<p>Returns a string with lsqlite3 library version information, in the
+form 'x.y[.z]'.</p>
+<p>
+</p>
+<hr>
+<h1><a name="database_methods">Database methods</a></h1>
+<p>After opening a database with <a href="#sqlite3_open"><code>sqlite.open()</code></a>
+or <a href="#sqlite3_open_memory"><code>sqlite.open_memory()</code></a>
+the returned database object should be used for all further method
+calls
+in connection with that database. An open database object supports the
+following methods.</p>
+<p>
+</p>
+<h2><a name="db_busy_handler">db@@busy_handler</a></h2>
+<pre>        db@@busy_handler([func [, udata]])</pre>
+<p>Sets or removes a busy handler for a database. <code>func</code> is
+either a Lua
+function that implements the busy handler or nil to remove a previously
+set handler. This function returns nothing.</p>
+<p>The handler function is called with two parameters: <code>udata</code>
+and the number of (re-)tries for a pending transaction. It should
+return nil, false or 0 if the transaction is to be aborted. All other
+values will result in another attempt to perform the transaction. (See
+the SQLite
+documentation for important hints about writing busy handlers.)</p>
+<p>
+</p>
+<h2><a name="db_busy_timeout">db@@busy_timeout</a></h2>
+<pre>        db@@busy_timeout(t)</pre>
+<p>Sets a busy handler that waits for <code>t</code> milliseconds if a
+transaction cannot proceed. Calling this function will remove any busy
+handler set by <a href="#db_busy_handler"><code>db@@busy_handler()</code></a>;
+calling it with an argument less than or equal to 0 will turn off all
+busy handlers.</p>
+<p>
+</p>
+<h2><a name="db_changes">db@@changes</a></h2>
+<pre>        db@@changes()</pre>
+<p>This function returns the number of database rows that were changed
+(or
+inserted or deleted) by the most recent SQL statement. Only changes
+that
+are directly specified by INSERT, UPDATE, or DELETE statements are
+counted. Auxiliary changes caused by triggers are not counted. Use <a href="#db_total_changes"><code>db@@total_changes()</code></a> to find
+the total number of changes.</p>
+<p>
+</p>
+<h2><a name="db_close">db@@close</a></h2>
+<pre>        db@@close()</pre>
+<p>Closes a database. All SQL statements prepared using <a href="#db_prepare"><code>db@@prepare()</code></a> should
+have been finalized before this function is called. The function
+returns <code>sqlite.OK</code> on success or else a numerical error code (see
+the list of
+<a href="#numerical_error_and_result_codes">Numerical error and result
+codes</a>).</p>
+<p>
+</p>
+<h2><a name="db_close_vm">db@@close_vm</a></h2>
+<pre>        db@@close_vm(temponly)</pre>
+<p>Finalizes all statements that have not been explicitly finalized. If
+<code>temponly</code> is true, only internal, temporary statements are
+finalized.
+This function returns nothing.</p>
+<p>
+</p>
+<h2><a name="db_get_ptr">db@@get_ptr</a></h2>
+<pre>        db@@get_ptr()</pre>
+<p>Returns a lightuserdata corresponding to the open <code>db</code>.
+Use with <a href="#sqlite3_open_ptr"><code>sqlite.open_ptr</code></a>
+to pass a database connection
+between threads. (When using lsqlite3 in a multithreaded environment,
+each thread has a separate Lua environment; full userdata structures
+can't be passed from one thread to another, but this is possible with
+lightuserdata.)</p>
+<p>
+</p>
+<h2><a name="db_commit_hook">db@@commit_hook</a></h2>
+<pre>        db@@commit_hook(func, udata)</pre>
+<p>This function installs a commit_hook callback handler. <code>func</code>
+is a Lua function that is invoked by SQLite3 whenever a transaction is
+commited. This callback receives one argument: the <code>udata</code>
+argument used when the callback was installed. If <code>func</code>
+returns <code>false</code>
+or <code>nil</code> the COMMIT is allowed to prodeed, otherwise the
+COMMIT is converted to a ROLLBACK.</p>
+<p>See: <a href="#db_rollback_hook">db@@rollback_hook</a> and <a href="#db_update_hook">db:update_hook</a></p>
+<p>
+</p>
+<h2><a name="db_create_aggregate">db@@create_aggregate</a></h2>
+<pre>        db@@create_aggregate(name, nargs, step, final [, userdata])</pre>
+<p>This function creates an aggregate callback function. Aggregates
+perform
+an operation over all rows in a query. <code>name</code> is a string
+with the name of the aggregate function as given in an SQL statement; <code>nargs</code>
+is the number of arguments this call will provide. <code>step</code>
+is the actual Lua function that gets called once for every row; it
+should accept a function context (see <a href="#methods_for_callback_contexts">Methods for callback contexts</a>)
+plus the same number of
+parameters as given in <code>nargs</code>. <code>final</code> is a
+function that is called once after all rows have been processed; it
+receives one argument, the
+function context. If provided, <code>userdata</code> can be any Lua
+value and would be returned
+by the <code>context@@user_data()</code> method.</p>
+<p>The function context can be used inside the two callback functions
+to
+communicate with sqlite. Here is a simple example:</p>
+<pre>        db@@exec('<br>          CREATE TABLE numbers(num1, num2);<br>          INSERT INTO numbers VALUES(1, 11);<br>          INSERT INTO numbers VALUES(2, 22);<br>          INSERT INTO numbers VALUES(3, 33);<br>        ')<br>        local num_sum := 0<br>        local procedure oneRow(context,num) is  # add one column in all rows<br>          num_sum +:= num<br>        end<br>        local procedure afterLast(context) is   # return sum after last row has been processed<br>          context@@result_number(num_sum)<br>          num_sum := 0<br>        end<br>        db@@create_aggregate("do_the_sums",1,oneRow,afterLast)<br>        for sum in db@@urows('SELECT do_the_sums(num1) FROM numbers') do print("Sum of col 1:", sum) end<br>        for sum in db@@urows('SELECT do_the_sums(num2) FROM numbers') do print("Sum of col 2:", sum) end</pre>
+<p>This prints:</p>
+<pre>        Sum of col 1:   6<br>        Sum of col 2:   66</pre>
+<p>
+</p>
+<h2><a name="db_create_collation">db@@create_collation</a></h2>
+<pre>        db@@create_collation(name,func)</pre>
+<p>This creates a collation callback. A collation callback is used to
+establish a collation order, mostly for string comparisons and sorting
+purposes. <code>name</code> is a string with the name of the collation
+to be created;
+<code>func</code> is a function that accepts two string arguments,
+compares them and returns 0 if both strings are identical, -1 if the
+first argument is
+lower in the collation order than the second and 1 if the first
+argument
+is higher in the collation order than the second. A simple example:</p>
+<pre>        local procedure collate(s1, s2) is<br>          s1 := s1@@lower()<br>          s2 := s2@@lower()<br>          if s1 = s2 then return 0<br>          elif s1 &lt; s2 then return -1<br>          else return 1 end<br>        end<br>        db@@exec('<br>          CREATE TABLE test(id INTEGER PRIMARY KEY,content COLLATE CINSENS);<br>          INSERT INTO test VALUES(NULL, 'hello world');<br>          INSERT INTO test VALUES(NULL, 'Buenos dias');<br>          INSERT INTO test VALUES(NULL, 'HELLO WORLD');<br>        ')<br>        db@@create_collation('CINSENS', collate)<br>        for row in db@@nrows('SELECT * FROM test') do print(row.id, row.content) end</pre>
+<p>
+</p>
+<h2><a name="db_create_function">db@@create_function</a></h2>
+<pre>        db@@create_function(name,nargs,func[,userdata])</pre>
+<p>This function creates a callback function. Callback function are
+called
+by SQLite3 once for every row in a query. <code>name</code> is a
+string with the name of the callback function as given in an SQL
+statement; <code>nargs</code> is the number of arguments this call
+will provide. <code>func</code> is the actual Lua
+function that gets called once for every row; it should accept a
+function context (see <a href="#methods_for_callback_contexts">Methods
+for callback contexts</a>) plus the same
+number of parameters as given in nargs. If provided, <code>userdata</code>
+can be any Lua value and would be returned
+by the <code>context@@user_data()</code> method. Here is an example:</p>
+<pre>        db@@exec'CREATE TABLE test(col1, col2, col3)'<br>        db@@exec'INSERT INTO test VALUES(1, 2, 4)'<br>        db@@exec'INSERT INTO test VALUES(2, 4, 9)'<br>        db@@exec'INSERT INTO test VALUES(3, 6, 16)'<br>        db@@create_function('sum_cols', 3, function(ctx, a, b, c)<br>          ctx@@result_number(a + b + c)<br>        end))<br>        for col1, col2, col3, sum in db@@urows('SELECT *, sum_cols(col1, col2, col3) FROM test') do<br>          printf('%2i+%2i+%2i=%2i\n', col1, col2, col3, sum)<br>        end</pre>
+<p>
+</p>
+<h2><a name="db_load_extension">db@@load_extension</a></h2>
+<pre>        db@@load_extension([name,[entrypoint]])</pre>
+<p>When a <code>name</code> is provided, loads an SQLite extension
+library from the named file into this database connection. The optional
+<code>entrypoint</code> is the library initialization function name; if
+not supplied, SQLite tries various default entrypoint names. Returns <code>true</code>
+when successful, or <code>false</code> and an error string otherwise.
+</p>
+<p>When called with no arguments, disables the load_extension() SQL
+function, which is enabled as a side effect of calling <code>db@@load_extension</code>
+with a <code>name</code>.
+</p>
+<p>
+</p>
+<h2><a name="db_errcode">db@@errcode</a></h2>
+<pre>        db@@errcode()<br>        db@@error_code()</pre>
+<p>Returns the numerical result code (or extended result code) for the
+most
+recent failed call associated with database db. See
+<a href="#numerical_error_and_result_codes">Numerical error and result
+codes</a> for details.</p>
+<p>
+</p>
+<h2><a name="db_errmsg">db@@errmsg</a></h2>
+<pre>        db@@errmsg()<br>        db@@error_message()</pre>
+<p>Returns a string that contains an error message for the most recent
+failed call associated with database db.</p>
+<p>
+</p>
+<h2><a name="db_exec">db@@exec</a></h2>
+<pre>        db@@exec(sql[,func[,udata]])<br>        db@@execute(sql[,func[,udata]])</pre>
+<p>Compiles and executes the SQL statement(s) given in string <code>sql</code>.
+The
+statements are simply executed one after the other and not stored. The
+function returns <code>sqlite.OK</code> on success or else a
+numerical error code
+(see <a href="#numerical_error_and_result_codes">Numerical error and
+result codes</a>).</p>
+<p>If one or more of the SQL statements are queries, then the callback
+function specified in <code>func</code> is invoked once for each row
+of the query
+result (if <code>func</code> is nil, no callback is invoked). The
+callback receives
+four arguments: <code>udata</code> (the third parameter of the <code>db@@exec()</code>
+call), the number of columns in the row, a table with the column values
+and another table with the column names. The callback function should
+return 0. If the callback returns a non-zero value then the query is
+aborted, all subsequent SQL statements are skipped and <code>db@@exec()</code>
+returns <code>sqlite.ABORT</code>. Here is a simple example:</p>
+<pre>        sql := '<br>          CREATE TABLE numbers(num1, num2, str);<br>          INSERT INTO numbers VALUES(1, 11, "ABC");<br>          INSERT INTO numbers VALUES(2, 22, "DEF");<br>          INSERT INTO numbers VALUES(3, 33, "UVW");<br>          INSERT INTO numbers VALUES(4, 44, "XYZ");<br>          SELECT * FROM numbers;<br>        '<br>        procedure showrow(udata, cols, values, names) is<br>          assume(udata = 'test_udata')<br>          print('exec:')<br>          for i to cols do print('', names[i], values[i]) end<br>          return 0<br>        end<br>        db@@exec(sql, showrow, 'test_udata')</pre>
+<p>
+</p>
+<h2><a name="db_interrupt">db@@interrupt</a></h2>
+<pre>        db@@interrupt()</pre>
+<p>This function causes any pending database operation to abort and
+return
+at the next opportunity. This function returns nothing.</p>
+<p>
+</p>
+<h2><a name="db_db_filename">db@@db_filename</a></h2>
+<pre>        db@@db_filename(name)</pre>
+<p>This function returns the filename associated with database <code>name</code>
+of connection <code>db</code>. The <code>name</code> may be "main"
+for the main database file, or the name specified after the AS keyword
+in an ATTACH statement for an attached database. If there is no
+attached database <code>name</code> on the database connection <code>db</code>,
+then no value is returned; if database <code>name</code> is a
+temporary or in-memory database, then an empty string is returned.</p>
+<p>
+</p>
+<h2><a name="db_isopen">db@@isopen</a></h2>
+<pre>        db@@isopen()</pre>
+<p>Returns true if database db is open, false otherwise.</p>
+<p>
+</p>
+<h2><a name="db_last_insert_rowid">db@@last_insert_rowid</a></h2>
+<pre>        db@@last_insert_rowid()</pre>
+<p>This function returns the rowid of the most recent INSERT into the
+database. If no inserts have ever occurred, 0 is returned. (Each row in
+an SQLite table has a unique 64-bit signed integer key called the
+'rowid'. This id is always available as an undeclared column named
+ROWID, OID, or _ROWID_. If the table has a column of type INTEGER
+PRIMARY KEY then that column is another alias for the rowid.)</p>
+<p>If an INSERT occurs within a trigger, then the rowid of the inserted
+row
+is returned as long as the trigger is running. Once the trigger
+terminates, the value returned reverts to the last value inserted
+before
+the trigger fired.</p>
+<p>
+</p>
+<h2><a name="db_nrows">db@@nrows</a></h2>
+<pre>        db@@nrows(sql)</pre>
+<p>Creates an iterator that returns the successive rows selected by the
+SQL
+statement given in string <code>sql</code>. Each call to the iterator
+returns a table in which the named fields correspond to the columns in
+the database.
+Here is an example:</p>
+<pre>        db@@exec('<br>          CREATE TABLE numbers(num1, num2);<br>          INSERT INTO numbers VALUES(1, 11);<br>          INSERT INTO numbers VALUES(2, 22);<br>          INSERT INTO numbers VALUES(3, 33);<br>        ')<br>        for a in db@@nrows('SELECT * FROM numbers') do print(a) end</pre>
+<p>This script prints:</p>
+<pre>        num2: 11<br>        num1: 1<br>        num2: 22<br>        num1: 2<br>        num2: 33<br>        num1: 3</pre>
+<p>
+</p>
+<h2><a name="db_prepare">db@@prepare</a></h2>
+<pre>        db@@prepare(sql)</pre>
+<p>This function compiles the SQL statement in string <code>sql</code>
+into an internal
+representation and returns this as userdata. The returned object should
+be used for all further method calls in connection with this specific
+SQL statement (see <a href="#methods_for_prepared_statements">Methods
+for prepared statements</a>).</p>
+<p>
+</p>
+<h2><a name="db_progress_handler">db@@progress_handler</a></h2>
+<pre>        db@@progress_handler(n, func, udata)</pre>
+<p>This function installs a callback function <code>func</code> that
+is invoked
+periodically during long-running calls to <a href="#db_exec"><code>db@@exec()</code></a>
+or <a href="#stmt_step"><code>stmt@@step()</code></a>. The
+progress callback is invoked once for every <code>n</code> internal
+operations, where <code>n</code> is the first argument to this
+function. <code>udata</code> is passed to the progress callback
+function each time it is invoked. If a call to <code>db@@exec()</code>
+or <code>stmt@@step()</code> results in fewer than <code>n</code>
+operations being executed, then the progress callback is never invoked.
+Only a single progress callback function may be registered for each
+opened database and a call to this function will overwrite any
+previously set callback function. To remove the progress callback
+altogether, pass nil as the second argument.</p>
+<p>If the progress callback returns a result other than 0, then the
+current
+query is immediately terminated, any database changes are rolled back
+and the containing <code>db@@exec()</code> or <code>stmt@@step()</code>
+call returns <code>sqlite.INTERRUPT</code>. This feature can be used to cancel
+long-running
+queries.</p>
+<p>
+</p>
+<h2><a name="db_rollback_hook">db@@rollback_hook</a></h2>
+<pre>        db@@rollback_hook(func, udata)</pre>
+<p>This function installs a rollback_hook callback handler. <code>func</code>
+is a Lua function that is invoked by SQLite3 whenever a transaction is
+rolled back. This callback receives one argument: the <code>udata</code>
+argument used when the callback was installed.</p>
+<p>See: <a href="#db_commit_hook">db@@commit_hook</a> and <a href="#db_update_hook">db@@update_hook</a></p>
+<p>
+</p>
+<h2><a name="db_rows">db@@rows</a></h2>
+<pre>        db@@rows(sql)</pre>
+<p>Creates an iterator that returns the successive rows selected by the
+SQL
+statement given in string <code>sql</code>. Each call to the iterator
+returns a table
+in which the numerical indices 1 to n correspond to the selected
+columns
+1 to n in the database. Here is an example:</p>
+<pre>        db@@exec('<br>          CREATE TABLE numbers(num1, num2);<br>          INSERT INTO numbers VALUES(1, 11);<br>          INSERT INTO numbers VALUES(2, 22);<br>          INSERT INTO numbers VALUES(3, 33);<br>        ')<br>        for a in db@@rows('SELECT * FROM numbers') do print(a) end</pre>
+<p>This script prints:</p>
+<pre>        1: 1<br>        2: 11<br>        1: 2<br>        2: 22<br>        1: 3<br>        2: 33</pre>
+<p>
+</p>
+<h2><a name="db_total_changes">db@@total_changes</a></h2>
+<pre>        db@@total_changes()</pre>
+<p>This function returns the number of database rows that have been
+modified by INSERT, UPDATE or DELETE statements since the database was
+opened. This includes UPDATE, INSERT and DELETE statements executed as
+part of trigger programs. All changes are counted as soon as the
+statement that produces them is completed by calling either <a href="#stmt_reset"><code>stmt@@reset()</code></a> or <a href="#stmt_finalize"><code>stmt@@finalize()</code></a>.</p>
+<p>
+</p>
+<h2><a name="db_trace">db@@trace</a></h2>
+<pre>        db@@trace(func, udata)</pre>
+<p>This function installs a trace callback handler. <code>func</code>
+is a Lua
+function that is called by SQLite3 just before the evaluation of an SQL
+statement. This callback receives two arguments: the first is the <code>udata</code>
+argument used when the callback was installed; the second is a string
+with the SQL statement about to be executed.</p>
+<p>
+</p>
+<h2><a name="db_update_hook">db@@update_hook</a></h2>
+<pre>        db@@update_hook(func, udata)</pre>
+<p>This function installs an update_hook Data Change Notification
+Callback handler. <code>func</code> is a Lua function that is invoked
+by SQLite3 whenever a row is updated, inserted or deleted. This
+callback receives five arguments: the first is the <code>udata</code>
+argument used when the callback was installed; the second is an integer
+indicating the operation that caused the callback to be invoked (one of <code>sqlite.UPDATE</code>, <code>sqlite.INSERT</code>, or <code>sqlite.DELETE</code>). The
+third and fourth arguments are the database and table name containing
+the affected row. The final callback parameter is the rowid of the row.
+In the case of an update, this is the rowid after the update takes
+place.</p>
+<p>See: <a href="#db_commit_hook">db@@commit_hook</a> and <a href="#db_rollback_hook">db@@rollback_hook</a></p>
+<p>
+</p>
+<h2><a name="db_urows">db@@urows</a></h2>
+<pre>        db@@urows(sql)</pre>
+<p>Creates an iterator that returns the successive rows selected by the
+SQL
+statement given in string <code>sql</code>. Each call to the iterator
+returns the
+values that correspond to the columns in the currently selected row.
+Here is an example:</p>
+<pre>        db@@exec('<br>          CREATE TABLE numbers(num1, num2);<br>          INSERT INTO numbers VALUES(1, 11);<br>          INSERT INTO numbers VALUES(2, 22);<br>          INSERT INTO numbers VALUES(3, 33);<br>        ')<br>        for num1,num2 in db@@urows('SELECT * FROM numbers') do print(num1, num2) end</pre>
+<p>This script prints:</p>
+<pre>        1       11<br>        2       22<br>        3       33</pre>
+<p>
+</p>
+<hr>
+<h1><a name="methods_for_prepared_statements">Methods for prepared
+statements</a></h1>
+<p>After creating a prepared statement with <a href="#db_prepare"><code>db@@prepare()</code></a>
+the returned statement object should be used for all further calls in
+connection with that statement. Statement objects support the following
+methods.</p>
+<p>
+</p>
+<h2><a name="stmt_bind">stmt@@bind</a></h2>
+<pre>        stmt@@bind(n[,value])</pre>
+<p>Binds value to statement parameter <code>n</code>. If the type of
+value is string it is bound as text. If the type of value is number,
+then with Lua prior to 5.3 it is bound as a double, with Lua 5.3 it is
+bound as an integer or double
+depending on its subtype using <code>lua_isinteger</code>. If <code>value</code>
+is a
+boolean then it is bound as 0 for <code>false</code> or 1 for <code>true</code>.
+If <code>value</code> is nil or missing, any previous binding is
+removed. The function
+returns <code>sqlite.OK</code> on success or else a numerical error
+code (see
+<a href="#numerical_error_and_result_codes">Numerical error and result
+codes</a>).</p>
+<p>
+</p>
+<h2><a name="stmt_bind_blob">stmt@@bind_blob</a></h2>
+<pre>        stmt@@bind_blob(n,blob)</pre>
+<p>Binds string <code>blob</code> (which can be a binary string) as a
+blob to statement parameter <code>n</code>. The function returns <code>sqlite.OK</code>
+on success or else a numerical error code (see <a href="#numerical_error_and_result_codes">Numerical error and result
+codes</a>).</p>
+<p>
+</p>
+<h2><a name="stmt_bind_names">stmt@@bind_names</a></h2>
+<pre>        stmt@@bind_names(nametable)</pre>
+<p>Binds the values in <code>nametable</code> to statement parameters.
+If the statement parameters are named (i.e., of the form ":AAA" or
+"$AAA") then this function looks for appropriately named fields in <code>nametable</code>;
+if the statement parameters are
+not named, it looks for numerical fields 1 to the number of statement
+parameters. The function returns <code>sqlite.OK</code> on success or
+else a
+numerical error code (see <a href="#numerical_error_and_result_codes">Numerical
+error and result codes</a>).</p>
+<p>
+</p>
+<h2><a name="stmt_bind_parameter_count">stmt@@bind_parameter_count</a></h2>
+<pre>        stmt@@bind_parameter_count()</pre>
+<p>Returns the largest statement parameter index in prepared statement <code>stmt</code>.
+When the statement parameters are of the forms ":AAA" or "?", then they
+are assigned sequentially increasing numbers beginning with one, so the
+value returned is the number of parameters. However if the same
+statement parameter name is used multiple times, each occurrence is
+given the same number, so the value returned is the number of unique
+statement parameter names.</p>
+<p>If statement parameters of the form "?NNN" are used (where NNN is an
+integer) then there might be gaps in the numbering and the value
+returned by this interface is the index of the statement parameter with
+the largest index value.</p>
+<p>
+</p>
+<h2><a name="stmt_bind_parameter_name">stmt@@bind_parameter_name</a></h2>
+<pre>        stmt@@bind_parameter_name(n)</pre>
+<p>Returns the name of the <code>n</code>-th parameter in prepared
+statement <code>stmt</code>. Statement parameters of the form ":AAA"
+or "@AAA" or "$VVV" have a name which is the string ":AAA" or "@AAA" or
+"$VVV". In other words, the initial ":" or "$" or "@" is included as
+part of the name. Parameters of the form "?" or "?NNN" have no name.
+The first bound parameter has an index of 1.
+If the value <code>n</code> is out of range or if the <code>n</code>-th
+parameter is
+nameless, then nil is returned. The function returns <code>sqlite.OK</code>
+on
+success or else a numerical error code (see
+<a href="#numerical_error_and_result_codes">Numerical error and result
+codes</a>)</p>
+<p>
+</p>
+<h2><a name="stmt_bind_values">stmt@@bind_values</a></h2>
+<pre>        stmt@@bind_values(value1,value2,...,valueN)</pre>
+<p>Binds the given values to statement parameters. The function returns <code>sqlite.OK</code> on success or else a numerical error code (see
+<a href="#numerical_error_and_result_codes">Numerical error and result
+codes</a>).</p>
+<p>
+</p>
+<h2><a name="stmt_columns">stmt@@columns</a></h2>
+<pre>        stmt@@columns()</pre>
+<p>Returns the number of columns in the result set returned by
+statement
+stmt or 0 if the statement does not return data (for example an UPDATE).</p>
+<p>
+</p>
+<h2><a name="stmt_finalize">stmt@@finalize</a></h2>
+<pre>        stmt@@finalize()</pre>
+<p>This function frees prepared statement stmt. If the statement was
+executed successfully, or not executed at all, then <code>sqlite.OK</code>
+is
+returned. If execution of the statement failed then an error code is
+returned.</p>
+<p>
+</p>
+<h2><a name="stmt_get_name">stmt@@get_name</a></h2>
+<pre>        stmt@@get_name(n)</pre>
+<p>Returns the name of column <code>n</code> in the result set of
+statement stmt. (The
+left-most column is number 0.)</p>
+<p>
+</p>
+<h2><a name="stmt_get_named_types">stmt@@get_named_types</a></h2>
+<pre>        stmt@@get_named_types()</pre>
+<p>Returns a table with the names and types of all columns in the
+result
+set of statement stmt.</p>
+<p>
+</p>
+<h2><a name="stmt_get_named_values">stmt@@get_named_values</a></h2>
+<pre>        stmt@@get_named_values()</pre>
+<p>This function returns a table with names and values of all columns
+in
+the current result row of a query.</p>
+<p>
+</p>
+<h2><a name="stmt_get_names">stmt@@get_names</a></h2>
+<pre>        stmt@@get_names()</pre>
+<p>This function returns an array with the names of all columns in the
+result set returned by statement stmt.</p>
+<p>
+</p>
+<h2><a name="stmt_get_type">stmt@@get_type</a></h2>
+<pre>        stmt@@get_type(n)</pre>
+<p>Returns the type of column <code>n</code> in the result set of
+statement stmt. (The
+left-most column is number 0.)</p>
+<p>
+</p>
+<h2><a name="stmt_get_types">stmt@@get_types</a></h2>
+<pre>        stmt@@get_types()</pre>
+<p>This function returns an array with the types of all columns in the
+result set returned by statement stmt.</p>
+<p>
+</p>
+<h2><a name="stmt_get_unames">stmt@@get_unames</a></h2>
+<pre>        stmt@@get_unames()</pre>
+<p>This function returns a list with the names of all columns in the
+result
+set returned by statement stmt.</p>
+<p>
+</p>
+<h2><a name="stmt_get_utypes">stmt@@get_utypes</a></h2>
+<pre>        stmt@@get_utypes()</pre>
+<p>This function returns a list with the types of all columns in the
+result
+set returned by statement stmt.</p>
+<p>
+</p>
+<h2><a name="stmt_get_uvalues">stmt@@get_uvalues</a></h2>
+<pre>        stmt@@get_uvalues()</pre>
+<p>This function returns a list with the values of all columns in the
+current result row of a query.</p>
+<p>
+</p>
+<h2><a name="stmt_get_value">stmt@@get_value</a></h2>
+<pre>        stmt@@get_value(n)</pre>
+<p>Returns the value of column <code>n</code> in the result set of
+statement stmt. (The
+left-most column is number 0.)</p>
+<p>
+</p>
+<h2><a name="stmt_get_values">stmt@@get_values</a></h2>
+<pre>        stmt@@get_values()</pre>
+<p>This function returns an array with the values of all columns in the
+result set returned by statement stmt.</p>
+<p>
+</p>
+<h2><a name="stmt_isopen">stmt@@isopen</a></h2>
+<pre>        stmt@@isopen()</pre>
+<p>Returns true if stmt has not yet been finalized, false otherwise.</p>
+<p>
+</p>
+<h2><a name="stmt_nrows">stmt@@nrows</a></h2>
+<pre>        stmt@@nrows()</pre>
+<p>Returns an function that iterates over the names and values of the
+result set of statement <code>stmt</code>. Each iteration returns a
+table with the
+names and values for the current row.
+This is the prepared statement equivalent of <a href="#db_nrows"><code>db@@nrows()</code></a>.</p>
+<p>
+</p>
+<h2><a name="stmt_reset">stmt@@reset</a></h2>
+<pre>        stmt@@reset()</pre>
+<p>This function resets SQL statement <code>stmt</code>, so that it is
+ready to be
+re-executed. Any statement variables that had values bound to them
+using
+the <code>stmt@@bind*()</code> functions retain their values.</p>
+<p>
+</p>
+<h2><a name="stmt_rows">stmt@@rows</a></h2>
+<pre>        stmt@@rows()</pre>
+<p>Returns an function that iterates over the values of the result set
+of
+statement stmt. Each iteration returns an array with the values for the
+current row.
+This is the prepared statement equivalent of <a href="#db_rows"><code>db@@rows()</code></a>.</p>
+<p>
+</p>
+<h2><a name="stmt_step">stmt@@step</a></h2>
+<pre>        stmt@@step()</pre>
+<p>This function must be called to evaluate the (next iteration of the)
+prepared statement stmt. It will return one of the following values:</p>
+<ul>
+  <li>
+    <p><code>sqlite.BUSY</code>: the engine was unable to acquire the
+locks needed. If the
+statement is a COMMIT or occurs outside of an explicit transaction,
+then
+you can retry the statement. If the statement is not a COMMIT and
+occurs
+within a explicit transaction then you should rollback the transaction
+before continuing.</p>
+  </li>
+  <li>
+    <p><code>sqlite.DONE</code>: the statement has finished executing
+successfully. <a href="#stmt_step"><code>stmt@@step()</code></a>
+should not be called again on this statement without first calling <a href="#stmt_reset"><code>stmt@@reset()</code></a> to reset the virtual
+machine back to the initial state.</p>
+  </li>
+  <li>
+    <p><code>sqlite.ROW</code>: this is returned each time a new row
+of data is ready for
+processing by the caller. The values may be accessed using the column
+access functions. <a href="#stmt_step"><code>stmt@@step()</code></a>
+can be called again to retrieve the next row of data.</p>
+  </li>
+  <li>
+    <p><code>sqlite.ERROR</code>: a run-time error (such as a
+constraint violation) has
+occurred. <a href="#stmt_step"><code>stmt@@step()</code></a> should
+not be called again. More information may be found by calling <a href="#db_errmsg"><code>db@@errmsg()</code></a>. A more specific error
+code (can be obtained by calling <a href="#stmt_reset"><code>stmt@@reset()</code></a>.</p>
+  </li>
+  <li>
+    <p><code>sqlite.MISUSE</code>: the function was called
+inappropriately, perhaps because the statement has already been
+finalized or a previous call to <a href="#stmt_step"><code>stmt@@step()</code></a>
+has returned <code>sqlite.ERROR</code> or <code>sqlite.DONE</code>.</p>
+  </li>
+</ul>
+<p>
+</p>
+<h2><a name="stmt_urows">stmt@@urows</a></h2>
+<pre>        stmt@@urows()</pre>
+<p>Returns an function that iterates over the values of the result set
+of
+statement stmt. Each iteration returns the values for the current row.
+This is the prepared statement equivalent of <a href="#db_urows"><code>db@@urows()</code></a>.</p>
+<p>
+</p>
+<h2><a name="stmt_last_insert_rowid">stmt@@last_insert_rowid</a></h2>
+<pre>        stmt@@last_insert_rowid()</pre>
+<p>This function returns the rowid of the most recent INSERT into the
+database corresponding to this statement. See <a href="#db_last_insert_rowid"><code>db@@last_insert_rowid()</code></a>.</p>
+<p>
+</p>
+<hr>
+<h1><a name="methods_for_callback_contexts">Methods for callback
+contexts</a></h1>
+<p>A callback context is available as a parameter inside the callback
+functions <a href="#db_create_aggregate"><code>db@@create_aggregate()</code></a>
+and <a href="#db_create_function"><code>db@@create_function()</code></a>.
+It can be used
+to get further information about the state of a query.</p>
+<p>
+</p>
+<h2><a name="context_aggregate_count">context@@aggregate_count</a></h2>
+<pre>        context@@aggregate_count()</pre>
+<p>Returns the number of calls to the aggregate step function.</p>
+<p>
+</p>
+<h2><a name="context_get_aggregate_data">context@@get_aggregate_data</a></h2>
+<pre>        context@@get_aggregate_data()</pre>
+<p>Returns the user-definable data field for callback funtions.</p>
+<p>
+</p>
+<h2><a name="context_set_aggregate_data">context@@set_aggregate_data</a></h2>
+<pre>        context@@set_aggregate_data(udata)</pre>
+<p>Set the user-definable data field for callback funtions to <code>udata</code>.</p>
+<p>
+</p>
+<h2><a name="context_result">context@@result</a></h2>
+<pre>        context@@result(res)</pre>
+<p>This function sets the result of a callback function to res. The
+type of
+the result depends on the type of res and is either a number or a
+string
+or nil. All other values will raise an error message.</p>
+<p>
+</p>
+<h2><a name="context_result_null">context@@result_null</a></h2>
+<pre>        context@@result_null()</pre>
+<p>This function sets the result of a callback function to nil. It
+returns
+nothing.</p>
+<p>
+</p>
+<h2><a name="context_result_number">context@@result_number</a></h2>
+<pre>        context@@result_number(number)<br>        context@@result_double(number)</pre>
+<p>This function sets the result of a callback function to the value
+<code>number</code>. It returns nothing.</p>
+<p>
+</p>
+<h2><a name="context_result_int">context@@result_int</a></h2>
+<pre>        context@@result_int(number)</pre>
+<p>This function sets the result of a callback function to the integer
+value in <code>number</code>. It returns nothing.</p>
+<p>
+</p>
+<h2><a name="context_result_text">context@@result_text</a></h2>
+<pre>        context@@result_text(str)</pre>
+<p>This function sets the result of a callback function to the string
+in
+<code>str</code>. It returns nothing.</p>
+<p>
+</p>
+<h2><a name="context_result_blob">context@@result_blob</a></h2>
+<pre>        context@@result_blob(blob)</pre>
+<p>This function sets the result of a callback function to the binary
+string in <code>blob</code>. It returns nothing.</p>
+<p>
+</p>
+<h2><a name="context_result_error">context@@result_error</a></h2>
+<pre>        context@@result_error(err)</pre>
+<p>This function sets the result of a callback function to the error
+value
+in <code>err</code>. It returns nothing.</p>
+<p>
+</p>
+<h2><a name="context_user_data">context@@user_data</a></h2>
+<pre>        context@@user_data()</pre>
+<p>Returns the userdata parameter given in the call to install the
+callback
+function (see <a href="#db_create_aggregate"><code>db@@create_aggregate()</code></a>
+and <a href="#db_create_function"><code>db@@create_function()</code></a>
+for details).</p>
+<p>
+</p>
+<hr>
+<h1><a name="methods_for_online_backup">Methods for Online Backup</a></h1>
+<p>A backup userdata is created using <code>backup =&nbsp;</code><a href="#sqlite3_backup_init"><code>sqlite.backup_init(...)</code></a>.
+It is then used to step the backup, or inquire about its progress.</p>
+<p>
+</p>
+<h2><a name="bu_step">backup@@step</a></h2>
+<pre>        backup@@step(nPages)</pre>
+<p>Returns the status of the backup after stepping <code>nPages</code>.
+It is called one or more times to transfer the data between the two
+databases.</p>
+<p><code>backup@@step(nPages)</code> will copy up to <code>nPages</code>
+pages between the source and destination databases specified by <code>backup</code>
+userdata. If <code>nPages</code> is negative, all remaining source
+pages are copied. </p>
+<p> If <code>backup@@step(nPages)</code> successfully copies <code>nPages</code>
+pages and there are still more pages to be copied, then the function
+returns <code>sqlite.OK</code>. If <code>backup@@step(nPages)</code>
+successfully finishes copying all pages from source to destination,
+then it returns <code>sqlite.DONE</code>. If an error occurs during
+the step, then an error code is returned. such as <code>sqlite.READONLY</code>, <code>sqlite.NOMEM</code>, <code>sqlite.BUSY</code>, <code>sqlite.LOCKED</code>,
+or an <code>sqlite.IOERR_XXX</code> extended error code.
+</p>
+<p>
+</p>
+<h2><a name="bu_remaining">backup@@remaining</a></h2>
+<pre>        backup@@remaining()</pre>
+<p>Returns the number of pages still to be backed up at the conclusion
+of the most recent step.
+</p>
+<p>
+</p>
+<h2><a name="bu_pagecount">backup@@pagecount</a></h2>
+<pre>        backup@@pagecount()</pre>
+<p>Returns the total number of pages in the source database at the
+conclusion of the most recent
+step.</p>
+<p>
+</p>
+<h2><a name="bu_finish">backup@@finish</a></h2>
+<pre>        backup@@finish()</pre>
+<p>When <code>backup@@step(nPages)</code> has returned <code>sqlite.DONE</code>,
+or when the application wishes to abandon the backup operation, the
+application should destroy the backup by calling <code>backup@@finish()</code>.
+This releases all resources associated with the backup. If <code>backup@@step(nPages)</code>
+has not yet returned <code>sqlite.DONE</code>, then any active
+write-transaction on the destination database is rolled back. After the
+call, the backup userdata corresponds to a completed backup, and should
+not be used.
+</p>
+<p>The value returned by <code>backup@@finish()</code> is <code>sqlite.OK</code>
+if no errors occurred, regardless or whether or not the backup
+completed. If an out-of-memory condition or IO error occurred during
+any prior step on the same backup, then <code>backup@@finish()</code>
+returns the corresponding error code.
+</p>
+<p>A return of <code>sqlite.BUSY</code> or <code>sqlite.LOCKED</code>
+from <code>backup@@step(nPages)</code> is not a permanent error and
+does not affect the return value of <code>backup@@finish()</code>.
+</p>
+<p>
+</p>
+<hr>
+<h1><a name="numerical_error_and_result_codes">Numerical error and
+result codes</a></h1>
+<p>The following constants are defined by module sqlite3:</p>
+<pre>  OK: 0            ERROR: 1         INTERNAL: 2      PERM: 3          ABORT: 4<br>  BUSY: 5          LOCKED: 6        NOMEM: 7         READONLY: 8      INTERRUPT: 9<br>  IOERR: 10        CORRUPT: 11      NOTFOUND: 12     FULL: 13         CANTOPEN: 14<br>  PROTOCOL: 15     EMPTY: 16        SCHEMA: 17       TOOBIG: 18       CONSTRAINT: 19<br>  MISMATCH: 20     MISUSE: 21       NOLFS: 22        AUTH: 23         FORMAT: 24<br>  RANGE: 25        NOTAdb: 26       NOTICE: 27       WARNING: 28      ROW: 100<br>  DONE: 101</pre>
+<p>plus the Authorizer Action Codes:</p>
+<pre>  CREATE_INDEX: 1         CREATE_TABLE: 2       CREATE_TEMP_INDEX: 3  CREATE_TEMP_TABLE: 4<br>  CREATE_TEMP_TRIGGER: 5  CREATE_TEMP_VIEW: 6   CREATE_TRIGGER: 7     CREATE_VIEW: 8<br>  DELETE: 9               DROP_INDEX: 10        DROP_TABLE: 11        DROP_TEMP_INDEX: 12<br>  DROP_TEMP_TABLE: 13     DROP_TEMP_TRIGGER: 14 DROP_TEMP_VIEW: 15    DROP_TRIGGER: 16<br>  DROP_VIEW: 17           INSERT: 18            PRAGMA: 19            READ: 20<br>  SELECT: 21              TRANSACTION: 22       UPDATE: 23            ATTACH: 24<br>  DETACH: 25              ALTER_TABLE: 26       REINDEX: 27           ANALYZE: 28<br>  CREATE_VTABLE: 29       DROP_VTABLE: 30       FUNCTION: 31          SAVEPOINT: 32<br></pre>
+<p>and the Open Flags:</p>
+<pre>  OPEN_READONLY           OPEN_READWRITE        OPEN_CREATE           OPEN_URI<br>  OPEN_MEMORY             OPEN_NOMUTEX          OPEN_FULLMUTEX        OPEN_SHAREDCACHE<br>  OPEN_PRIVATECACHE<br></pre>
+<p>For details about their exact meaning please see the <strong>SQLite3
+documentation</strong> <a href="http://www.sqlite.org/">http://www.sqlite.org/</a>.</p>
+<p>
+</p>
+<hr>
+<h1><a name="version">VERSION</a></h1>
+<p>This is <code>lsqlite3</code> version "0.9.4", also tagged as <code>fsl_9x</code>.</p>
+<p>
+</p>
+<hr>
+<h1><a name="credits">CREDITS</a></h1>
+<p><code>lsqlite3</code> was developed by Tiago Dionizio and Doug
+Currie with contributions from Thomas Lauer, Michael Roth, and Wolfgang
+Oertl.</p>
+<p>This documentation is based on the "(very) preliminary" documents
+for the Idle-SQLite3 database module. Thanks to Thomas Lauer for
+making it available.</p>
+<p>
+</p>
+<hr>
+<h1><a name="license">LICENSE</a></h1>
+<pre>    /************************************************************************<br>    * lsqlite3                                                              *<br>    * Copyright (C) 2002-2016 Tiago Dionizio, Doug Currie                   *<br>    * All rights reserved.                                                  *<br>    * Author    : Tiago Dionizio &lt;tiago.dionizio@ist.utl.pt&gt;                *<br>    * Author    : Doug Currie &lt;doug.currie@alum.mit.edu&gt;                    *<br>    * Library   : lsqlite3 - an SQLite 3 database binding for Lua 5         *<br>    *                                                                       *<br>    * Permission is hereby granted, free of charge, to any person obtaining *<br>    * a copy of this software and associated documentation files (the       *<br>    * "Software"), to deal in the Software without restriction, including   *<br>    * without limitation the rights to use, copy, modify, merge, publish,   *<br>    * distribute, sublicense, and/or sell copies of the Software, and to    *<br>    * permit persons to whom the Software is furnished to do so, subject to *<br>    * the following conditions:                                             *<br>    *                                                                       *<br>    * The above copyright notice and this permission notice shall be        *<br>    * included in all copies or substantial portions of the Software.       *<br>    *                                                                       *<br>    * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       *<br>    * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    *<br>    * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*<br>    * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  *<br>    * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  *<br>    * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     *<br>    * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                *<br>    ************************************************************************/<br></pre>
+<script nonce="">/* builtin.c:637 */
+(function(){
+if(window.NodeList && !NodeList.prototype.forEach){NodeList.prototype.forEach = Array.prototype.forEach;}
+if(!window.fossil) window.fossil={};
+window.fossil.version = "2.27 [01855974c9] 2025-07-15 20:11:35 UTC";
+window.fossil.rootPath = "/home"+'/';
+window.fossil.config = {projectName: "LuaSQLite3",
+shortProjectName: "",
+projectCode: "ca59eedc9f232f655fee677b1c7305656fabc228",
+/* Length of UUID hashes for display purposes. */hashDigits: 10, hashDigitsUrl: 16,
+diffContextLines: 5,
+editStateMarkers: {/*Symbolic markers to denote certain edit states.*/isNew:'[+]', isModified:'[*]', isDeleted:'[-]'},
+confirmerButtonTicks: 3 /*default fossil.confirmer tick count.*/,
+skin:{isDark: false/*true if the current skin has the 'white-foreground' detail*/}
+};
+window.fossil.user = {name: "guest",isAdmin: false};
+if(fossil.config.skin.isDark) document.body.classList.add('fossil-dark-style');
+window.fossil.page = {name:"doc/tip/doc/lsqlite3.wiki"};
+})();
+</script>
+<script nonce="">/* doc.c:434 */
+window.addEventListener('load', ()=>window.fossil.pikchr.addSrcView(), false);
+</script></div>
+
+<footer>
+This page was generated in about
+0.007s by
+Fossil 2.27 [01855974c9] 2025-07-15 20:11:35
+</footer>
+<script nonce="">/* style.c:899 */
+function debugMsg(msg){
+var n = document.getElementById("debugMsg");
+if(n){n.textContent=msg;}
+}
+</script>
+<script nonce="">
+/* hbmenu.js *************************************************************/
+(function() {
+var hbButton = document.getElementById("hbbtn");
+if (!hbButton) return;
+if (!document.addEventListener) return;
+var panel = document.getElementById("hbdrop");
+if (!panel) return;
+if (!panel.style) return;
+var panelBorder = panel.style.border;
+var panelInitialized = false;
+var panelResetBorderTimerID = 0;
+var animate = panel.style.transition !== null && (typeof(panel.style.transition) == "string");
+var animMS = panel.getAttribute("data-anim-ms");
+if (animMS) {
+animMS = parseInt(animMS);
+if (isNaN(animMS) || animMS == 0)
+animate = false;
+else if (animMS < 0)
+animMS = 400;
+}
+else
+animMS = 400;
+var panelHeight;
+function calculatePanelHeight() {
+panel.style.maxHeight = '';
+var es   = window.getComputedStyle(panel),
+edis = es.display,
+epos = es.position,
+evis = es.visibility;
+panel.style.visibility = 'hidden';
+panel.style.position   = 'absolute';
+panel.style.display    = 'block';
+panelHeight = panel.offsetHeight + 'px';
+panel.style.display    = edis;
+panel.style.position   = epos;
+panel.style.visibility = evis;
+}
+function showPanel() {
+if (panelResetBorderTimerID) {
+clearTimeout(panelResetBorderTimerID);
+panelResetBorderTimerID = 0;
+}
+if (animate) {
+if (!panelInitialized) {
+panelInitialized = true;
+calculatePanelHeight();
+panel.style.transition = 'max-height ' + animMS +
+'ms ease-in-out';
+panel.style.overflowY  = 'hidden';
+panel.style.maxHeight  = '0';
+}
+setTimeout(function() {
+panel.style.maxHeight = panelHeight;
+panel.style.border    = panelBorder;
+}, 40);
+}
+panel.style.display = 'block';
+document.addEventListener('keydown',panelKeydown,true);
+document.addEventListener('click',panelClick,false);
+}
+var panelKeydown = function(event) {
+var key = event.which || event.keyCode;
+if (key == 27) {
+event.stopPropagation();
+panelToggle(true);
+}
+};
+var panelClick = function(event) {
+if (!panel.contains(event.target)) {
+panelToggle(true);
+}
+};
+function panelShowing() {
+if (animate) {
+return panel.style.maxHeight == panelHeight;
+}
+else {
+return panel.style.display == 'block';
+}
+}
+function hasChildren(element) {
+var childElement = element.firstChild;
+while (childElement) {
+if (childElement.nodeType == 1)
+return true;
+childElement = childElement.nextSibling;
+}
+return false;
+}
+window.addEventListener('resize',function(event) {
+panelInitialized = false;
+},false);
+hbButton.addEventListener('click',function(event) {
+event.stopPropagation();
+event.preventDefault();
+panelToggle(false);
+},false);
+function panelToggle(suppressAnimation) {
+if (panelShowing()) {
+document.removeEventListener('keydown',panelKeydown,true);
+document.removeEventListener('click',panelClick,false);
+if (animate) {
+if (suppressAnimation) {
+var transition = panel.style.transition;
+panel.style.transition = '';
+panel.style.maxHeight = '0';
+panel.style.border = 'none';
+setTimeout(function() {
+panel.style.transition = transition;
+}, 40);
+}
+else {
+panel.style.maxHeight = '0';
+panelResetBorderTimerID = setTimeout(function() {
+panel.style.border = 'none';
+panelResetBorderTimerID = 0;
+}, animMS);
+}
+}
+else {
+panel.style.display = 'none';
+}
+}
+else {
+if (!hasChildren(panel)) {
+var xhr = new XMLHttpRequest();
+xhr.onload = function() {
+var doc = xhr.responseXML;
+if (doc) {
+var sm = doc.querySelector("ul#sitemap");
+if (sm && xhr.status == 200) {
+panel.innerHTML = sm.outerHTML;
+showPanel();
+}
+}
+}
+var url = hbButton.href + (hbButton.href.includes("?")?"&popup":"?popup")
+xhr.open("GET", url);
+xhr.responseType = "document";
+xhr.send();
+}
+else {
+showPanel();
+}
+}
+}
+})();
+/* fossil.bootstrap.js *************************************************************/
+"use strict";
+(function () {
+if(typeof window.CustomEvent === "function") return false;
+window.CustomEvent = function(event, params) {
+if(!params) params = {bubbles: false, cancelable: false, detail: null};
+const evt = document.createEvent('CustomEvent');
+evt.initCustomEvent( event, !!params.bubbles, !!params.cancelable, params.detail );
+return evt;
+};
+})();
+(function(global){
+const F = global.fossil;
+const timestring = function f(){
+if(!f.rx1){
+f.rx1 = /\.\d+Z$/;
+}
+const d = new Date();
+return d.toISOString().replace(f.rx1,'').split('T').join(' ');
+};
+const localTimeString = function ff(d){
+if(!ff.pad){
+ff.pad = (x)=>(''+x).length>1 ? x : '0'+x;
+}
+d || (d = new Date());
+return [
+d.getFullYear(),'-',ff.pad(d.getMonth()+1),
+'-',ff.pad(d.getDate()),
+' ',ff.pad(d.getHours()),':',ff.pad(d.getMinutes()),
+':',ff.pad(d.getSeconds())
+].join('');
+};
+F.message = function f(msg){
+const args = Array.prototype.slice.call(arguments,0);
+const tgt = f.targetElement;
+if(args.length) args.unshift(
+localTimeString()+':'
+);
+if(tgt){
+tgt.classList.remove('error');
+tgt.innerText = args.join(' ');
+}
+else{
+if(args.length){
+args.unshift('Fossil status:');
+console.debug.apply(console,args);
+}
+}
+return this;
+};
+F.message.targetElement =
+document.querySelector('#fossil-status-bar');
+if(F.message.targetElement){
+F.message.targetElement.addEventListener(
+'dblclick', ()=>F.message(), false
+);
+}
+F.error = function f(msg){
+const args = Array.prototype.slice.call(arguments,0);
+const tgt = F.message.targetElement;
+args.unshift(timestring(),'UTC:');
+if(tgt){
+tgt.classList.add('error');
+tgt.innerText = args.join(' ');
+}
+else{
+args.unshift('Fossil error:');
+console.error.apply(console,args);
+}
+return this;
+};
+F.encodeUrlArgs = function(obj,tgtArray,fakeEncode){
+if(!obj) return '';
+const a = (tgtArray instanceof Array) ? tgtArray : [],
+enc = fakeEncode ? (x)=>x : encodeURIComponent;
+let k, i = 0;
+for( k in obj ){
+if(i++) a.push('&');
+a.push(enc(k),'=',enc(obj[k]));
+}
+return a===tgtArray ? a : a.join('');
+};
+F.repoUrl = function(path,urlParams){
+if(!urlParams) return this.rootPath+path;
+const url=[this.rootPath,path];
+url.push('?');
+if('string'===typeof urlParams) url.push(urlParams);
+else if(urlParams && 'object'===typeof urlParams){
+this.encodeUrlArgs(urlParams, url);
+}
+return url.join('');
+};
+F.isObject = function(v){
+return v &&
+(v instanceof Object) &&
+('[object Object]' === Object.prototype.toString.apply(v) );
+};
+F.mergeLastWins = function(){
+var k, o, i;
+const n = arguments.length, rc={};
+for(i = 0; i < n; ++i){
+if(!F.isObject(o = arguments[i])) continue;
+for( k in o ){
+if(o.hasOwnProperty(k)) rc[k] = o[k];
+}
+}
+return rc;
+};
+F.hashDigits = function(hash,forUrl){
+const n = ('number'===typeof forUrl)
+? forUrl : F.config[forUrl ? 'hashDigitsUrl' : 'hashDigits'];
+return ('string'==typeof hash ? hash.substr(
+0, n
+) : hash);
+};
+F.onPageLoad = function(callback){
+window.addEventListener('load', callback, false);
+return this;
+};
+F.onDOMContentLoaded = function(callback){
+window.addEventListener('DOMContentLoaded', callback, false);
+return this;
+};
+F.shortenFilename = function(name){
+const a = name.split('/');
+if(a.length<=2) return name;
+while(a.length>2) a.shift();
+return '.../'+a.join('/');
+};
+F.page.addEventListener = function f(eventName, callback){
+if(!f.proxy){
+f.proxy = document.createElement('span');
+}
+f.proxy.addEventListener(eventName, callback, false);
+return this;
+};
+F.page.dispatchEvent = function(eventName, eventDetail){
+if(this.addEventListener.proxy){
+try{
+this.addEventListener.proxy.dispatchEvent(
+new CustomEvent(eventName,{detail: eventDetail})
+);
+}catch(e){
+console.error(eventName,"event listener threw:",e);
+}
+}
+return this;
+};
+F.page.setPageTitle = function(title){
+const t = document.querySelector('title');
+if(t) t.innerText = title;
+return this;
+};
+F.debounce = function f(func, waitMs, immediate) {
+var timeoutId;
+if(!waitMs) waitMs = f.$defaultDelay;
+return function() {
+const context = this, args = Array.prototype.slice.call(arguments);
+const later = function() {
+timeoutId = undefined;
+if(!immediate) func.apply(context, args);
+};
+const callNow = immediate && !timeoutId;
+clearTimeout(timeoutId);
+timeoutId = setTimeout(later, waitMs);
+if(callNow) func.apply(context, args);
+};
+};
+F.debounce.$defaultDelay = 500;
+})(window);
+/* fossil.dom.js *************************************************************/
+"use strict";
+(function(F){
+const argsToArray = (a)=>Array.prototype.slice.call(a,0);
+const isArray = (v)=>v instanceof Array;
+const dom = {
+create: function(elemType){
+return document.createElement(elemType);
+},
+createElemFactory: function(eType){
+return function(){
+return document.createElement(eType);
+};
+},
+remove: function(e){
+if(e?.forEach){
+e.forEach(
+(x)=>x?.parentNode?.removeChild(x)
+);
+}else{
+e?.parentNode?.removeChild(e);
+}
+return e;
+},
+clearElement: function f(e){
+if(!f.each){
+f.each = function(e){
+if(e.forEach){
+e.forEach((x)=>f(x));
+return e;
+}
+while(e.firstChild) e.removeChild(e.firstChild);
+};
+}
+argsToArray(arguments).forEach(f.each);
+return arguments[0];
+},
+};
+dom.splitClassList = function f(str){
+if(!f.rx){
+f.rx = /(\s+|\s*,\s*)/;
+}
+return str ? str.split(f.rx) : [str];
+};
+dom.div = dom.createElemFactory('div');
+dom.p = dom.createElemFactory('p');
+dom.code = dom.createElemFactory('code');
+dom.pre = dom.createElemFactory('pre');
+dom.header = dom.createElemFactory('header');
+dom.footer = dom.createElemFactory('footer');
+dom.section = dom.createElemFactory('section');
+dom.span = dom.createElemFactory('span');
+dom.strong = dom.createElemFactory('strong');
+dom.em = dom.createElemFactory('em');
+dom.ins = dom.createElemFactory('ins');
+dom.del = dom.createElemFactory('del');
+dom.label = function(forElem, text){
+const rc = document.createElement('label');
+if(forElem){
+if(forElem instanceof HTMLElement){
+forElem = this.attr(forElem, 'id');
+}
+if(forElem){
+dom.attr(rc, 'for', forElem);
+}
+}
+if(text) this.append(rc, text);
+return rc;
+};
+dom.img = function(src){
+const e = this.create('img');
+if(src) e.setAttribute('src',src);
+return e;
+};
+dom.a = function(href,label){
+const e = this.create('a');
+if(href) e.setAttribute('href',href);
+if(label) e.appendChild(dom.text(true===label ? href : label));
+return e;
+};
+dom.hr = dom.createElemFactory('hr');
+dom.br = dom.createElemFactory('br');
+dom.text = function(){
+return document.createTextNode(argsToArray(arguments).join(''));
+};
+dom.button = function(label,callback){
+const b = this.create('button');
+if(label) b.appendChild(this.text(label));
+if('function' === typeof callback){
+b.addEventListener('click', callback, false);
+}
+return b;
+};
+dom.textarea = function(){
+const rc = this.create('textarea');
+let rows, cols, readonly;
+if(1===arguments.length){
+if('boolean'===typeof arguments[0]){
+readonly = !!arguments[0];
+}else{
+rows = arguments[0];
+}
+}else if(arguments.length){
+rows = arguments[0];
+cols = arguments[1];
+readonly = arguments[2];
+}
+if(rows) rc.setAttribute('rows',rows);
+if(cols) rc.setAttribute('cols', cols);
+if(readonly) rc.setAttribute('readonly', true);
+return rc;
+};
+dom.select = dom.createElemFactory('select');
+dom.option = function(value,label){
+const a = arguments;
+var sel;
+if(1==a.length){
+if(a[0] instanceof HTMLElement){
+sel = a[0];
+}else{
+value = a[0];
+}
+}else if(2==a.length){
+if(a[0] instanceof HTMLElement){
+sel = a[0];
+value = a[1];
+}else{
+value = a[0];
+label = a[1];
+}
+}
+else if(3===a.length){
+sel = a[0];
+value = a[1];
+label = a[2];
+}
+const o = this.create('option');
+if(undefined !== value){
+o.value = value;
+this.append(o, this.text(label || value));
+}else if(undefined !== label){
+this.append(o, label);
+}
+if(sel) this.append(sel, o);
+return o;
+};
+dom.h = function(level){
+return this.create('h'+level);
+};
+dom.ul = dom.createElemFactory('ul');
+dom.li = function(parent){
+const li = this.create('li');
+if(parent) parent.appendChild(li);
+return li;
+};
+dom.createElemFactoryWithOptionalParent = function(childType){
+return function(parent){
+const e = this.create(childType);
+if(parent) parent.appendChild(e);
+return e;
+};
+};
+dom.table = dom.createElemFactory('table');
+dom.thead = dom.createElemFactoryWithOptionalParent('thead');
+dom.tbody = dom.createElemFactoryWithOptionalParent('tbody');
+dom.tfoot = dom.createElemFactoryWithOptionalParent('tfoot');
+dom.tr = dom.createElemFactoryWithOptionalParent('tr');
+dom.td = dom.createElemFactoryWithOptionalParent('td');
+dom.th = dom.createElemFactoryWithOptionalParent('th');
+dom.fieldset = function(legendText){
+const fs = this.create('fieldset');
+if(legendText){
+this.append(
+fs,
+(legendText instanceof HTMLElement)
+? legendText
+: this.append(this.legend(legendText))
+);
+}
+return fs;
+};
+dom.legend = function(legendText){
+const rc = this.create('legend');
+if(legendText) this.append(rc, legendText);
+return rc;
+};
+dom.append = function f(parent){
+const a = argsToArray(arguments);
+a.shift();
+for(let i in a) {
+var e = a[i];
+if(isArray(e) || e.forEach){
+e.forEach((x)=>f.call(this, parent,x));
+continue;
+}
+if('string'===typeof e
+|| 'number'===typeof e
+|| 'boolean'===typeof e
+|| e instanceof Error) e = this.text(e);
+parent.appendChild(e);
+}
+return parent;
+};
+dom.input = function(type){
+return this.attr(this.create('input'), 'type', type);
+};
+dom.checkbox = function(value, checked){
+const rc = this.input('checkbox');
+if(1===arguments.length && 'boolean'===typeof value){
+checked = !!value;
+value = undefined;
+}
+if(undefined !== value) rc.value = value;
+if(!!checked) rc.checked = true;
+return rc;
+};
+dom.radio = function(){
+const rc = this.input('radio');
+let name, value, checked;
+if(1===arguments.length && 'boolean'===typeof name){
+checked = arguments[0];
+name = value = undefined;
+}else if(2===arguments.length){
+name = arguments[0];
+if('boolean'===typeof arguments[1]){
+checked = arguments[1];
+}else{
+value = arguments[1];
+checked = undefined;
+}
+}else if(arguments.length){
+name = arguments[0];
+value = arguments[1];
+checked = arguments[2];
+}
+if(name) this.attr(rc, 'name', name);
+if(undefined!==value) rc.value = value;
+if(!!checked) rc.checked = true;
+return rc;
+};
+const domAddRemoveClass = function f(action,e){
+if(!f.rxSPlus){
+f.rxSPlus = /\s+/;
+f.applyAction = function(e,a,v){
+if(!e || !v
+) return;
+else if(e.forEach){
+e.forEach((E)=>E.classList[a](v));
+}else{
+e.classList[a](v);
+}
+};
+}
+var i = 2, n = arguments.length;
+for( ; i < n; ++i ){
+let c = arguments[i];
+if(!c) continue;
+else if(isArray(c) ||
+('string'===typeof c
+&& c.indexOf(' ')>=0
+&& (c = c.split(f.rxSPlus)))
+|| c.forEach
+){
+c.forEach((k)=>k ? f.applyAction(e, action, k) : false);
+}else if(c){
+f.applyAction(e, action, c);
+}
+}
+return e;
+};
+dom.addClass = function(e,c){
+const a = argsToArray(arguments);
+a.unshift('add');
+return domAddRemoveClass.apply(this, a);
+};
+dom.removeClass = function(e,c){
+const a = argsToArray(arguments);
+a.unshift('remove');
+return domAddRemoveClass.apply(this, a);
+};
+dom.toggleClass = function f(e,c){
+if(e.forEach){
+e.forEach((x)=>x.classList.toggle(c));
+}else{
+e.classList.toggle(c);
+}
+return e;
+};
+dom.hasClass = function(e,c){
+return (e && e.classList) ? e.classList.contains(c) : false;
+};
+dom.moveTo = function(dest,e){
+const n = arguments.length;
+var i = 1;
+const self = this;
+for( ; i < n; ++i ){
+e = arguments[i];
+this.append(dest, e);
+}
+return dest;
+};
+dom.moveChildrenTo = function f(dest,e){
+if(!f.mv){
+f.mv = function(d,v){
+if(d instanceof Array){
+d.push(v);
+if(v.parentNode) v.parentNode.removeChild(v);
+}
+else d.appendChild(v);
+};
+}
+const n = arguments.length;
+var i = 1;
+for( ; i < n; ++i ){
+e = arguments[i];
+if(!e){
+console.warn("Achtung: dom.moveChildrenTo() passed a falsy value at argument",i,"of",
+arguments,arguments[i]);
+continue;
+}
+if(e.forEach){
+e.forEach((x)=>f.mv(dest, x));
+}else{
+while(e.firstChild){
+f.mv(dest, e.firstChild);
+}
+}
+}
+return dest;
+};
+dom.replaceNode = function f(old,nu){
+var i = 1, n = arguments.length;
+++f.counter;
+try {
+for( ; i < n; ++i ){
+const e = arguments[i];
+if(e.forEach){
+e.forEach((x)=>f.call(this,old,e));
+continue;
+}
+old.parentNode.insertBefore(e, old);
+}
+}
+finally{
+--f.counter;
+}
+if(!f.counter){
+old.parentNode.removeChild(old);
+}
+};
+dom.replaceNode.counter = 0;
+dom.attr = function f(e){
+if(2===arguments.length) return e.getAttribute(arguments[1]);
+const a = argsToArray(arguments);
+if(e.forEach){
+e.forEach(function(x){
+a[0] = x;
+f.apply(f,a);
+});
+return e;
+}
+a.shift();
+while(a.length){
+const key = a.shift(), val = a.shift();
+if(null===val || undefined===val){
+e.removeAttribute(key);
+}else{
+e.setAttribute(key,val);
+}
+}
+return e;
+};
+const enableDisable = function f(enable){
+var i = 1, n = arguments.length;
+for( ; i < n; ++i ){
+let e = arguments[i];
+if(e.forEach){
+e.forEach((x)=>f(enable,x));
+}else{
+e.disabled = !enable;
+}
+}
+return arguments[1];
+};
+dom.enable = function(e){
+const args = argsToArray(arguments);
+args.unshift(true);
+return enableDisable.apply(this,args);
+};
+dom.disable = function(e){
+const args = argsToArray(arguments);
+args.unshift(false);
+return enableDisable.apply(this,args);
+};
+dom.selectOne = function(x,origin){
+var src = origin || document,
+e = src.querySelector(x);
+if(!e){
+e = new Error("Cannot find DOM element: "+x);
+console.error(e, src);
+throw e;
+}
+return e;
+};
+dom.flashOnce = function f(e,howLongMs,afterFlashCallback){
+if(e.dataset.isBlinking){
+return;
+}
+if(2===arguments.length && 'function' ===typeof howLongMs){
+afterFlashCallback = howLongMs;
+howLongMs = f.defaultTimeMs;
+}
+if(!howLongMs || 'number'!==typeof howLongMs){
+howLongMs = f.defaultTimeMs;
+}
+e.dataset.isBlinking = true;
+const transition = e.style.transition;
+e.style.transition = "opacity "+howLongMs+"ms ease-in-out";
+const opacity = e.style.opacity;
+e.style.opacity = 0;
+setTimeout(function(){
+e.style.transition = transition;
+e.style.opacity = opacity;
+delete e.dataset.isBlinking;
+if(afterFlashCallback) afterFlashCallback();
+}, howLongMs);
+return e;
+};
+dom.flashOnce.defaultTimeMs = 400;
+dom.flashOnce.eventHandler = (event)=>dom.flashOnce(event.target)
+dom.flashNTimes = function(e,n,howLongMs,afterFlashCallback){
+const args = argsToArray(arguments);
+args.splice(1,1);
+if(arguments.length===3 && 'function'===typeof howLongMs){
+afterFlashCallback = howLongMs;
+howLongMs = args[1] = this.flashOnce.defaultTimeMs;
+}else if(arguments.length<3){
+args[1] = this.flashOnce.defaultTimeMs;
+}
+n = +n;
+const self = this;
+const cb = args[2] = function f(){
+if(--n){
+setTimeout(()=>self.flashOnce(e, howLongMs, f),
+howLongMs+(howLongMs*0.1));
+}else if(afterFlashCallback){
+afterFlashCallback();
+}
+};
+this.flashOnce.apply(this, args);
+return this;
+};
+dom.addClassBriefly = function f(e, className, howLongMs, afterCallback){
+if(arguments.length<4 && 'function'===typeof howLongMs){
+afterCallback = howLongMs;
+howLongMs = f.defaultTimeMs;
+}else if(arguments.length<3 || !+howLongMs){
+howLongMs = f.defaultTimeMs;
+}
+this.addClass(e, className);
+setTimeout(function(){
+dom.removeClass(e, className);
+if(afterCallback) afterCallback();
+}, howLongMs);
+return this;
+};
+dom.addClassBriefly.defaultTimeMs = 1000;
+dom.copyTextToClipboard = function(text){
+if( window.clipboardData && window.clipboardData.setData ){
+window.clipboardData.setData('Text',text);
+return true;
+}else{
+const x = document.createElement("textarea");
+x.style.position = 'fixed';
+x.value = text;
+document.body.appendChild(x);
+x.select();
+var rc;
+try{
+document.execCommand('copy');
+rc = true;
+}catch(err){
+rc = false;
+}finally{
+document.body.removeChild(x);
+}
+return rc;
+}
+};
+dom.copyStyle = function f(e, style){
+if(e.forEach){
+e.forEach((x)=>f(x, style));
+return e;
+}
+if(style){
+let k;
+for(k in style){
+if(style.hasOwnProperty(k)) e.style[k] = style[k];
+}
+}
+return e;
+};
+dom.effectiveHeight = function f(e){
+if(!e) return 0;
+if(!f.measure){
+f.measure = function callee(e, depth){
+if(!e) return;
+const m = e.getBoundingClientRect();
+if(0===depth){
+callee.top = m.top;
+callee.bottom = m.bottom;
+}else{
+callee.top = m.top ? Math.min(callee.top, m.top) : callee.top;
+callee.bottom = Math.max(callee.bottom, m.bottom);
+}
+Array.prototype.forEach.call(e.children,(e)=>callee(e,depth+1));
+if(0===depth){
+f.extra += callee.bottom - callee.top;
+}
+return f.extra;
+};
+}
+f.extra = 0;
+f.measure(e,0);
+return f.extra;
+};
+dom.parseHtml = function(){
+let childs, string, tgt;
+if(1===arguments.length){
+string = arguments[0];
+}else if(2==arguments.length){
+tgt = arguments[0];
+string  = arguments[1];
+}
+if(string){
+const newNode = new DOMParser().parseFromString(string, 'text/html');
+childs = newNode.documentElement.querySelector('body');
+childs = childs ? Array.prototype.slice.call(childs.childNodes, 0) : [];
+}else{
+childs = [];
+}
+return tgt ? this.moveTo(tgt, childs) : childs;
+};
+F.connectPagePreviewers = function f(selector,methodNamespace){
+if('string'===typeof selector){
+selector = document.querySelectorAll(selector);
+}else if(!selector.forEach){
+selector = [selector];
+}
+if(!methodNamespace){
+methodNamespace = F.page;
+}
+selector.forEach(function(e){
+e.addEventListener(
+'click', function(r){
+const eTo = '#'===e.dataset.fPreviewTo[0]
+? document.querySelector(e.dataset.fPreviewTo)
+: methodNamespace[e.dataset.fPreviewTo],
+eFrom = '#'===e.dataset.fPreviewFrom[0]
+? document.querySelector(e.dataset.fPreviewFrom)
+: methodNamespace[e.dataset.fPreviewFrom],
+asText = +(e.dataset.fPreviewAsText || 0);
+eTo.textContent = "Fetching preview...";
+methodNamespace[e.dataset.fPreviewVia](
+(eFrom instanceof Function ? eFrom.call(methodNamespace) : eFrom.value),
+function(r){
+if(eTo instanceof Function) eTo.call(methodNamespace, r||'');
+else if(!r){
+dom.clearElement(eTo);
+}else if(asText){
+eTo.textContent = r;
+}else{
+dom.parseHtml(dom.clearElement(eTo), r);
+}
+}
+);
+}, false
+);
+});
+return this;
+};
+return F.dom = dom;
+})(window.fossil);
+/* fossil.pikchr.js *************************************************************/
+(function(F){
+"use strict";
+const D = F.dom, P = F.pikchr = {};
+P.addSrcView = function f(svg){
+if(!f.hasOwnProperty('parentClick')){
+f.parentClick = function(ev){
+if(ev.altKey || ev.metaKey || ev.ctrlKey
+|| this.classList.contains('toggle')){
+this.classList.toggle('source');
+ev.stopPropagation();
+ev.preventDefault();
+}
+};
+f.clickPikchrShow = function(ev){
+const pId = this.dataset['pikchrid'];
+if(!pId) return;
+const ePikchr = this.parentNode.parentNode.querySelector('#'+pId);
+if(!ePikchr) return;
+ev.stopPropagation();
+window.sessionStorage.setItem('pikchr-xfer', ePikchr.innerText);
+};
+};
+if(!svg) svg = 'svg.pikchr';
+if('string' === typeof svg){
+document.querySelectorAll(svg).forEach((e)=>f.call(this, e));
+return this;
+}else if(svg.forEach){
+svg.forEach((e)=>f.call(this, e));
+return this;
+}
+if(svg.dataset.pikchrProcessed){
+return this;
+}
+svg.dataset.pikchrProcessed = 1;
+const parent = svg.parentNode.parentNode;
+const srcView = parent ? svg.parentNode.nextElementSibling : undefined;
+if(srcView && srcView.classList.contains('pikchr-src')){
+parent.addEventListener('click', f.parentClick, false);
+const eSpan = window.sessionStorage
+? srcView.querySelector('span')
+: undefined;
+if(eSpan){
+const openLink = eSpan.querySelector('a');
+if(openLink){
+openLink.addEventListener('click', f.clickPikchrShow, false);
+eSpan.classList.remove('hidden');
+}
+}
+}
+return this;
+};
+})(window.fossil);
+</script>
+</body></html>

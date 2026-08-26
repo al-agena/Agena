@@ -1,0 +1,149 @@
+import sqlite
+
+width := 78
+procedure line(pref, suff)
+   pref := pref or ''
+   suff := suff or ''
+   local len := width - 2 - size(pref) - size(suff)
+   print(pref & strings.repeat('-', len) & suff)
+end
+
+#local db, vm
+assert_, assert := assert, proc(test) is
+   if (not test) then
+       error(db@@errmsg(), 2)
+   end
+end
+
+line(sqlite.version())
+
+os.remove('test.db', true);
+db := sqlite.open('test.db')
+
+line(nil, 'db@@exec')
+db@@exec('CREATE TABLE t(a, b)')
+
+line(nil, 'prepare')
+vm := db@@prepare('insert into t values(?, :bork)'):
+assume(vm, db@@errmsg())
+assume(vm@@bind_parameter_count() = 2)
+assume(vm@@bind_values(2, 4) = sqlite.OK)
+assume(vm@@step() = sqlite.DONE)
+assume(vm@@reset() = sqlite.OK)
+assume(vm@@bind_names([ 'pork', bork = 'nono' ]) = sqlite.OK)
+#assume(vm@@bind_names[ 'pork', bork = 'nono' ] = sqlite.OK)
+assume(vm@@step() = sqlite.DONE)
+vm@@reset():
+assume(vm@@reset() = sqlite.OK)
+assume(vm@@bind_names([ bork = 'sisi' ]) = sqlite.OK)
+assume(vm@@step() = sqlite.DONE)
+assume(vm@@reset() = sqlite.OK)
+assume(vm@@bind_names([ 1 ]) = sqlite.OK)
+assume(vm@@step() = sqlite.DONE)
+assume(vm@@finalize() = sqlite.OK)
+
+line("select * from t", 'db@@exec')
+
+assume(db@@exec('select * from t', proc (ud, ncols, values, names) is
+   #table.setn(values, 2)
+   print(tables.unpack(values))
+   return sqlite.OK
+end) = sqlite.OK)
+
+line("select * from t", 'db@@prepare')
+
+vm := db@@prepare('select * from t'):
+assume(vm, db@@errmsg())
+print(vm@@get_unames())
+while vm@@step() = sqlite.ROW do
+   print(vm@@get_uvalues())
+end
+assume(vm@@finalize() = sqlite.OK)
+
+line('udf', 'scalar')
+
+procedure do_query(sql) is
+   local r, vm;
+   vm := db@@prepare(sql)
+   assume(vm, db@@errmsg())
+   print('====================================')
+   print(vm@@get_unames())
+   print('------------------------------------')
+   r := vm@@step()
+   while (r = sqlite.ROW) do
+       print(vm@@get_uvalues())
+       r := vm@@step()
+   end
+   assume(r = sqlite.DONE)
+   assume(vm@@finalize() = sqlite.OK)
+   print('====================================')
+end
+
+procedure udf1_scalar(ctx, v) is
+   local ud := ctx@@user_data()
+   ud.r := (ud.r or '') & tostring(v)
+   ctx@@result_text(ud.r)
+end
+
+db@@create_function('udf1', 1, udf1_scalar, [])
+do_query('select udf1(a) from t')
+
+line('udf', 'aggregate')
+
+procedure udf2_aggregate(ctx, ?) is
+   local ud := ctx@@get_aggregate_data()
+   if not ud then
+       ud := []
+       ctx@@set_aggregate_data(ud)
+   end
+   ud.r := (ud.r or 0) + 2
+end
+
+procedure udf2_aggregate_finalize(ctx, v) is
+   local ud := ctx@@get_aggregate_data()
+   ctx@@result_number(ud and ud.r or 0)
+end
+
+db@@create_aggregate('udf2', 1, udf2_aggregate, udf2_aggregate_finalize, [])
+do_query('select udf2(a) from t')
+
+line(nil, '100 insert exec')
+db@@exec('delete from t'):
+t := os.time()
+for i to 100 do
+   db@@exec('insert into t values(' & i & ', ' & (i * 2 * -1^i) & ')')
+end
+print('elapsed: ' & (os.time() - t))
+do_query('select count(*) from t')
+
+line(nil, '100000 insert exec T')
+db@@exec('delete from t'):
+t := os.time()
+db@@exec('begin')
+for i to 100000 do
+   db@@exec('insert into t values(' & i & ', ' & (i * 2 * -1^i) & ')')
+end
+db@@exec('commit'):
+print('elapsed: ' & (os.time() - t))
+do_query('select count(*) from t')
+
+line(nil, '100000 insert prepare/bind T')
+db@@exec('delete from t')
+t := os.time()
+vm := db@@prepare('insert into t values(?, ?)')
+db@@exec('begin')
+for i to 100000 do
+   vm@@bind_values(i, i * 2 * -1^i)
+   vm@@step()
+   vm@@reset()
+end
+vm@@finalize()
+db@@exec('commit')
+print('elapsed: ' & (os.time() - t))
+do_query('select count(*) from t')
+
+line(nil, "db@@close")
+
+assume(db@@close() = sqlite.OK)
+
+line(sqlite.version())
