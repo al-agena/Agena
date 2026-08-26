@@ -1,0 +1,29 @@
+# Evaluate the natural logarithm of given numbers
+
+# Usage:   agena ln.agn <arguments>
+# Example: agena ln.agn 0 1 2
+# Result:  ln(0) = undefined
+#          ln(1) = 0
+#          ln(2) = 0.69314718055995
+
+if nargs < 1 then
+   print('Error, need at least one number');
+   os.exit(-1) # just return error exit code
+fi;
+
+rc := 0; # exit/return code of the script
+
+for i to nargs do # iterate each argument at the command line
+   x := tonumber(args[i]);
+   if x -: number then x := 0 fi;    # if conversion failed, set x to 0
+   r := ln(x);
+   if r = undefined then rc := 1 fi; # there was an arithmetic error
+   writeline('ln(', x, ') = ', r)
+od;
+
+/* clear interpreter state, perform garbage collection & return exit code:
+-1 = no arguments given
+ 0 = okay
+ 1 = domain error or wrong type of argument */
+
+os.exit(rc, true);

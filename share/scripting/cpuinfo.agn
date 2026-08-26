@@ -1,0 +1,129 @@
+#!/usr/local/bin/agena
+
+# cpuinfo [/a] [/c] [/d] [/s] [/h]
+# Prints various information on installed CPU.
+local noptions, help, L, narguments, isets, cache, details;
+
+if unassigned printf then
+   printf := proc(?) is
+      local fd := ?[1];
+      if io.isfdesc(fd) then
+         io.write(fd, strings.format(op(2:nargs, ?)));
+         io.sync(fd)
+      else
+         io.write(strings.format(op(?)));
+         io.sync()  # for Solaris to print text immediately at the console
+      fi;
+   end
+fi;
+
+# First search for options
+
+noptions := 0;  # number of options
+
+for arg in args do
+   if   arg in {'/c', '-c'} then cache := true
+   elif arg in {'/d', '-d'} then details := true
+   elif arg in {'/s', '-s'} then isets := true
+   elif arg in {'/a', '-a'} then cache, details, isets -> true
+   elif arg in {'/h', '-h'} then help := true
+   onsuccess inc noptions
+   fi
+od;
+
+narguments := nargs;
+
+notcalledfromagena := unassigned(args[-1])
+
+if notcalledfromagena and narguments = 0 then
+   narguments := size args[2 to size(args)]
+fi;
+
+# No argument given or /h switch given ? -> print help
+if help then
+   print('Prints information about the installed CPU.');
+   print('Usage: cpuinfo');
+   print('Options:');
+   print('       /c - add cache information')
+   print('       /d - add details on vendor & revision')
+   print('       /s - add supported instruction sets')
+   print('       /a - all options combined')
+   print('       /h - this help');
+   os.exit()
+fi;
+
+# search for the file
+try
+   L := os.cpuinfo();
+catch
+   print('Operation failed.');
+   os.exit(0)
+yrt;
+
+if L = fail then  # no file found
+   print('Operation failed.');
+   os.exit(0)
+fi;
+
+print('\nGeneral');
+print('-------');
+print('Brand:               ' & L.brand);
+if os.iswindows() then
+print('Type:                ' & L['type'])
+fi;
+print('Frequency in Mhz:    ' & strings.trim(strings.format('%5.0m ', L.frequency)));
+print('Cycles per usec:     ' & strings.trim(strings.format('%5.0m ', L.cyclesperusec)));
+print('Cores:               ' & L.ncpu);
+print('Endianness:          ' & if L.bigendian = true then "Big Endian" else "Little Endian" fi);
+
+if details then
+print('\nDetails');
+print('-------');
+print('Vendor:              ' & L.vendor);
+if os.iswindows() then
+local cputype := sorted(totable(L.cputype));
+printf('Processor type:      ');
+for i to size cputype do
+   if i < size cputype then
+      printf('%s, ', cputype[i])
+   else
+      printf('%s\n', cputype[i])
+   fi
+od;
+print('Processor level:     ' & L.level);
+print('Processor revision:  ' & L.revision)
+fi
+fi;
+
+if cache then
+print('\nCache');
+print('-----');
+for i from 0 to size L.cache - 1 do
+print('#' & i & ' level: ' & L.cache[i, 'level']);
+print('#' & i & ' size:  ' & strings.trim(strings.format('%6.0m bytes', L.cache[i, 'size'])));
+print('#' & i & ' sets:  ' & strings.trim(strings.format('%6.0m', L.cache[i, 'sets'])))
+od;
+fi;
+
+if isets then
+print('\nInstruction sets');
+print('----------------');
+local support := sorted(totable(L.support));
+local instructions := '';
+for i to size support do
+   instructions &:= support[i];
+   if i < size support then
+      printf('%s, ', support[i])
+   else
+      printf('%s\n', support[i])
+   fi;
+   if size instructions + size support[i + 1] > 75 then
+      printf('\n');
+      instructions := ''
+   fi;
+   instructions &:= ', '
+od
+fi;
+
+os.exit(1);
+

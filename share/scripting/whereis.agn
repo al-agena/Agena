@@ -1,0 +1,215 @@
+#!/usr/local/bin/agena
+
+# whereis [/r] [/s] [/d] [/a] [/h] <file> <path>
+# Searches for the location of the given <file> in <path>. Depending on the options, the script prints
+# file location, date, size.
+
+local printdate, printsize, recurse, noptions, optiongiven, fileattribs, L, file, path, help,
+   narguments, notcalledfromagena;
+
+# For an srglue/sragena-created binary executable, we need the following three functions:
+
+if unassigned printf then
+   printf := proc(?) is
+      local fd := ?[1];
+      if io.isfdesc(fd) then
+         io.write(fd, strings.format(op(2:nargs, ?)));
+         io.sync(fd)
+      else
+         io.write(strings.format(op(?)));
+         io.sync()  # for Solaris to print text immediately at the console
+      fi;
+   end
+
+   os.list := proc(dirname, ?) is
+      local olddirname, restorecwd, dir, p, pattern, topp, options, isrec, err;
+      dirname := dirname or os.chdir();
+      dirname -: string ? argerror(dirname, 'os.list', 'expected a string or null');
+      olddirname := os.chdir();
+      dirname := strings.replace(dirname, '\\', '/');
+      # remove trailing slashes
+      size dirname > 1 ? dirname := strings.chop(dirname, <: x -> x == '/' :>);
+      p := dirname split '/';
+      topp := top(p);
+      options := unique(?);
+      if 'r' in options then  # recursive descent ?
+         delete 'r' from options;
+         options := tables.entries(options);  # remove holes
+         isrec := true
+      fi;
+      if topp <> null and ('*' in topp or '?' in topp or topp = '.') then
+         # is there a joker or dot in the end of the path ?
+         if topp <> '.' and topp <> '*' then insert topp into options fi;
+         pop top from p;
+         dirname := strings.join(p, '/')
+      fi;
+      if unique(p) = seq('..') then  # process something like '../../..'
+         local q := os.chdir() split '/';
+         dirname := if is size q <= size p then
+            return '/'
+         else
+            for i to size p do
+               pop top from q
+            od;
+            return strings.join(q, '/')
+         fi
+      fi;
+      dirname := if is size dirname = 2 and dirname[2] = ':' then  # drive letter has been passed ?
+         restorecwd := true;
+         os.chdir(dirname);
+         return '/'
+      elif dirname = '' then  # dirname was something like '*.c' ?
+         return os.chdir()
+      else
+         return dirname
+      fi;
+      dir, err := os.listcore(dirname, op(options));  # listcore does not understand the 'r' option
+      if dir = null then
+         restorecwd ? os.chdir(olddirname);
+         return null, err
+      fi;
+      if isrec then  # traverse subfolders recursively
+         local subdir, curdirname, olddirnameloc;
+         insert 'r' into options;
+         olddirnameloc := os.chdir();
+         if os.chdir(dirname, true) then  # avoid `access not permitted` errors
+            for i in os.list(dirname, 'dirs') do
+               curdirname := dirname & if dirname = '/' then '' else '/' fi & i;  # treat root differently
+               subdir := os.list(curdirname, op(options));
+               for j in subdir do
+                  insert i & '/' & j into dir
+               od
+            od
+         fi;
+         os.chdir(olddirnameloc)
+      fi;
+      restorecwd ? os.chdir(olddirname);
+      return sort(dir), dirname
+   end;
+
+   os.whereis := proc(file :: string, dir :: string, ?) is
+      local recursive, caseinsens, where_aux, r, pos, count;
+      where_aux := proc(file, folder) is
+         if count := os.countcore(folder), count :: number and count <= 1024 then
+            local items, directory, fsobject := os.list(folder), folder;  /* use os.list, not os.listcore
+            as the latter does not properly deal with roots (c:\ etc.) */
+            for i in items do
+               fsobject := directory & '/' & i;
+               if strings.glob(os.filename(fsobject) or (fsobject split '/')[-1], file, caseinsens) then
+                  insert fsobject[pos to -1] into r
+               fi;
+               if recursive and os.isdir(fsobject) then
+                  procname(file, fsobject)
+               fi
+            od
+         else
+            local f, fsobject, fstype;
+            f := os.iterate(folder, true);
+            do
+               fsobject, fstype := f();
+               break when unassigned fsobject;
+               if strings.glob(os.filename(fsobject) or (fsobject split '/')[-1], file, caseinsens) then
+                  insert fsobject[pos to -1] into r
+               fi;
+               if recursive and fstype = 'DIR' then
+                  procname(file, fsobject)
+               fi
+            od
+         fi
+      end;
+      recursive, caseinsens, r := null, true, [];
+      for i in ? do
+         case i
+            of 'r' then recursive := 'r';
+            of 's' then caseinsens := false
+         esac
+      od;
+      if size dir = 2 and os.isdriveletter(dir) then
+         dir &:= '/'
+      elif dir in {'*', '.'} then
+         dir := os.realpath('.')
+      fi;
+      if not os.isdir(dir) then
+         printf('Error in `os.whereis`: folder `%s` does not exist', dir);
+         os.exit(0)
+      fi;
+      pos := size dir + 2 - (size dir = 3 and os.isdriveletter(dir));
+      where_aux(file, os.dirname(dir))
+      sort(r);       # sort in-place
+      environ.gc();  # explicitly close all open dir handles
+      return r
+   end
+fi;
+
+# First search for options
+
+noptions := 0;  # number of options
+
+for arg in args do
+   if   arg in {'/r', '-r'} then recurse := 'r'
+   elif arg in {'/h', '-h'} then help := true
+   elif arg in {'/s', '-s'} then printsize := true
+   elif arg in {'/d', '-d'} then printdate := true
+   elif arg in {'/a', '-a'} then printdate, printsize -> true
+   onsuccess inc noptions
+   fi
+od;
+
+narguments := nargs;
+
+notcalledfromagena := unassigned(args[-1])
+
+if notcalledfromagena and narguments = 0 then
+   narguments := size args[2 to size(args)]
+fi;
+
+# No argument given or /h switch given ? -> print help
+if narguments < 2 or help then
+   print('Locate a file in the given path.');
+   print('Usage: whereis [/r] [/s] [/d] [/a] [/h] <file> <dir>');
+   print('       /r - recurse starting with directory <dir>');
+   print('       /s - print size in bytes along with <file>');
+   print('       /d - print date along with <file>');
+   print('       /a - print date, size along with <file>');
+   print('       /h - this help');
+   print('Wildcards, * and ? are allowed in <file>, but paths should be enclosed in');
+   print('double quotes.');
+   os.exit()
+fi;
+
+# Get filename and path
+file := args[1 + noptions + notcalledfromagena];
+path := args[2 + noptions + notcalledfromagena];
+
+# search for the file
+L := os.whereis(file, path, recurse);
+
+if empty L then  # no file found
+   os.exit(0)
+fi;
+
+# print locations, optionally along with timestamps and size in bytes
+optiongiven := printall or printsize or printdate;
+
+for i in L do
+   if optiongiven then
+      fileattribs := os.fstat(path & '/' & i);
+      if fileattribs -: table then
+         printf('Could not fetch file attributes for %s.', path & '/' & i);
+         os.exit(0)
+      fi
+   fi;
+   if printdate then
+      datetime := fileattribs.date;
+      datetime := tostring @ datetime;
+      datetime := <: x -> if size x = 1 then '0' & x else x fi :> @ datetime;
+      datetime := [datetime[1] & '/' & datetime[2] & '/' & datetime[3],
+                   datetime[4] & ':' & datetime[5] & ':' & datetime[6]];
+      printf('%s ' , datetime[1]);
+      printf('%s ' , datetime[2])
+   fi;
+   printsize ? printf('%14.0m ', fileattribs.length);
+   printf('%s\n', i);
+od;
+
+os.exit(1);

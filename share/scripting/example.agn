@@ -1,0 +1,92 @@
+# READ.ME and DEMO Run Agena Scripts Easily (rase) for Windows
+
+/*
+This file shows how to execute Agena scripts in Windows NT 4.0 and later without passing the script and its arguments
+to the actual Agena interpreter.
+
+We won't call "agena example.agn 1 2" from the commandline, but just enter "example 1 2" in the NT shell.
+
+In OS/2 we use the batch script example.cmd to execute a script.
+
+Please make sure that the following files are now in one and the same directory:
+
+example.agn          (or your favourite script filename)
+example.exe          (Windows only, or your favourite executable filename)
+agena.exe            (in OS/2 only)
+agena.dll            (do not change the filename)
+library.agn          (do not change the filename)
+libgcc_s_dw2-1.dll   (Windows only, do not change the filename)
+libmingwex-4.dll     (Windoes only, do not change the filename)
+
+In Windows, rename the following files in this ZIP file to your favourite name:
+
+	example.exe -> yourfavouritename.exe
+	example.agn -> yourfavouritename.agn
+
+In OS/2, rename the following files in this ZIP file to your favourite name:
+
+	example.cmd -> yourfavouritename.cmd
+	example.agn -> yourfavouritename.agn
+
+and edit the *.agn file according to your need. The *.exe or *.cmd file will launch your *.agn script file of the same name.
+
+For a more elobarate script that locates files, links or folders in a directory, check the `whereis.agn` script.
+For a script that prints drive information, check the `drive.agn` script. */
+
+print('\nDemo using NO explicit function by referring to the \`args\' table:');
+print('-----------------------------------------------------------------\n');
+
+print('Number of arguments:', size(args));
+# all arguments (all strings )are available in the args table, including the name of the script at index 1
+print('Arguments passed:   ', args);
+# we convert the command-line arguments to numbers
+local x, y := tonumber(args[2]), tonumber(args[3]);
+if x :: number and y :: number then
+   print('Test:              ', x & ' minus ' & y & ' is ' & (x - y));
+   print('Test:              ', 'sqrt(' & x & ' + ' & y & ') is ' & sqrt(x + y))
+fi;
+
+
+/* In Windows, we _alternatively_ define a function of the same name as the executable 
+   (w/o the file suffix, `example` in this case). This function will then be called 
+   by the executable `example.exe`.
+
+   Just enter the following statement in an NT shell (cmd.com) and see what will happen:
+
+   example 1 2
+*/
+
+example := proc(?) is  # this function will be automatically called by the executable
+   print('\nDemo using explicit function of same name \& \`nargs\' and the \`varargs\' table:');
+   print('----------------------------------------------------------------------------\n');
+   print('Number of arguments:', nargs);
+   print('Arguments passed:   ', ?);
+   local x, y := tonumber(?[1]), tonumber(?[2]);
+   if x :: number and y :: number then
+      print('Test:              ', x & ' minus ' & y & ' is ' & (x - y));
+      print('Test:              ', 'sqrt(' & x & ' + ' & y & ') is ' & sqrt(x + y))
+   fi
+end;
+
+/* The output should be:
+
+C:\agena\extract>example 1 2
+
+Demo using NO explicit function by referring to the `args' table:
+-----------------------------------------------------------------
+
+Number of arguments:    3
+Arguments passed:       [example, 1, 2]
+Test:                   1 minus 2 is -1
+Test:                   sqrt(1 + 2) is 1.7320508075689
+
+Demo using explicit function of same name & `nargs' and the `varargs' table:
+----------------------------------------------------------------------------
+
+Number of arguments:    3
+Arguments passed:       [example, 1, 2]
+Test:                   1 minus 2 is -1
+Test:                   sqrt(1 + 2) is 1.7320508075689
+
+*/
+

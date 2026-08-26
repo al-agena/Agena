@@ -1,0 +1,91 @@
+#!/usr/local/bin/agena
+
+# drive <drive>
+# <drive> can either be a single drive letter or a single drive letter followed by a colon.
+# Prints various information on a drive including file system, free space, sector and cluster information.
+local drive, noptions, help, L, narguments;
+
+# First search for options
+
+noptions := 0;  # number of options
+
+for arg in args do
+   if arg in {'/h', '-h'} then help := true
+   onsuccess inc noptions
+   fi
+od;
+
+narguments := nargs;
+
+notcalledfromagena := unassigned(args[-1])
+
+if notcalledfromagena and narguments = 0 then
+   narguments := size args[2 to size(args)]
+fi;
+
+# No argument given or /h switch given ? -> print help
+if narguments = 0 or help then
+   print('Prints information about the given drive.');
+   print('Usage: drive <drive>');
+   print('       <drive> can be a single drive letter or a single drive letter followed');
+   print('       by a colon.');
+   print('Options:');
+   print('       /h - this help');
+   os.exit()
+fi;
+
+# Get filename and path, and convert to standard DOS notation, 'c' -> 'C:'
+drive := args[1 + noptions + notcalledfromagena];
+
+if drive = null then
+   print('Need a drive letter for ' & args[0] & '.');
+   os.exit(0)
+elif size drive = 1 and strings.islatin(drive) then
+   drive &:= ':\\'
+fi;
+
+drive := strings.upper(os.dirname(drive)[1 to -2]);  
+
+if drive notin os.drives() then
+   print('Drive ' & drive & ' does not exist.');
+   os.exit(0)
+fi;
+
+try
+   L := os.drivestat(drive);
+catch
+   print('Argument `' & drive & '` is invalid.');
+   os.exit(0)
+yrt;
+
+print('\nGeneral');
+print('----------------------------------------------');
+print('Drive:               ' & drive);           # C:
+print('Label:               ' & L.label);         # Acer
+print('File system:         ' & L.filesystem);    # NTFS
+if os.iswindows() then
+print('Drive type:          ' & L.drivetype);     # Fixed
+print('DosDevice:           ' & L.dosdevice);     # \Device\HarddiskVolume4
+print('Serial number:       ' & L.serialnumber);  # 1277119562
+if assigned(L.trim) then
+print('TRIM:                ' & L.trim);
+fi;
+fi;
+print('\nSpace in bytes');
+print('----------------------------------------------');
+print('Total:               ' & strings.format('%.0m', L.totalsize));
+print('Free:                ' & strings.format('%.0m', L.freesize));
+if os.iswindows() then
+print('Used:                ' & strings.format('%.0m', L.usedsize));
+else
+print('Used:                ' & strings.format('%.0m', L.totalsize - L.freesize));
+fi;
+print('\nClusters & sectors');
+print('----------------------------------------------');
+print('Total clusters:      ' & strings.format('%.0m', L.totalclusters));
+print('Free clusters:       ' & strings.format('%.0m', L.freeclusters));
+print('Sectors per cluster: ' & strings.format('%.0m', L.sectorspercluster));
+print('Bytes per sector:    ' & strings.format('%.0m', L.bytespersector));
+
+os.exit(1);
+

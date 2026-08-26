@@ -1,0 +1,46 @@
+#
+# The call
+# agena share\scripting\optarg.agn -h -a=90 10 20 30
+# returns:
+
+#switch  optarg   nextidx
+#------  ------   -------
+#h                2
+#a       90       3
+
+#idx     #args[idx]
+#---     ----------
+#3       10
+#4       20
+#5       30
+
+/*
+for switch, optarg, nextidx in environ.getopt(args, 'ha:s::') do
+   last_index := nextidx;
+   if switch = 'h' then
+      print('-h      print this help text');
+      print('-a ARG  a flag with required value');
+      print('-s ARG  a different flag with an optional value');
+   elif switch in {'a', 's'} then
+      print('we were passed', switch, optarg)
+   end
+end
+*/
+
+local next_index := 1;  # default
+
+for switch, optarg, nextidx in environ.getopt(args, 'ha:s:p') do
+   print(switch, optarg, nextidx);
+   next_index := nextidx
+end;
+
+if args <> null then
+   print('print the rest of the command-line arguments:');
+   for idx from next_index to tables.maxn(args) do
+      print(idx, args[idx])
+   end
+end;
+
+print();
+
+# print(args);

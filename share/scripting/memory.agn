@@ -1,0 +1,71 @@
+#!/usr/local/bin/agena
+
+# memory
+# Prints various information on the installed memory.
+local noptions, help, L, narguments;
+
+# First search for options
+
+noptions := 0;  # number of options
+
+for arg in args do
+   if arg in {'/h', '-h'} then help := true
+   onsuccess inc noptions
+   fi
+od;
+
+narguments := nargs;
+
+notcalledfromagena := unassigned(args[-1])
+
+if notcalledfromagena and narguments = 0 then
+   narguments := size args[2 to size(args)]
+fi;
+
+# No argument given or /h switch given ? -> print help
+if help then
+   print('Prints information about the installed memory.');
+   print('Usage: drive');
+   print('Options:');
+   print('       /h - this help');
+   os.exit()
+fi;
+
+# search for the file
+try
+   L := os.memstate('mbytes');
+catch
+   print('Operation failed.');
+   os.exit(0)
+yrt;
+
+if L = fail then  # no file found
+   print('Operation failed.');
+   os.exit(0)
+fi;
+
+print('\nPhysical memory');
+print('-----------------------------------');
+print('Installed:           ' & strings.format('%7.0m ', L.totalphysical) & 'mbytes');
+print('Free:                ' & strings.format('%7.0m ', L.freephysical) & 'mbytes');
+if os.isos2() then
+print('Shareable:           ' & strings.format('%7.0m ', L.maxshmem) & 'mbytes');
+fi;
+
+print('\nVirtual memory');
+print('-----------------------------------');
+if os.iswindows() then
+print('Total:               ' & strings.format('%7.0m ', L.totalvirtual) & 'mbytes');
+fi;
+print('Free:                ' & strings.format('%7.0m ', L.freevirtual) & 'mbytes');
+
+print('\nPagefile');
+print('-----------------------------------');
+if os.iswindows() then
+print('Total:               ' & strings.format('%7.0m ', L.totalpagefile) & 'mbytes');
+print('Free:                ' & strings.format('%7.0m ', L.freepagefile) & 'mbytes');
+fi;
+print('Pagesize:            ' & strings.format('%7.0m ', L.pagesize) & 'bytes');
+
+os.exit(1);
+
