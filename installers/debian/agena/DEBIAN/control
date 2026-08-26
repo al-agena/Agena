@@ -1,0 +1,19 @@
+Package: agena
+Version: 7.9.2
+Section: programming languages
+Priority: optional
+Architecture: all
+Essential: no
+Maintainer: Alexander Walz <via http://agena.sourceforge.net>
+Replaces: agena
+Provides: agena
+Homepage: http://agena.sourceforge.net
+Depends: libc6 (>= 2.34), libgmp10 (>= 2:6.2.1+dfsg), libmpfr6 (>= 3.1.3), libncurses6 (>= 6), libreadline8 (>= 6.0), libtinfo6 (>= 6), zlib1g (>= 1:1.1.4)
+Description: Agena is an easy-to-learn procedural programming language designed
+ for science, scripting, and many other applications.
+ .
+ Its syntax resembles very simplified Algol 68 with elements taken from Lua
+ and SQL.
+ .
+ Agena provides fast real and complex arithmetics, efficient text processing,
+ flexible data structures, intelligent procedures and package management.
