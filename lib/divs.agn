@@ -1,0 +1,411 @@
+create table divs;   # initialise package table
+
+create table divs.aux
+
+divs.initstring :=
+   'divs v0.3.5 as of April 25, 2019\n';
+
+# Metatable for adding and subtracting fractions
+divs.div_mt := [
+   __add = proc(a, b) is
+      return divs.add(a, b)
+   end,
+   __sub = proc(a, b) is
+      return divs.subtract(a, b)
+   end,
+   __mul = proc(a, b) is
+      return divs.multiply(a, b)
+   end,
+   __div = proc(a, b) is
+      return divs.divide(a, b)
+   end,
+   __pow = proc(a, b) is
+      return divs.pow(a, b)
+   end,
+   __ipow = proc(a :: divs, b :: number) is  #2.2.0 u2
+      if fractional(b) then
+         error('Error in `**` operator: exponent must be an integer.')
+      fi;
+      return divs.ipow(a, b)
+   end,
+   __unm = proc(a) is
+      return divs.multiply(-1, a)
+   end,
+   __le =  proc(a :: divs, b :: divs) is
+      return divs.todec(a) <= divs.todec(b)
+   end,
+   __lt =  proc(a :: divs, b :: divs) is
+      return divs.todec(a) < divs.todec(b)
+   end,
+   __eq =  proc(a :: divs, b :: divs) is  # 2.2.0 u2
+      return a[1] == b[1] and a[2] == b[2]
+   end,
+   __eeq =  proc(a :: divs, b :: divs) is  # 2.2.0 u2
+      return a[1] == b[1] and a[2] == b[2]
+   end,
+   __aeq =  proc(a :: divs, b :: divs) is  # 2.2.0 u2
+      return divs.todec(a) ~= divs.todec(b)
+   end,
+   __naeq =  proc(a :: divs, b :: divs) is  # 2.5.4
+      return divs.todec(a) ~<> divs.todec(b)
+   end,
+   __abs = proc(x :: divs) is
+      return divs.divs(abs(x[1]), x[2])
+   end,
+   __recip = proc(x :: divs) is  # 2.5.4
+      return divs.divs(x[2], x[1])
+   end,
+   __sqrt = proc(x :: divs) is
+      return divs.sqroot(x)
+   end,
+   __ln =  proc(x :: divs) is
+      return divs.loge(x)
+   end,
+   __exp = proc(x :: divs) is
+      return divs.expe(x)
+   end,
+   __sin = proc(x :: divs) is
+      return divs.sine(x)
+   end,
+   __sinc = proc(x :: divs) is  # 2.5.4
+      return divs.divide(divs.sine(x), x)
+   end,
+   __cos = proc(x :: divs) is
+      return divs.cosine(x)
+   end,
+   __tan = proc(x :: divs) is
+      return divs.tangent(x)
+   end,
+   __arcsin = proc(x :: divs) is  # added 2.5.4
+      return divs.asine(x)
+   end,
+   __arccos = proc(x :: divs) is  # added 2.5.4
+      return divs.acosine(x)
+   end,
+   __arctan = proc(x :: divs) is  # added 2.5.4
+      return divs.atangent(x)
+   end,
+   __arcsec = proc(x :: divs) is  # added 2.5.4
+      return divs.asecant(x)
+   end,
+   __sinh = proc(x :: divs) is  # added 2.5.4
+      return divs.hsine(x)
+   end,
+   __cosh = proc(x :: divs) is  # added 2.5.4
+      return divs.hcosine(x)
+   end,
+   __tanh = proc(x :: divs) is  # added 2.5.4
+      return divs.htangent(x)
+   end,
+   __sign = proc(x :: divs) is
+      return sign(x[1])
+   end,
+   __int = proc(x :: divs) is  # 2.2.0 u2
+      return x[1] \ x[2]
+   end,
+   __tostring = proc(x) is
+      if zero x[1] then return 0
+      elif x[2] = 1 then return x[1]
+      else return 'divs(' & x[1] & ', ' & x[2] & ')'
+      fi
+   end,
+   __oftype = proc(x) is
+      # cannot use `::` operator for __oftype would be called recursively
+      return type(x) = sequence and typeof(x) = 'divs' and size x < 3 and isall(x, number)  # changed 2.9.3/4.0.0 RC 2/4.6.2
+   end
+];
+
+
+divs.aux.partition := proc(x, y, prozname) is  # split two fractions into its numerators and denominators
+   if x :: number then
+      x := divs.divs(x, 1)
+   elif x -: 'divs' then
+      argerror(x, prozname, 'expected a number or `divs` value (fraction) as first argument')
+   fi;
+   if y :: number then
+      y := divs.divs(y, 1)
+   elif y -: 'divs' then
+      argerror(y, prozname, 'expected a number or `divs` value (fraction) as second argument')
+   fi;
+   return bottom(x), top(x), bottom(y), top(y)
+end;
+
+
+# define a fraction
+divs.divs := proc(?) is
+   local r, item, d;
+   create seq r(3);
+   if nargs < 1 or nargs > 3 then
+      error('Error in `divs.divs`: wrong number of arguments.')
+   fi;
+   item := ?[1];
+   if item :: pair then  # handle div format [hh:]mm:ss (as pair or nested pair)
+      if right(item) :: pair then
+         insert left(item), left(right(item)), right(right(item)) into r
+      else
+         insert left(item), right(item) into r
+      fi;
+      isall(r, number) -? error('Error in `divs.divs`: number expected in pair.')  # 3.15.4 tweak
+   else
+      local v;
+      for i to nargs do
+         v := ?[i];
+         if v -: number then
+            argerror(v, 'divs.divs', 'number expected')
+         else
+            insert v into r
+         fi
+      od
+   fi;
+   if size r = 3 then  # handle improper fractions
+      local i := bottom(r);
+      pop bottom from r;
+      return i + divs.divs(r[1], r[2])
+   fi;
+   if size r = 1 then
+      r[2] := 1
+   elif zero r[2] then
+      return undefined
+   fi;
+   zero r[1] ? r[2] := 1;
+   if r[2] < 0 then r[1] := -r[1]; r[2] := -r[2] fi;
+   d := numtheory.gcd(r[1], r[2]);
+   r[1] := r[1] / d;
+   r[2] := r[2] / d;
+   if fractional(r[1]) or fractional(r[2]) then  # 2.2.0 u2 improvement
+      r := divs.todiv(r[1]/r[2])
+   fi;
+   setmetatable(r, divs.div_mt, 'divs');
+   return r
+end;
+
+
+# adds two values of type div
+divs.add := proc(x, y) is
+   local a, b, c, d := divs.aux.partition(x, y, 'divs.add');
+   return divs.divs(muladd(a, d, c*b, true), b*d)
+end;
+
+
+# subtracts two values of type div
+divs.subtract := proc(x, y) is
+   local a, b, c, d := divs.aux.partition(x, y, 'divs.subtract');
+   return divs.divs(muladd(a, d, -c*b, true), b*d)
+end;
+
+
+# multiply two values of type div
+divs.multiply := proc(x, y) is
+   local a, b, c, d := divs.aux.partition(x, y, 'divs.multiply');
+   return divs.divs(a*c, b*d)
+end;
+
+
+# divide two values of type div
+divs.divide := proc(x, y) is
+   local a, b, c, d := divs.aux.partition(x, y, 'divs.divide');
+   return divs.divs(a*d, b*c)
+end;
+
+
+divs.pow := proc(x, y) is
+   local a, b, c, d;
+   a, b, c, d := divs.aux.partition(x, y, 'divs.pow');
+   if d = 1 then
+      return divs.divs(a^c, b^c)
+   else
+      local f, p, q, eps, fl;
+      f := c/d;
+      fl := a^f / b^f;
+      p, q, eps := math.fraction(fl);
+      return if zero eps then divs.divs(p, q) else fl fi
+   fi;
+end;
+
+
+divs.ipow := proc(x, y) is  # 2.2.0 u2
+   local a, b, c;
+   a, b, c := divs.aux.partition(x, y, 'divs.pow');
+   return divs.divs(a**c, b**c)
+end;
+
+
+divs.sqroot := proc(x :: divs) is
+   local f := sqrt(x[1]) / sqrt(x[2]);
+   if nan(f) then  # changed to `nan` operator, 2.1.2
+      return undefined
+   else
+      local p, q, eps := math.fraction(f);
+      return if zero eps then divs.divs(p, q) else f fi
+   fi
+end;
+
+
+divs.loge := proc(x :: divs) is
+   local f := ln(x[1]) - ln(x[2]);
+   if nan(f) then  # changed to `nan` operator, 2.1.2
+      return undefined
+   else
+      local p, q, eps := math.fraction(f);
+      return if zero eps then divs.divs(p, q) else f fi
+   fi
+end;
+
+
+divs.expe := proc(x :: divs) is
+   local f, p, q, eps;
+   f := exp(x[1]/x[2]);
+   p, q, eps := math.fraction(f);
+   return if zero eps then divs.divs(p, q) else f fi
+end;
+
+
+divs.sine := proc(x :: divs) is
+   local f, p, q, eps;
+   f := sin(x[1]/x[2]);
+   p, q, eps := math.fraction(f);
+   return if zero eps then divs.divs(p, q) else f fi
+end;
+
+
+divs.cosine := proc(x :: divs) is
+   local f, p, q, eps;
+   f := cos(x[1]/x[2]);
+   p, q, eps := math.fraction(f);
+   return if zero eps then divs.divs(p, q) else f fi
+end;
+
+
+divs.tangent := proc(x :: divs) is
+   local f, p, q, eps;
+   f := tan(x[1]/x[2]);
+   p, q, eps := math.fraction(f);
+   return if zero eps then divs.divs(p, q) else f fi
+end;
+
+
+divs.atangent := proc(x :: divs) is  # changed 2.5.4
+   local f, p, q, eps;
+   f := arctan(x[1]/x[2]);
+   p, q, eps := math.fraction(f);
+   return if zero eps then divs.divs(p, q) else f fi
+end;
+
+
+divs.asine := proc(x :: divs) is  # added 2.5.4
+   local f;
+   f := arcsin(x[1]/x[2]);
+   if nan(f) then
+      return undefined
+   else
+      local p, q, eps := math.fraction(f);
+      return if zero eps then divs.divs(p, q) else f fi
+   fi
+end;
+
+
+divs.acosine := proc(x :: divs) is  # added 2.5.4
+   local f;
+   f := arccos(x[1]/x[2]);
+   if nan(f) then
+      return undefined
+   else
+      local p, q, eps := math.fraction(f);
+      return if zero eps then divs.divs(p, q) else f fi
+   fi
+end;
+
+
+divs.asecant := proc(x :: divs) is  # added 2.5.4
+   local f;
+   f := arcsec(x[1]/x[2]);
+   if nan(f) then
+      return undefined
+   else
+      local p, q, eps := math.fraction(f);
+      return if zero eps then divs.divs(p, q) else f fi
+   fi
+end;
+
+
+divs.hsine := proc(x :: divs) is  # added 2.5.4
+   local f;
+   f := sinh(x[1]/x[2]);
+   if not finite(f) then
+      return f
+   else
+      local p, q, eps := math.fraction(f);
+      return if zero eps then divs.divs(p, q) else f fi
+   fi
+end;
+
+
+divs.hcosine := proc(x :: divs) is  # added 2.5.4
+   local f;
+   f := cosh(x[1]/x[2]);
+   if not finite(f) then
+      return f
+   else
+      local p, q, eps := math.fraction(f);
+      return if zero eps then divs.divs(p, q) else f fi
+   fi
+end;
+
+
+divs.htangent := proc(x :: divs) is  # added 2.5.4
+   local f;
+   f := tanh(x[1]/x[2]);
+   if not finite(f) then
+      return f
+   else
+      local p, q, eps := math.fraction(f);
+      return if zero eps then divs.divs(p, q) else f fi
+   fi
+end;
+
+
+divs.todec := proc(x :: divs) is
+   return x[1]/x[2]
+end;
+
+
+divs.todiv := proc(a :: number) is
+   local n, d, err := math.fraction(a);
+   return divs.divs(n, d), err
+end;
+
+
+divs.numer := proc(x :: divs) is  # 1.11.3
+   return x[1]
+end;
+
+
+divs.denom := proc(x :: divs) is  # 1.11.3
+   return x[2]
+end;
+
+
+divs.equals := proc(x, y, option) is  # 2.2.0 u2
+   if option = null then
+     if x :: 'divs' and y :: 'divs' then
+        return x[1] = y[1] and x[2] = y[2]
+     elif x :: 'divs' and y :: number then
+        return divs.todec(x) = y
+     elif x :: number  and y :: 'divs' then
+        return x = divs.todec(y)
+     else
+        error('Error in `divs.equals`: invalid argument.')
+     fi
+   else
+     if x :: 'divs' and y :: 'divs' then
+        return x[1] ~= y[1] and x[2] ~= y[2]
+     elif x :: 'divs' and y :: number then
+        return divs.todec(x) ~= y
+     elif x :: number  and y :: 'divs' then
+        return x ~= divs.todec(y)
+     else
+        error('Error in `divs.equals`: invalid argument.')
+     fi
+   fi
+end;
+

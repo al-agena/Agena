@@ -1,0 +1,467 @@
+# The astro package, initiated January 07, 2013
+
+package.checkclib('astro');  # has C dynamic link library been found ?
+
+create table astro.aux;
+
+astro.initstring :=
+   'astro package v2.0.2 as of August 15, 2026\n';
+
+# Provides an easier-to-use interface to 3344`astro.sunriseset`. Longitudes and latitudes can be given in form
+# of two tables containing degrees (a number), minutes  (a number), seconds (a number), and the orientation
+# (the single character 'N', 'S', 'W' or 'E').
+# The return is a table with the indices 'riseset', 'civil', 'astro', and 'nautical' times containing the
+# rise and set times in `tm` representation. The index 'south' holds the time where the Sun is at south.
+# See `astro.sunriseset` for further information.
+
+# The function uses the `tm` time notation of the `clock` package.
+
+# Example: astro.sun(2013, 1, 7, [7, 5, 53.5452, 'E'], [50, 44, 17.748, 'N'])  # Bonn
+
+# 07.01.2013
+
+astro.sun := proc(y :: number, m :: number, d :: number, lon :: {table, number}, lat :: {table, number}) is
+   lon :: table ? lon := astro.dmstodec(op(lon));  # 7.3.6 extension
+   lat :: table ? lat := astro.dmstodec(op(lat));
+   local r := [astro.sunriseset(y, m, d, lon, lat)];
+   unassigned clock ? import clock;  # changed 2.14.0
+   r := clock.totm @ values(r, 1, 2, 4, 5, 7, 8, 10, 11, 13);
+   return [riseset = [r[1], r[2]], civil = [r[4], r[5]], nautical = [r[7], r[8]], astro = [r[10], r[11]],
+      south = r[13]]
+end;
+
+
+# Provides an easier-to-use interface to `astro.moonriseset` and `astro.moonphase`. The first four arguments represent
+# the year, month, day, and hour, all of type number. Longitudes and latitudes can be given in form of two tables
+# containing degrees (a number), minutes  (a number), seconds (a number), and the orientation (the single character
+# 'N', 'S', 'W' or 'E').
+# The return is a table with the indices 'riseset', containing the rise and set times of the Moon in `tm`
+# representation, and the index 'phase' which holds the computed Lunar phase (a float and an integer).
+
+# See `astro.moonriseset` and `astro.moonphase` for further information.
+
+# The function uses the `tm` time notation of the `clock` package.
+
+# Example: astro.moon(2013, 1, 7, 0, [7, 5, 53.5452, 'E'], [50, 44, 17.748, 'N'])  # Bonn
+
+# 08.01.2013
+
+astro.moon := proc(y :: number, m :: number, d :: number, h :: number,
+   lon :: {table, number}, lat :: {table, number}) is
+   lon :: table ? lon := astro.dmstodec(op(lon));  # 7.3.6 extension
+   lat :: table ? lat := astro.dmstodec(op(lat));
+   local r := [astro.moonriseset(y, m, d, lon, lat)];
+   unassigned clock ? import clock;  # changed 2.14.0
+   r := clock.totm @ r;
+   return [riseset = [r[1], r[2]], phase = [astro.moonphase(y, m, d, h)]]
+end;
+
+
+astro.lastcweek := proc(y :: number, flag) is  # 2.9.8, May 30, 2016
+   # determines last week of a year, see: https://en.wikipedia.org/wiki/ISO_week_date
+   # If flag is not given, the function returns either the number 52 or 53, and the given year y. If flag is
+   # given, then calendar week 1 and y + 1 is returned if December 31 of the given year y is either a
+   # Monday, Tuesday or Wednesday, otherwise it works as if flag has not been passed.
+   local ld;
+   try
+      ld := os.date('*t', os.datetosecs(y, 12, 31))  # determine number of last day of week for given year
+   catch  # do not issue os.datetosecs error message, instead:
+      error('Error in `astro.lastcweek`: invalid date passed.')
+   yrt;
+   case ld.wday
+      of 1 to 3 then  # is Dec 31 a Monday (1), Tuesday (2) or Wednesday (3) ?
+         if flag then
+            return 1, y + 1
+         else
+            return 53, y
+         fi
+      of 4 then       # is Dec 31 a Thursday (4) ...
+         return 53, y
+      of 5 then       # ... or a Friday (5) ?
+         return if astro.isleapyear(y) then 53 else 52 fi, y
+      else            # Saturday or Sunday (6 and 7)
+         return 52, y
+      esle
+   esac
+end;
+
+
+astro.cweek := proc(y :: number, m :: number, d :: number) is  # 2.9.8, May 24, 2016
+   # Returns the calendar week (an integer) of the given day, month, and year according to the ISO 8601 norm
+   # as the first, and the corresponding year as the second result. The second result is not necessarily equal
+   # to y, e.g. the calendar week of of January 1, 2016 is cw 53 of 2015, and the calendar week of December 31,
+   # 2013 is cw 1 of 2014.
+   # See: https://en.wikipedia.org/wiki/ISO_week_date
+   local t, cw;
+   try
+      t := os.date('*t', os.datetosecs(y, m, d))  # determine day of year and day of week for given date
+   catch  # do not issue os.datetosecs error message, instead:
+      error('Error in `astro.cweek`: invalid date passed.')
+   yrt;
+   cw := (t.yday - t.wday + 10) \ 7;  /* the \ operator denotes integer division (fraction free division)
+     tm.yday is the day of the year, where Jan 01 is 1 and Dec 31 is either 365 or 366 (latter with leap years)
+     tm.wday is number of the day of the week, where Monday is 1 and Sunday is 7 */
+   case
+      of cw < 1 then
+         return astro.lastcweek(y - 1, true)  # return maximum calendar week of previous year
+      of cw > astro.lastcweek(y, true) then   # do not call cweek(y, 12, 31) or similar since the function would go infinite
+         return 1, y + 1                      # return calendar week 1 of next year
+      else
+         return cw, y
+      esle
+   esac
+end;
+
+
+astro.aux.checkcweek := proc(y, cw, pn) is
+   cw < 1 or cw > astro.lastcweek(y) ?  # changed 2.14.0
+      error('Error in `' & pn & '`: invalid calendar week passed.');
+   try
+      return os.date('*t', os.datetosecs(y, 1, 3)).wday  # determine ISO 8601 weekday number of January 3 of the given year
+   catch
+      error('Error in `' & pw & '`: invalid date passed.')
+   yrt
+end;
+
+astro.cweekmonsun := proc(y :: number, cw :: number) is  # 2.9.8, May 31, 2016
+   # Computes the Gregorian dates of the Monday and Sunday for a given calendar week cw and year y and returns four numbers:
+   # the year, the month, the day, and the fraction of day - int his order. In case of a non-existent calendar
+   # week cw, the function issues an error.
+   # For the formula, see:
+   # https://www.ablebits.com/office-addins-blog/2015/04/29/excel-weeknum-function-convert-week-number-date/#convert-week-number-date
+   # =DATE(year, 1, -2) - WEEKDAY(DATE(year, 1; 3)) + 7*calweeknr */
+   local wd, md, mon, sun;
+   wd := astro.aux.checkcweek(y, cw, 'astro.cweekmonsun');
+   wd := wd % 7 + 1;  # convert to Excel weekday number (1 = Sunday, 7 = Saturday)
+   md := astro.jdate(y - 1, 12, 29) - wd + 7*cw;  # = Julian Date of December 29 of the previous year - wd + 7*cw
+   mon := [astro.cdate(md)];      # compute Gregorian date of Monday
+   sun := [astro.cdate(md + 6)];  # compute Gregorian date of Sunday
+   return mon[1 to 3], sun[1 to 3]
+end;
+
+
+astro.shabbat := proc(y :: number, cw :: number) is  # 7.8.5, created with the help of Gemini AI
+   # Computes the start and end of Shabbat for a given calendar week cw and year y (both Gregorian) and returns two tables with
+   # six numbers each: the year, the month, the day, hour, minute and second for astronomical sunset (begin of Shabbat),
+   # nightfall (end of Shabbat) at Jerusalem, both in UTC. In case of a non-existent calendar week cw, the function issues an error.
+   # Users should be aware that this function computes absolute geometric and astronomical boundaries for the Sun's position.
+   # It does not calculate the actual ritual or community timings observed in practice.
+   local wd, md, fri, sat, shabbat_beg, shabbat_end;
+   wd := astro.aux.checkcweek(y, cw, 'astro.shabbat');
+   wd := wd % 7 + 1;  # convert to Excel weekday number (1 = Sunday, 7 = Saturday)
+   md := astro.jdate(y - 1, 12, 29) - wd + 7*cw;  # = Julian Date of December 29 of the previous year - wd + 7*cw
+   fri := [astro.cdate(md + 4)];  # compute Gregorian date of Friday ...
+   sat := [astro.cdate(md + 5)];  # ... and for Saturday
+   shabbat_beg := drop(1, astro.searchaltitude('Sun', 31.7683, 35.2137, 754.0, fri[1], fri[2], fri[3], 12, 0, 0, -0.833, -1, 1.0));
+   shabbat_end := drop(1, astro.searchaltitude('Sun', 31.7683, 35.2137, 754.0, sat[1], sat[2], sat[3], 12, 0, 0, -8.500, -1, 1.0));
+   return shabbat_beg, shabbat_end
+end;
+
+
+/* Returns the TAI-UTC lookup table value of leap seconds for a given Julian date; if no argument is given,
+   then the value for the current date is computed. TAI stands for International Atomic Time. Returns 0
+   for Gregorian dates before 1961. In the future, you may have to add further values to the source code of
+   this function. 2.10.0
+
+   The function is written in Agena and included in the astro.agn file.
+
+   See also: os.date ('*j' format).
+
+   Idea taken from:
+   https://github.com/OpsLabJPL/MarsImagesIOS/blob/master/Mars-Images/MarsTime.m and updated with current
+   https://maia.usno.navy.mil/ser7/tai-utc.dat file as of August 24, 2025:
+
+ 1961 JAN  1 =JD 2437300.5  TAI-UTC=   1.4228180 S + (MJD - 37300.) X 0.001296 S
+ 1961 AUG  1 =JD 2437512.5  TAI-UTC=   1.3728180 S + (MJD - 37300.) X 0.001296 S
+ 1962 JAN  1 =JD 2437665.5  TAI-UTC=   1.8458580 S + (MJD - 37665.) X 0.0011232S
+ 1963 NOV  1 =JD 2438334.5  TAI-UTC=   1.9458580 S + (MJD - 37665.) X 0.0011232S
+ 1964 JAN  1 =JD 2438395.5  TAI-UTC=   3.2401300 S + (MJD - 38761.) X 0.001296 S
+ 1964 APR  1 =JD 2438486.5  TAI-UTC=   3.3401300 S + (MJD - 38761.) X 0.001296 S
+ 1964 SEP  1 =JD 2438639.5  TAI-UTC=   3.4401300 S + (MJD - 38761.) X 0.001296 S
+ 1965 JAN  1 =JD 2438761.5  TAI-UTC=   3.5401300 S + (MJD - 38761.) X 0.001296 S
+ 1965 MAR  1 =JD 2438820.5  TAI-UTC=   3.6401300 S + (MJD - 38761.) X 0.001296 S
+ 1965 JUL  1 =JD 2438942.5  TAI-UTC=   3.7401300 S + (MJD - 38761.) X 0.001296 S
+ 1965 SEP  1 =JD 2439004.5  TAI-UTC=   3.8401300 S + (MJD - 38761.) X 0.001296 S
+ 1966 JAN  1 =JD 2439126.5  TAI-UTC=   4.3131700 S + (MJD - 39126.) X 0.002592 S
+ 1968 FEB  1 =JD 2439887.5  TAI-UTC=   4.2131700 S + (MJD - 39126.) X 0.002592 S
+ 1972 JAN  1 =JD 2441317.5  TAI-UTC=  10.0       S + (MJD - 41317.) X 0.0      S
+ 1972 JUL  1 =JD 2441499.5  TAI-UTC=  11.0       S + (MJD - 41317.) X 0.0      S
+ 1973 JAN  1 =JD 2441683.5  TAI-UTC=  12.0       S + (MJD - 41317.) X 0.0      S
+ 1974 JAN  1 =JD 2442048.5  TAI-UTC=  13.0       S + (MJD - 41317.) X 0.0      S
+ 1975 JAN  1 =JD 2442413.5  TAI-UTC=  14.0       S + (MJD - 41317.) X 0.0      S
+ 1976 JAN  1 =JD 2442778.5  TAI-UTC=  15.0       S + (MJD - 41317.) X 0.0      S
+ 1977 JAN  1 =JD 2443144.5  TAI-UTC=  16.0       S + (MJD - 41317.) X 0.0      S
+ 1978 JAN  1 =JD 2443509.5  TAI-UTC=  17.0       S + (MJD - 41317.) X 0.0      S
+ 1979 JAN  1 =JD 2443874.5  TAI-UTC=  18.0       S + (MJD - 41317.) X 0.0      S
+ 1980 JAN  1 =JD 2444239.5  TAI-UTC=  19.0       S + (MJD - 41317.) X 0.0      S
+ 1981 JUL  1 =JD 2444786.5  TAI-UTC=  20.0       S + (MJD - 41317.) X 0.0      S
+ 1982 JUL  1 =JD 2445151.5  TAI-UTC=  21.0       S + (MJD - 41317.) X 0.0      S
+ 1983 JUL  1 =JD 2445516.5  TAI-UTC=  22.0       S + (MJD - 41317.) X 0.0      S
+ 1985 JUL  1 =JD 2446247.5  TAI-UTC=  23.0       S + (MJD - 41317.) X 0.0      S
+ 1988 JAN  1 =JD 2447161.5  TAI-UTC=  24.0       S + (MJD - 41317.) X 0.0      S
+ 1990 JAN  1 =JD 2447892.5  TAI-UTC=  25.0       S + (MJD - 41317.) X 0.0      S
+ 1991 JAN  1 =JD 2448257.5  TAI-UTC=  26.0       S + (MJD - 41317.) X 0.0      S
+ 1992 JUL  1 =JD 2448804.5  TAI-UTC=  27.0       S + (MJD - 41317.) X 0.0      S
+ 1993 JUL  1 =JD 2449169.5  TAI-UTC=  28.0       S + (MJD - 41317.) X 0.0      S
+ 1994 JUL  1 =JD 2449534.5  TAI-UTC=  29.0       S + (MJD - 41317.) X 0.0      S
+ 1996 JAN  1 =JD 2450083.5  TAI-UTC=  30.0       S + (MJD - 41317.) X 0.0      S
+ 1997 JUL  1 =JD 2450630.5  TAI-UTC=  31.0       S + (MJD - 41317.) X 0.0      S
+ 1999 JAN  1 =JD 2451179.5  TAI-UTC=  32.0       S + (MJD - 41317.) X 0.0      S
+ 2006 JAN  1 =JD 2453736.5  TAI-UTC=  33.0       S + (MJD - 41317.) X 0.0      S
+ 2009 JAN  1 =JD 2454832.5  TAI-UTC=  34.0       S + (MJD - 41317.) X 0.0      S
+ 2012 JUL  1 =JD 2456109.5  TAI-UTC=  35.0       S + (MJD - 41317.) X 0.0      S
+ 2015 JUL  1 =JD 2457204.5  TAI-UTC=  36.0       S + (MJD - 41317.) X 0.0      S
+ 2017 JAN  1 =JD 2457754.5  TAI-UTC=  37.0       S + (MJD - 41317.) X 0.0      S */
+
+astro.taiutc := proc(jd) is
+   unassigned(jd) ? jd := os.date('*j');  # changed 2.14.0
+   jd -: number ? argerror(jd, 'astro.taiutc', 'argument must be a number');  # changed 2.14.0
+   case
+      of jd >= 2457754.5 -> return 37
+      of jd >= 2457204.5 -> return 36
+      of jd >= 2456109.5 -> return 35
+      of jd >= 2454832.5 -> return 34
+      of jd >= 2453736.5 -> return 33
+      of jd >= 2451179.5 -> return 32
+      of jd >= 2450630.5 -> return 31
+      of jd >= 2450083.5 -> return 30
+      of jd >= 2449534.5 -> return 29
+      of jd >= 2449169.5 -> return 28
+      of jd >= 2448804.5 -> return 27
+      of jd >= 2448257.5 -> return 26
+      of jd >= 2447892.5 -> return 25
+      of jd >= 2447161.5 -> return 24
+      of jd >= 2446247.5 -> return 23
+      of jd >= 2445516.5 -> return 22
+      of jd >= 2445151.5 -> return 21
+      of jd >= 2444786.5 -> return 20
+      of jd >= 2444239.5 -> return 19
+      of jd >= 2443874.5 -> return 18
+      of jd >= 2443509.5 -> return 17
+      of jd >= 2443144.5 -> return 16
+      of jd >= 2442778.5 -> return 15
+      of jd >= 2442413.5 -> return 14
+      of jd >= 2442048.5 -> return 13
+      of jd >= 2441683.5 -> return 12
+      of jd >= 2441499.5 -> return 11
+      of jd >= 2441317.5 -> return 10
+      of jd >= 2439887.5 -> return 4.21317
+      of jd >= 2439126.5 -> return 4.31317
+      of jd >= 2439004.5 -> return 3.84013
+      of jd >= 2438942.5 -> return 3.74013
+      of jd >= 2438820.5 -> return 3.64013
+      of jd >= 2438761.5 -> return 3.54013
+      of jd >= 2438639.5 -> return 3.44013
+      of jd >= 2438486.5 -> return 3.34013
+      of jd >= 2438395.5 -> return 3.24013
+      of jd >= 2438334.5 -> return 1.945858
+      of jd >= 2437665.5 -> return 1.845858
+      of jd >= 2437512.5 -> return 1.372818
+      of jd >= 2437300.5 -> return 1.422818
+      else
+         return 0
+      esle
+   esac
+end;
+
+
+astro.aux.getdatapath := proc(pn :: string) is
+   for i from size mainlibname downto 1 while mainlibname[i] <> '/' do od;
+   local path := mainlibname[1 to i] & 'data' & '/';
+   if not os.exists(path) then
+      error('Error in `' & pn & '`: could not find data folder.')
+   fi;
+   return path
+end;
+
+
+astro.aux.convert := proc(str :: string, cpfrom :: string, cpto :: string) is
+   local r;
+   unassigned iconv ? import iconv;
+   try
+      local cd := iconv.open(cpfrom, cpto);
+      r := iconv.convert(cd, str);
+      iconv.close(cd)
+   end;
+   return r
+end;
+
+astro.aux.cp2utf := proc(str, codepage) is
+   return astro.aux.convert(str, 'CP' & codepage, 'utf-8')
+end;
+
+astro.aux.utf2cp := proc(str, codepage) is
+   return astro.aux.convert(str, 'utf-8', 'CP' & codepage)
+end;
+
+/* Searches the location database stored in the `data` subfolder of the Agena installation for the given place and
+   returns the following fields:
+
+   'location': the name of the place found, a string.
+   'country': the country, a string.
+   'latitude': the latitude, a number.
+   'longitude': the longitude, a number.
+   'population': the number of inhabitants, a number.
+   'elevation': the elevation above sea level in meters.
+   'timezone': the time zone, a string.
+
+   You can restrict the search with the optional two-character country code, see file `data/country.csv`.
+
+   The function supports pattern matching, see Chapter 9.1.3, and also the `*` wildcard. When given a pattern
+   or `*` wildcard for `place`, then the function searches the whole location database for matches, otherwise
+   the function will perform a fast binary search.
+
+   Examples:
+
+   > astro.locate('Houma'):
+   [[country ~ US, elevation ~ 5, latitude ~ 29.59577, location ~ Houma, longitude ~ -90.71953,
+     population ~ 34287, timezone ~ America/Chicago],
+    [country ~ TO, elevation ~ 24, latitude ~ -21.17005, location ~ Houma, longitude ~ -175.30213,
+     population ~ 1932, timezone ~ Pacific/Tongatapu]]
+
+   > astro.locate('Houma', 'US'):
+   [[country ~ US, elevation ~ 5, latitude ~ 29.59577, location ~ Houma, longitude ~ -90.71953,
+     population ~ 34287, timezone ~ America/Chicago]]
+   7.3.3 */
+astro.locate := proc(place :: string, ?) is
+   local fd, fb, c, line, path, addentry, traverse, finder, oldplace, country, options, codepage, codepages,
+      result;
+   path := astro.aux.getdatapath('astro.locate');
+   if not(os.exists(path & 'cities.kdx') and
+          os.exists(path & 'cities.dbf') and
+          os.exists(path & 'timezone.csv')) then
+      error('Error in `astro.locate`: could not find location files.')
+   fi;
+   if size place = 0 then
+      error('Error in `astro.locate`: input string is empty.')
+   fi;
+   # get and check optional country; if not given, country will be `null `
+   country := op(select(<: x -> x :: string :>, ?));
+   if country and country -: string or country :: string and size country <> 2 then
+      error('Error in `astro.locate`: invalid country code ' & country & '.')
+   fi;
+   options := checkoptions('astro.locate', ?, finder = procedure, codepages = table, codepage = posint, true);
+   # the following finder function can process both classic ASCII and multibyte UTF-8
+   finder := options.finder or <: x, y -> strings.tobytes(x) = strings.tobytes(y) :>;
+   if environ.attrib(finder).arity <> 2 then
+      error('Error in `astro.locate`: finder function must have exactly two parameters.')
+   fi;
+   if protect(finder, 'a', 'a') -: boolean then
+      error('Error in `astro.locate`: finder function must evaluate to a boolean.')
+   fi;
+   # get and check codepages: [850, 852, 857, 860, 775, 1258] stands for Western and Eastern Europe, Turkish,
+   # Portuguese, Baltic, Vietnamese, in this order.
+   codepages := options.codepages or [];  # default is none, as the automatically detected codepage should suffice
+   for i in codepages do
+      i -: posint ? error('Error in `astro.locate`: invalid codepage ' & tostringx(i) & '.')
+   od;
+   # DOS, Windows but not OS/2: get and check codepage
+   codepage := os.isdow() and (options.codepage or os.codepage());
+   if os.isdow() and (codepage = null or codepage -: posint) then
+      codepage := 850
+   fi;
+   # adds a hit to the result
+   addentry := proc(result, line, codepage, c, fb, r) is
+      local data := xbase.record(fb, r);
+      if os.isdow() then
+         line[1] := astro.aux.utf2cp(line[1], codepage)
+      fi;
+      result[c] := [
+         location   = line[1],
+         country    = line[2],
+         latitude   = data[1],
+         longitude  = data[2],
+         population = data[3],
+         elevation  = data[4],
+         timezone   = astro.aux.timezones[data[5]]
+      ]
+   end;
+   # searches all places in key file from start to end and adds all the hits, if any, to the result
+   traverse := proc(allkeys, fb, codepage, result, finder, place, country) is
+      local c, line := 1;
+      for city in allkeys do
+         if finder(place, city) then
+            local record := null;
+            while record := keyfile.read(fd, city, record) do
+               # record: country & row no.
+               if country and country notin record then next fi;
+               line := seq(city, record[1 to 2]);
+               # c is the running result number, r is the row in the dbf
+               addentry(result, line, codepage, c++, fb, tonumber(record[3 to -1]))
+            od
+         fi
+      od
+   end;
+   # search cities.csv from top to bottom and adds all the hits, if any, to the result
+   # only read line start positions and time zones the very first time
+   if unassigned astro.aux.timezones then
+      astro.aux.timezones := utils.readcsv(path & 'timezone.csv', delim='\t',
+         fields=[1, 3], header = true, dictionary = 1, flat = true)
+   fi;
+   oldplace := place;  # save the original search criteria as we will use it again below
+   if os.isdow() then
+      # in OS/2, Windows or DOS we convert the search string (place) to UTF-8 before starting the search later on
+      place := astro.aux.cp2utf(place, codepage);
+      if place = null then
+         error('Error in `astro.locate`: unsupported codepage ' & codepage & '.')
+      fi
+   fi;
+   c := 1;
+   fd := keyfile.open(path & 'cities.kdx', 'r');
+   fb := xbase.open(path & 'cities.dbf', 'r');
+   create table result;
+   if strings.ispattern(place, true) then  # place includes a pattern ?
+      local specials;
+      place := replace(place, '*', '.*');
+      specials := toset(select(<: x -> strings.isspec(x, true) :>, place));
+      if specials <> {} then
+         if place[1] <> '^' then place := '^' & place fi;
+         finder := <: x, y -> strings.match(y, x) <> null :>
+      fi
+      # for search see below
+   else  # search
+      local record := null;
+      while record := keyfile.read(fd, place, record) do
+         # record: country & row no.
+         if country and country notin record then next fi;
+         line := seq(place, record[1 to 2]);
+         # c is the running result number, r is the row in the dbf
+         addentry(result, line, codepage, c++, fb, tonumber(record[3 to -1]))
+      od
+   fi;
+   if empty result then
+      # there was no hit yet, so search the keys from start to end; 15 % of cityname are duplicates
+      local allkeys := keyfile.allkeys(fd, true)
+      traverse(allkeys, fb, codepage, result, finder, place, country);
+      delete codepage from codepages;  # we already tried the codepage, no need to do it again
+      if os.isdow() and filled(codepages) and empty result then
+         # still no result and we are in DOS, OS/2 or Windows: Try specific search with a set of codepages
+         # given by the user in the function call
+         for cp in codepages while empty result do
+            place := astro.aux.cp2utf(oldplace, cp);
+            place ? traverse(allkeys, fb, cp, result, finder, place, country)
+         od
+      fi
+   fi;
+   xbase.close(fb);
+   keyfile.close(fd);
+   return result
+end;
+
+#Target Language	iconv Name	Aliases
+#Western (German)	"CP850"	IBM850, 850
+#Central European (Polish)	"CP852"	IBM852, 852
+#Baltic (Latvian/Lithuanian)	"CP775"	IBM775, 775
+#Vietnamese	"CP1258"	WINDOWS-1258
+#Unicode Source	"UTF-8"	UTF8
+# astro.locate('.+Birkend'):
+# astro.locate("'s Gravenmoer"):
+# astro.locate('Houma'):
+# astro.locate('Lódz'):
+
+
+##############################################################################################
+# Backward compatibility to Agena 7.8.8 (08/2026) and earlier                                #
+##############################################################################################
+
+astro.togast := astro.siderial;

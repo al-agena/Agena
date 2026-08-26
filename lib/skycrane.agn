@@ -1,0 +1,536 @@
+# Skycrane package, initiated 18.08.2012
+
+# Inspired August 05, 2012 JPL Time, by the upper stage called Skycrane that delivered Curiosity onto
+# the surface of Mars. This package is automatically loaded when lib/library.agn is run at startup.
+
+package.checkclib('skycrane');  # has C dynamic link library been found ?
+
+skycrane.initstring :=
+   'skycrane v1.4.1 as of July 24, 2025\n';
+
+create table skycrane.aux;
+
+skycrane.aux.fileop := proc(fn :: procedure, a :: string, b :: string, verbose) is  # Agena 1.7.6
+   local aattribs, battribs, p, topp, r;
+   verbose <> true ? verbose := false;
+   a := skycrane.trimpath(a);
+   b := skycrane.trimpath(b);
+   p := a split '/';
+   topp := top(p);
+   if topp <> null and ('*' in topp or '?' in topp or topp = '.') then
+      # is there a joker or dot in the end of the path ?
+      pop top from p;
+      p := strings.join(p, '/');
+      for i in os.list(a, 'files') do
+         skycrane.aux.fileop(fn, p & '/' & i, b) = fail ? return fail, i;
+         verbose ? print(p & '/' & i)
+      od;
+      return true
+   fi;
+   aattribs := os.fstat(a);
+   if aattribs = fail then
+      return fail, a
+   fi;
+   if aattribs.mode = 'DIR' then
+      for i in os.list(a, 'files') do
+         skycrane.aux.fileop(fn, a & '/' & i, b) = fail ? return fail, i;
+         verbose ? print(a & '/' & i)
+      od;
+      return true
+   fi;
+   battribs := os.fstat(b);
+   if battribs :: table and battribs.mode = 'DIR' then
+      local prep := a split '/';
+      b &:= '/' & if prep = seq(a) then a else top(prep) fi;  # condition: no slash in path = true ? -> copy/move dir into new dir
+      if fn = os.move and os.exists(b) then os.remove(b) fi   # file already exists in target path ? -> remove it
+   fi;
+   # copy or move file
+   r := fn(a, b);
+   verbose and r <> fail ? print(a);
+   return r
+end;
+
+# Copies one or more files, accepts both source and target directories
+skycrane.fcopy := proc(a :: string, b :: string, verbose) is  # Agena 1.8.10
+   return skycrane.aux.fileop(os.fcopy, a, b, verbose)
+end;
+
+# Moves one or more files, accepts both source and target directories
+skycrane.move := proc(a :: string, b :: string, verbose) is  # Agena 1.8.10
+   return skycrane.aux.fileop(os.move, a, b, verbose)
+end;
+
+
+# Taken from https://docs.oracle.com/cd/E13214_01/wli/docs92/xref/xqisocodes.html
+skycrane.aux.countries := [
+   'AD', 'AE', 'AF', 'AG', 'AL', 'AM', 'AN', 'AO', 'AQ', 'AR', 'AS', 'AT', 'AU',
+   'AW', 'AZ', 'BA', 'BB', 'BD', 'BE', 'BF', 'BG', 'BH', 'BI', 'BJ', 'BM', 'BN',
+   'BO', 'BR', 'BS', 'BT', 'BV', 'BW', 'BY', 'BZ', 'CA', 'CC', 'CD', 'CF', 'CG',
+   'CH', 'CI', 'CK', 'CL', 'CM', 'CN', 'CO', 'CR', 'CS', 'CU', 'CV', 'CX', 'CY',
+   'CZ', 'DE', 'DJ', 'DK', 'DM', 'DO', 'DZ', 'EC', 'EE', 'EG', 'EH', 'ER', 'ES',
+   'ET', 'FI', 'FJ', 'FK', 'FM', 'FO', 'FR', 'GA', 'GB', 'GD', 'GE', 'GF', 'GH',
+   'GI', 'GL', 'GM', 'GN', 'GP', 'GQ', 'GR', 'GS', 'GT', 'GU', 'GW', 'GY', 'HK',
+   'HM', 'HN', 'HR', 'HT', 'HU', 'ID', 'IE', 'IL', 'IN', 'IO', 'IQ', 'IR', 'IS',
+   'IT', 'JM', 'JO', 'JP', 'KE', 'KG', 'KH', 'KI', 'KM', 'KN', 'KP', 'KR', 'KW',
+   'KY', 'KZ', 'LA', 'LB', 'LC', 'LI', 'LK', 'LR', 'LS', 'LT', 'LU', 'LV', 'LY',
+   'MA', 'MD', 'MD', 'MG', 'MH', 'MK', 'ML', 'MM', 'MN', 'MO', 'MP', 'MQ', 'MR',
+   'MS', 'MT', 'MU', 'MV', 'MW', 'MX', 'MY', 'MZ', 'NA', 'NC', 'NE', 'NF', 'NG',
+   'NI', 'NL', 'NO', 'NP', 'NR', 'NU', 'NZ', 'OM', 'PA', 'PE', 'PF', 'PG', 'PH',
+   'PK', 'PL', 'PM', 'PN', 'PR', 'PS', 'PW', 'PY', 'QA', 'RE', 'RO', 'RU', 'RW',
+   'SA', 'SB', 'SC', 'SD', 'SE', 'SG', 'SH', 'SI', 'SJ', 'SK', 'SL', 'SM', 'SN',
+   'SO', 'SR', 'ST', 'SV', 'SY', 'SZ', 'TC', 'TD', 'TF', 'TG', 'TH', 'TJ', 'TK',
+   'TL', 'TM', 'TN', 'TO', 'TR', 'TT', 'TV', 'TW', 'TZ', 'UA', 'UG', 'UM', 'US',
+   'UY', 'UZ', 'VC', 'VE', 'VG', 'VI', 'VN', 'VU', 'WF', 'WS', 'YE', 'YT', 'ZA',
+   'ZM', 'ZW'
+];
+
+# Taken from https://docs.oracle.com/cd/E13214_01/wli/docs92/xref/xqisocodes.html
+skycrane.aux.languages := [
+   'aa', 'ab', 'af', 'am', 'ar', 'as', 'ay', 'az', 'ba', 'be', 'bg', 'bh', 'bi',
+   'bn', 'bo', 'br', 'ca', 'co', 'cs', 'cy', 'da', 'de', 'dz', 'el', 'en', 'eo',
+   'es', 'et', 'eu', 'fa', 'fi', 'fj', 'fo', 'fr', 'fy', 'ga', 'gd', 'gl', 'gn',
+   'gu', 'gv', 'ha', 'he', 'hi', 'hr', 'hu', 'hy', 'ia', 'id', 'ie', 'ik', 'is',
+   'it', 'iu', 'ja', 'ja', 'ka', 'kk', 'kl', 'km', 'kn', 'ko', 'ks', 'ku', 'ky',
+   'la', 'li', 'ln', 'lo', 'lt', 'lv', 'mg', 'mi', 'mk', 'ml', 'mn', 'mo', 'mr',
+   'ms', 'mt', 'my', 'na', 'ne', 'nl', 'no', 'oc', 'om', 'or', 'pa', 'pl', 'ps',
+   'pt', 'qu', 'rm', 'rn', 'ro', 'ru', 'rw', 'sa', 'sd', 'sg', 'sh', 'si', 'sk',
+   'sl', 'sm', 'sn', 'so', 'sq', 'sr', 'ss', 'st', 'su', 'sv', 'sw', 'ta', 'te',
+   'tg', 'th', 'ti', 'tk', 'tl', 'tn', 'to', 'tr', 'ts', 'tt', 'tw', 'ug', 'uk',
+   'ur', 'uz', 'vi', 'vo', 'wo', 'xh', 'yi', 'yo', 'zh', 'zh', 'zu'];
+
+skycrane.getlocales := proc(x) is  # Agena 1.7.7, 26.08.2012
+   feature store;  # we have to use a store as remember tables do not accept `null` as an argument
+   local locale, lstr, res, des;
+   if store.result and store.argument = x then
+      return store.result
+   end;
+   if not skycrane.aux.langregion then  # 3.10.1 u1
+      if not mainlibname then
+         error('Error in `skycrane.getlocales`: mainlibname unassigned, please set it manually.')
+      else
+         skycrane.aux.langregion := utils.readcsv(
+            strings.rtrim(mainlibname, '/') & '/../data/' & 'langreg.csv',
+            header = true, convert = false, delim=',', remove = 'doublequotes',
+            flat = true, dictionary=1, ignore = <: x -> x[1] = '#' :>)
+      end
+   end;
+   create local table r;
+   if x :: string then  # 3.10.1 extension
+      store.argument := x;
+      store.result := skycrane.aux.langregion[x];
+      return store.result
+   elif x :: boolean then  # 3.10.1 extension
+      for lstr in tables.indices(skycrane.aux.langregion) do
+         res, des := os.islocale(lstr);
+         res ? r[lstr] := des
+      end
+   else  # argument is `null`
+      res, des := os.islocale('C');  # 2.14.12 patch
+      r['C'] := des;
+      for locale in skycrane.aux.countries do  # 3.10.1 change
+         for k in [locale, strings.lower(locale)] do  # 2.14.11 extension, check for `en` etc., as well
+            res, des := os.islocale(k);      # 2.14.11 change
+            res ? r[k] := des
+         end
+      end;
+      # traverse all possible combinations of languages and countries in Linux, etc.
+      for i in skycrane.aux.languages do     # 3.10.1 change
+         for j in skycrane.aux.countries do  # ditto
+            lstr := i & '_' & j;
+            res, des := os.islocale(lstr);  # 2.14.11 change
+            res ? r[lstr] := des
+         end
+      od
+   end;
+   store.argument := x;
+   store.result := r;
+   return r
+end;
+
+
+# creates a table of bags with its keys determined by the values in the sequence indices. 1.7.8 u2, 30.08.2012
+skycrane.bagtable := proc(indices :: sequence) is
+   create local table r(size indices);
+   size indices = 0 ? error('Error in `skycrane.bagtable`: expected a sequence with at least one entry.');
+   for i in indices do
+      r[i] := bags.bag()
+   od;
+   return r
+end;
+
+
+skycrane.readcsv := proc(fn, ?) is  # Agena 1.8.0 u1
+   fn -: string ? argerror(fn, 'skycrane.readcsv', 'expected a file name');
+   for i in ? do
+      i -: {pair, procedure} ? argerror(i, 'skycrane.readcsv', 'option must be a pair or procedure')
+   od;
+   return utils.readcsv(fn,
+      convert=false, ignorespaces=false, remove='doublequotes', op(?))  # 2.9.8 fix, removed removesinglequotes
+end;
+
+
+skycrane.sorted := proc(s :: listing, f) is  # Agena 1.8.9, 13.11.2012, optimised 2.3.0 RC 3 & 3.10.2
+   local tnumbers, tstrings, tothers;
+   assigned(f) and f -: procedure ? argerror('sorted', 'second argument must be a procedure');
+   tnumbers, tothers := selectremove(<: x -> x :: number :>, s, reshuffle=true);
+   tstrings, tothers := selectremove(<: x -> x :: string :>, tothers, reshuffle=true);
+   return sort(tnumbers, if f then f else 'number' fi) union sort(tstrings, f) union tothers  # 3.13.1 fix
+end;
+
+
+skycrane.iterate := proc(s) is  # Agena 1.8.11 u1, 11.12.2012; very primitive and very slow
+   local key, sizes, indices := 0;
+   case type(s)
+      of table then
+         indices := sorted(tables.indices(s))
+      of set then
+         indices := sorted(totable(s))
+      of sequence, register then  # 2.4.0 adaption
+         sizes := size s
+      else
+         argerror(s, 'skycrane.iterate', 'expected a table, set, sequence or register')
+      esle
+   esac;
+   return proc() is
+      key++;
+      case type(s)
+         of table then
+            return s[indices[key]]
+         of set then
+            return indices[key]
+         else
+            if key > sizes then
+               return null
+            else
+               return s[key]
+            fi
+         esle
+      esac
+   end
+end;
+
+
+# returns random integers in the range [1 .. 6].
+skycrane.dice := <: () -> math.random(6, true) :>;  # 2.5.1 improvement
+
+
+skycrane.stopwatch := proc() is  # 24.07.2012 or earlier
+   local t, flag;
+   flag := true;
+   do
+      if flag then
+         write('Press any key to start the stop watch ...\n');
+         io.getkey();
+      fi;
+      writeline('Press any key to stop the stop watch ...\n')
+      t := time();
+      write('Elapsed time: ' & strings.repeat(' ', 11) & 'seconds' & strings.repeat('\b', 18));
+      while io.anykey() = false do
+         write(strings.format('%10.2f', time(t) - t));
+         write(strings.repeat('\b', 10))
+      od;
+      writeline('\n');
+      writeline('Press `q` to quit, any other key to start again.\n');
+      if char(io.getkey()) = 'q' then break else flag := false fi
+   od
+end;
+
+
+skycrane.aux.scribe := proc(fd, x) is
+   if fd then io.write(fd, x) else io.write(x) fi
+end;
+
+skycrane.scribe := proc(?) is  # Agena 1.8.5 u1, improved 2.3.0 RC 3; rewritten 2.3.3
+   local fd, i, sizes, delim, nl, options, stop, isfd;
+   if isfd := io.isfdesc(?[1]), isfd then  # 2.0.0 RC 5
+      fd := ?[1];
+   fi;
+   options := checkoptions('skycrane.scribe', ?, delim=string, newline=boolean, nl=boolean);
+   delim := options.delim or ';';  # default delimiter
+   if assigned(options.newline) or assigned(options.nl) then  # add a newline at end of line, 5.2.4. change
+      # we cannot just simply mix booleans with or as `true` will always beat `false`
+      nl := options.newline or options.nl
+   else
+      nl := true
+   fi;
+   stop := nargs - size(options);  # 5.2.4. change
+   for x from 1 + isfd to stop do
+      i := ?[x];
+      if isstructure(i) then
+         sizes := if i :: register then registers.gettop(i) else size i fi;
+         for j to size i do  # 2.40 adaption
+            skycrane.aux.scribe(fd, tostring(i[j]));
+            if j < sizes then skycrane.aux.scribe(fd, delim) fi
+         od
+      else
+         skycrane.aux.scribe(fd, i)
+      fi;
+      if x < stop then skycrane.aux.scribe(fd, delim) fi
+   od;
+   if nl then skycrane.aux.scribe(fd, '\n') fi
+end;
+
+
+# Use `io.open` to open the file, and `io.close` to finally close it.
+skycrane.tee := proc(fd :: userdata, ?) is  # patched 2.2.0 RC 2, 2.12.6, simplified 5.2.4
+   local delim, nops, tobewritten, options;
+   not io.isfdesc(fd) ? error('Error in `skycrane.tee`: file handle is invalid.');  # 5.2.4 change
+   delim := '\t';
+   options := checkoptions('skycrane.tee', ?, delim = string, format = string);
+   options.delim and options.format ? error('Error in `skycrane.tee`: options cannot be mixed.');  # 5.2.4 change
+   nops := nargs - size options - 1;
+   if options.format then  # 1.12.4 u2
+      tobewritten := strings.format(options.format, op(?[1 to nops]));
+      io.write(tobewritten);
+      io.write(fd, tobewritten)
+   else
+      delim := options.delim or delim; # alternate(delim, options.delim);
+      tobewritten := strings.join(tostring @ ?[1 to nops], delim);
+      io.writeline(tobewritten);
+      io.writeline(fd, tobewritten)
+   fi;
+end;
+
+
+/* Returns the calendar date and time represented by the number x, which should hold the number of seconds
+(and optionally milliseconds) elapsed since the start of the given epoch. The return is a string of the
+format `YYYY/MM/DD hh:mm:ss`.
+
+If no argument is given, the current system date and time is returned. You may pass an optional format
+string if you prefer another representation of the date and time. See also: strings.format.
+
+See  also: os.now, os.time. */
+
+skycrane.todate := proc(s, format) is  # 2.0.0 RC 5
+   if assigned s then
+      if s :: string then
+         format := s
+      elif s -: number then
+         argerror(s, 'skycrane.todate', 'expected a number as first argument')
+      fi
+   fi;
+   if unassigned(s) or s :: string then  # get current time
+      local a, b := os.time();
+      s := a + b/1k
+   fi;
+   unassigned format ? format := '%4d/%02d/%02d %02d:%02d:%02d';
+   return strings.format(format, op(os.secstodate(s)))
+end;
+
+
+# Backward compatibility to 3.17.1 and earlier
+skycrane.timestamp := utils.timestamp;
+
+# Backward compatibility to 2.12.2 and earlier
+skycrane.counter := proc(start, step) is
+   return factory.count(start, step)
+end;
+
+# Backward compatibility to 2.12.1 and earlier, 2.12.3 fix
+skycrane.semaphore := skycrane.counter;
+
+
+/* In the first form, replaces all occurrences of string oldstring in file fn (a filename) in-place with string newstring.
+   In the second form, one or more substitutions can be given by passing a table or sequence of pairs of the form
+   oldstring : newstring.
+
+   By default, a backup of the file to be modified is created with the additional suffix .bup. You can suppress any backup
+   by passing the Boolean value `true` as the last argument. */
+skycrane.replaceinfile := proc(filename :: string, subslist :: {table, sequence, string}, ?) is  # 2.14.6
+   local fnout, fhout, hits, isstruct, newline;
+   if not os.exists(filename) then
+      error('Error in `skycrane.replaceinfile`: filename (first argument) does not exist.')
+   fi;
+   # check subslist, must be a structure of pairs oldstring ~ newstring
+   isstruct := subslist -: string;
+   if isstruct then
+      for i in subslist do
+         if not checktype(i, pair, string) then
+            error('Error in `skycrane.replaceinfile`: second argument is not a structure of string~string pairs.')
+         fi
+      od
+   elif nargs < 3 then
+      error('Error in `skycrane.replaceinfile`: need at least three arguments.')
+   fi;
+   # first write result to a temporary file
+   hits := 0;
+   fnout := io.mkstemp('fXXXXXX');  # 2.16.10 change
+   fhout := io.open(fnout, 'w');
+   if isstruct then
+      for line in io.lines(filename) do
+         for i in subslist do
+            hits +:= strings.hits(line, left i, true)
+         od;
+         newline := line;  # don't confuse the iterator
+         for i in subslist do
+            newline := strings.gsub(newline, left i, right i)
+         od;
+         io.writeline(fhout, newline)
+      od
+   else
+      for line in io.lines(filename) do
+         hits +:= strings.hits(line, subslist, true);
+         io.writeline(fhout, strings.gsub(line, subslist, ?[1]))
+      od
+   fi;
+   io.close(fhout);
+   if ?[size ?] <> true then  # create backup of original file
+      local backupfile := filename & '.bup';
+      if os.exists(backupfile) then os.remove(backupfile) fi;
+      os.fcopy(filename, backupfile)
+   fi;
+   # overwrite original file with result
+   os.remove(filename);
+   os.move(fnout, filename);
+   return hits  # number of substitutions
+end;
+
+
+# Creates a string formatted such that it can be used by `skycrane.xmlmatch` to match an XML tag. It is equivalent to
+# '<' & tag & '>(.-)</' & tag & '>'.  2.15.1, UNDOCUMENTED
+
+skycrane.aux.xmltag := <: tag :: {string, number} -> '<' & tag & '>(.-)</' & tag & '>' :>;
+
+/* Like `strings.match`, but returns the contents of the string enclosed by the given XML search tag <tag>(.-)</tag>. If further tags
+   tag[2] .. tag[k] are given, then the result of the previous search with tag[k-1] is checked for tag[k]. If tag is a number, it will be
+   converted to a string before matching. If any tag is not a string or number, it will be ignored. Example:
+
+   Returns `null` if any tag could not be found.
+
+> data := '<data>
+>            <name>abc</name>
+>            <info>
+>               <name>def</name>
+>            </info>
+>        </data>'
+
+> skycrane.xmlmatch(data, 'name'):
+abc
+
+> skycrane.xmlmatch(data, 'info', 'name'):
+def
+*/
+
+skycrane.xmlmatch := proc(str :: string, tag, ?) is  # 2.15.1
+   local value;
+   tag :: {string, number} ? value := strings.match(str, skycrane.aux.xmltag(tag));
+   for tag in ? while assigned value do
+      tag :: {string, number} ? value := strings.match(value, skycrane.aux.xmltag(tag))
+   od;
+   return if assigned value then strings.trim(value) else value fi
+end;
+
+
+/* Checks whether a string represents a valid E-mail address and returns `true` or `false`. The algorithm used does not cover all rules
+   defined in RFC 3696, but should suffice with standard E-mail addresses of syntax "local-part@domain".
+
+   Note that the domain may not necessarily include a dot. You can override this rule by passing any non-`null` value for `strict`. */
+skycrane.isemail := proc(str :: string, strict) is  # 2.18.1
+   local lastchr, c, alphanums, dots, atsigns, len, parts, comment, chr, rc, asciigt127, part, localpart, domainpart, tld;
+   c, alphanums, dots, atsigns, comment -> 0;
+   # str := strings.diamap(strings.tolatin(str));  # convert UTF-8 to Western Latin-1 and re-map umlauts from file import
+   len := size str;
+   local whitespaces := ' \n\r';
+   while c++ < len do
+      chr := str[c];
+      part := if atsigns = 0 then 'local-part' else 'domain-part' fi;
+      case chr  # you could optimise the following, but then the various rules might not be that obvious
+         of '@' then
+            # no preceding alphanum or multiple @'s, patched 2.36.1 ?
+            return when atsigns > 0      with false, '@ in ' & part;
+            return when c = 1 or c = len with false, '@ at start or end in ' & part;
+            return when lastchr = '.'    with false, 'illegal .@ sequence in ' & part;
+            # local-part can end in a hyphen !  return when lastchr = '-'    with false, 'illegal -@ sequence in ' & part;
+            atsigns++
+         of '.' then
+            # dot at start OR at end OR preceding @ or dot ?
+            return when c = 1 or c = len with false, 'period at start or end of ' & part;
+            return when strings.contains(lastchr, '.@' & whitespaces)
+                                         with false, 'illegal ' & lastchr & chr & ' sequence in ' & part;  # @. .. -. plus whitespaces around dots are illegal
+            return when part = 'domain-part' and lastchr = '-' with false, 'illegal ' & lastchr & chr & ' sequence in ' & part;
+            return when c < len and str[c + 1] in whitespaces
+                                         with false, 'illegal whitespaces around period in ' & part;
+            atsigns > 0 ? dots++
+         of '-' then
+            return when c = len with false, 'hyphen at end of ' & part  # hyphens are legal as start of local part, but not in domain 2.39.1 fix
+            # multiple succeeding hyphens are allowed in domain-part, so fall them through, see https://stackoverflow.com/questions/16468309/can-domain-name-have-two-continuous-hyphens
+            return when part = 'domain-part' and strings.contains(lastchr, '@.') with false, 'illegal ' & lastchr & chr & ' sequence in ' & part;  # @- .- -- are illegal
+         of '(', ')' then  # 2.36.1 extension for comments in local-part
+            return when part = 'domain-part' with false, 'comment in ' & part;  # comments are allowed in local-part only
+            # we are still in the local-part as @-sign has not been reached yet
+            if '@' in str then
+               local p, q;
+               localpart := (str split '@')[1];
+               return when comment > 1 with false, 'multiple comments in ' & part;
+               p, q := strings.find(localpart, '^%(.+%)');
+               if p = 1 then
+                  comment++; c := q; next
+               fi;
+               p, q := strings.find(localpart, '.+%(.+%)$');
+               if p = 1 then
+                  comment++; c := q; next
+               fi;
+               return false, 'comment in middle of ' & part # comment not at start or end of local-part
+            fi
+         else
+            # eligible chars are latinalphanums, hyphens, special chars only allowed in local-part
+            if atsigns = 0 and abs(chr) > 127 then
+               # especially, ligatures and diacritics in local-part are valid in RFC 5336; don't bail out to see whether rest is valid; store first occurrence only
+               unassigned asciigt127 ? asciigt127 := chr
+            else
+               return when not(
+                  strings.islatinnumeric(chr) or
+                  chr = '-' or
+                  atsigns = 0 and strings.contains(chr, '#!$%&\'*+/=?^_\`{|}~')  # specialchars are only allowed in local-part
+               ) with false, 'illegal character `' & chr & '` with ASCII code ' & abs(chr) & ' in ' & part
+            fi;
+            alphanums++
+         esle
+      esac;
+      lastchr := chr
+   od;
+   parts := str split '@';
+   size parts <> 2 ?                return false, 'no @';  # no @ ?  2.36.1 patch
+   localpart, domainpart := parts[1], parts[2];
+   tld := domainpart split '.';
+   return when size tld < 2           with false, 'domain-part with no period';
+   tld := tld[-1];
+   return when not(size tld in 1:63)  with false, 'top-level domain of invalid size ' & size tld;  # 0 < size TLD < 64
+   return when strings.isnumeric(tld) with false, 'top-level domain is all-numeric';
+   # local-part no more than 64 chars, domain-part no more than 255 chars
+   return when size localpart  > 64   with false, 'local-part > 64 characters';
+   return when size localpart  < 2    with true,  'correct';  # local-part consists of just one character
+   return when size domainpart > 255  with false, 'domain-part > 255 characters';
+   rc := alphanums > 3 and (strict = null or dots <> 0);
+   return when rc and asciigt127 :: string with false, 'illegal character `' & asciigt127 & '` with ASCII code ' & abs(asciigt127) & ' in local-part';
+   return rc, if rc then 'correct' else 'miscellaneous' fi
+end;
+
+
+/* Similar to `io.writeline`, but all the strings, numbers or Booleans to be formatted must be passed in a table, sequence or
+   register, and returns a string instead of writing the values to a file. The function accepts the following options:
+   - delim =   <string> -> the delimiter, a semicolon by default, can also be the empty string
+   - enclose = <string> -> each value will be enclosed by <string>, double quotes by default, can also be the empty string.
+   Example: skycrane.formatline([1, 'agena', true], delim = '|', enclose = '\'') -> '1'|'agena'|'true' */
+skycrane.formatline := proc(tbl :: listing, ?) is  # 2.26.0 u1
+   local options, delim, enclose;
+   options := checkoptions('skycrane.formatline', ?, delim=string, enclose=string);
+   delim   := options.delim   or ';';
+   enclose := options.enclose or '\"';
+   tbl := <: x -> strings.wrap(x, enclose) :> @ tbl;
+   return strings.join(tbl, delim)
+end;
+
+
+##############################################################################################
+# Backward compatibility to Agena 2.39.0 and earlier                                         #
+##############################################################################################
+
+skycrane.removedquotes := proc(str) is
+   return strings.unwrap(str, '"')
+end;
+
+skycrane.enclose := proc(str, delim) is
+   return strings.wrap(str, delim or '"')
+end;
+

@@ -1,0 +1,92 @@
+##############################################################################################
+#                                                                                            #
+# Agena Initialisation File Sample                                                           #
+#                                                                                            #
+# Rename this file to .agenainit on UNIX-based platforms (e.g. Solaris, Linux, and Mac) or   #
+# agena.ini on DOS-based platforms (DOS, OS/2, Windows). You may read Chapter 2.7 and        #
+# Appendix A6 of the manual for more information.                                            #
+#                                                                                            #
+##############################################################################################
+
+# assign short names for the following library functions:
+execute := os.execute;
+
+##############################################################################################
+# Extend libname to include paths to additional libraries (but only if directories exist)    #
+##############################################################################################
+
+if environ.os in {'windows', 'dos', 'os/2'} then
+   addpaths := seq(  # further paths to packages
+      'd:/agena/mypackage1',
+      'd:/agena/mypackage2'
+   )
+elif environ.os = 'solaris' then
+   addpaths := seq(
+      '/export/home/proglang/agena/mypackage1',
+      '/export/home/proglang/agena/mypackage2'
+   )
+elif environ.os = 'linux' then
+   addpaths := seq(
+      '~/agena/mypackage1',
+      '~/agena/mypackage2'
+   )
+fi;
+
+# Add paths to libname
+for i in addpaths do
+   if os.exists(i) and i in libname = null then  # do not add path if already included
+      libname &:= ';' & i
+   fi
+od;
+
+clear addpaths;  # clear sequence with additional paths
+
+##############################################################################################
+# User-defined Initialisation of Environment Variables                                       #
+##############################################################################################
+
+#environ.more := 20; # number of lines when printing table contents; fit it to the number of
+                     # lines your console window is using
+
+#environ.printzeroedcmplxvals := true;  # when _printing_ complex values, round real and
+                  # imaginary parts close to zero to zero on output. Note that internally,
+                  # complex values are NOT rounded.
+
+#unassigned environ.aux ? create table environ.aux;
+#environ.aux.printenclosestrings := '\'';  # if set, strings are prepended and appended with
+                  # the string in this variable.
+
+#environ.withverbose := true;  # true means that information on short names already assigned will be printed
+
+#environ.printemptyline := true;  # a newline is printed at the console each time after a
+                               # statement has been entered
+
+#environ.printenclosestrings := '\'';  # at the console, strings are printed with the prepending
+                               # and appending string in this variable
+
+##############################################################################################
+# User-defined Initialisation of Kernel Settings                                             #
+##############################################################################################
+
+#environ.kernel(digits = 14);  # set the number of digits used in the output of numbers, range [1, 17],
+                               # default is 14.
+
+#environ.kernel(signedbits = false);  # determine whether the bitwise operators band, bot, bxor, bnot,
+                               # and shift internally use signed (signedbits = true) or unsigned
+                               # (signedbits = false) integers.
+
+#environ.kernel(constants = false);   # switch off constants validation
+
+#environ.kernel(duplicates = false);  # switch off duplicates warnings
+
+
+##############################################################################################
+# Backward Compatibility                                                                     #
+#                                                                                            #
+# Uncomment the line below if you want to use deprecated function names of the former        #
+# Agena editions.                                                                            #
+##############################################################################################
+
+#readlib 'compat'    # for Agena 1.0 compatibility
+#readlib 'compat.0'  # for Agena 0.X compatibility
+

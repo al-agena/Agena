@@ -1,0 +1,195 @@
+# The ADS package, initiated September 23, 2007
+
+package.checkclib('ads');  # has C dynamic link library been found ?
+
+ads.initstring := 'ads v3.2.1 as of March 22, 2023\n';
+
+# ads.createdict:
+# Create an ADB file from a text dictionary. In the text file keys and values must be
+# separated by pipes.
+
+ads.createdict := proc(name :: string, language :: string) is
+   local fn := os.getenv('AGENAPATH') & '/books/' & name & '.dict';
+   local fout := os.getenv('AGENAPATH') & '/books/' & name & '.adb';
+   local L := io.readlines(fn, '#');
+   local it, max;
+   max := 0;
+   # determine largest key
+   for j in L do
+      it := j split '|';
+      if size(it[1]) > max then
+         max := size(it[1])
+      fi
+   od;
+   ads.createbase(fout, size(L), 'database', 3, max);
+   local fh := ads.open(fout);
+   for j in L do
+      it := j split '|';
+      if it[1] <> '' then
+         ads.write(fh, it[1], it[2], language)
+      fi
+   od;
+   ads.close(fh)
+end;
+
+# ads.opendict written July 11, 2007
+
+ads.opendict := proc(name :: string) is
+   local fout := os.getenv('AGENAPATH') & '/books/' & name & '.adb';
+   return ads.open(fout)
+end;
+
+# ads.fastopen written July 12, 2007
+# opens a database in readonly mode for later access by ads.fastread. The return is the number
+# of the file handle plus an entry to global ads.baseinfo with various information needed by fastread.
+
+ads.fastopen := proc(fn :: string) is
+   local fh := ads.open(fn, 'readonly');
+   local inds := ads.indices(fh);
+   local high := ads.sizeof(fh);
+   local keylen := ads.attrib(fh)['keylength'];
+   local listflag := ads.attrib(fh)['type'];
+   if listflag > 1 then
+      error('Error in `ads.fastopen`: function not applicable to sequences.')
+   fi;
+   if ads.baseinfo = null then
+      create table ads.baseinfo
+   fi;
+   ads.baseinfo[fh] := [inds, high, keylen, listflag];
+   return fh
+end;
+
+# ads.fastread written July 12, 2007:
+# reads the value to the given key by high speed access to fh. fastread is 33 % faster than ads.read.
+# Example:
+# > fh := ads.fastopen('d:/t.agb');
+# > ads.fastread(fh, 'aleks'):
+
+ads.fastread := proc(fh :: nonnegint, key :: string) is
+   local infos := ads.baseinfo[fh];
+   return ads.fastseek(fh, key, infos[1], infos[2], infos[3], infos[4])
+end;
+
+# ads.fastclose written July 12, 2007
+
+ads.fastclose := proc(fh :: nonnegint) is
+   local result := ads.close(fh);
+   if result then
+      clear ads.baseinfo[fh]
+   fi;
+   return result
+end;
+
+# ads.lookup written July 09, 2007
+# search for a key in a database with internal diacritics and runes extension;
+# If the function does not find the exact key, it searches anew by prepending `*` to the key.
+# If it still cannot find anything it iterates over all keys and values in the database.
+#
+# Examples:
+# > ads.lookup(fh, '<th>iudinassus') -> ads.seek(fh, 'þiudinassus') -> kingdom
+#
+# > ads.lookup(fh, '[.]*<th>iud'):
+# Gutþiuda = Gotenfolk
+# þiudinassus = Königreich
+
+ads._ligReplacements := [  # 2.11.0 RC2 fix, taken from Agena 1.0.0 source file
+   '<ae>' : char(145), '<Ae>' : char(146), # Æ
+   '<ao>' : char(134), '<Ao>' : char(143), # Å
+   '<oe>' : char(155), '<Oe>' : char(157), # Ø
+   '<th>' : char(231), '<Th>' : char(232), # þ
+   '<dh>' : char(208), '<Dh>' : char(209), # Ð
+   '<nj>' : char(164), '<Nj>' : char(165), # Ñ
+
+   '<ac>' : char(131), '<Ac>' : char(182), # Â
+   '<ec>' : char(136), '<Ec>' : char(210), # Ê
+   '<ic>' : char(140), '<Ic>' : char(215), # Î
+   '<oc>' : char(147), '<Oc>' : char(226), # Ô
+   '<uc>' : char(150), '<Uc>' : char(234), # Û
+
+   '<al>' : char(133), '<Al>' : char(183), # À
+   '<el>' : char(138), '<El>' : char(212), # È
+   '<il>' : char(141), '<Il>' : char(222), # Ì
+   '<ol>' : char(149), '<Ol>' : char(227), # Ò
+   '<ul>' : char(151), '<Ul>' : char(235), # Ù
+
+   '<ar>' : char(160), '<Ar>' : char(181), # Á
+   '<er>' : char(130), '<Er>' : char(144), # É
+   '<ir>' : char(161), '<Ir>' : char(214), # Í
+   '<or>' : char(162), '<Or>' : char(224), # Ó
+   '<ur>' : char(163), '<Ur>' : char(233), # Ú
+   '<yr>' : char(236), '<Yr>' : char(237)  # Ý
+];
+
+ads.auxconvert := proc(chars :: string) is
+   return strings.replace(chars, ads._ligReplacements);
+end;
+
+
+ads.lookup := proc(fh :: nonnegint, word :: string) is
+   local key := ads.auxconvert(word);
+   local found := ads.read(fh, key);
+   if assigned(found) then
+      return found
+   else # search for reconstructed words marked by a preceding asterisk
+      found := ads.read(fh, '*' & key);
+      if assigned(found) then
+         return '[*] ' & found
+      fi
+   fi;
+   # inprecise search, allowing regexs
+   local s, t := ads.iterate(fh, '');
+   create local table result;
+   while s <> null do
+      if key in s then
+         result[s] := t
+      fi;
+      s, t := ads.iterate(fh, s)
+   od;
+   return result
+end;
+
+# ads.search, written July 21, 2007
+# search all values in a dictionary for a given substring (with internal diacritics and runes extension);
+# Return is a table.
+#
+# Examples:
+# > ads.search(fh, '<th>iudinassus') -> ads.seek(fh, 'þiudinassus') -> kingdom
+#
+# > ads.seek(fh, '[.]*<th>iud'):
+# Gutþiuda = Gotenvolk
+# þiudinassus = Königreich
+
+ads.search := proc(fh :: nonnegint, word :: string, column) is
+   local col, key;
+   col := if column = null then 2 else column fi;
+   key := ads.auxconvert(word);
+   return ads.find(fh, key, col)
+end;
+
+# close all open files in one stroke; July 09, 2007
+
+ads.closeall := proc() is
+   for keys i in ads.openfiles do
+      ads.close(i)
+   od;
+   return null
+end;
+
+
+# creates a sequence; April 22, 2008
+
+ads.createseq := proc(fn :: string) is
+   ads.createbase(fn, 10, 'seq')
+end;
+
+
+##############################################################################################
+# Backward compatibility to Agena 2.37.6 and earlier                                         #
+##############################################################################################
+
+ads.openbase  := ads.open;
+ads.closebase := ads.close;
+ads.readbase  := ads.read;
+ads.writebase := ads.write;
+ads.rawsearch := ads.find;
+

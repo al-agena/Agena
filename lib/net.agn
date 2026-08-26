@@ -1,0 +1,133 @@
+# The net package
+
+package.checkclib('net');  # has C dynamic link library been found ?
+
+net.initstring := 'net v0.4.3 as of October 06, 2022\n
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY. Check the Agena licence for further information.\n';
+
+# for the archetype of this function, please see:
+# http://coding.debuntu.org/c-linux-socket-programming-tcp-simple-http-client
+net.wget := proc(domain :: string, path, port) is
+   local s, contents, r, err, slashindomain;
+   if assigned(port) then
+      if port -: nonnegint or port >= 64k then
+         argerror(port, 'net.wget', 'third argument must be a non-negative integer < 64k')
+      fi
+   else
+      port := 80  # use default HTTP port 80
+   fi;
+   if 'http://' in domain = 1 then
+      domain := domain[8 to -1]
+   elif 'https://' in domain = 1 then
+      domain := domain[9 to -1]
+   fi;
+   while '/' atendof domain do  # delete trailing slashes
+      domain := domain[1 to -2]
+   od;
+   if domain = '' then
+      error('Error in `net.wget`: first argument must not be the empty string.')
+   fi;
+   slashindomain := '/' in domain;
+   if slashindomain and unassigned(path) then
+      domain, path := domain[1 to slashindomain - 1], domain[slashindomain + 1 to -1];
+   fi;
+   try
+      net.lookup(domain)
+   catch
+      error('Error in `net.wget`/' & lasterror)
+   yrt;
+   if unassigned(path) or path = '' then
+      path := '/'
+   elif path -: string then
+      argerror(path, 'net.wget', 'second argument must be a string')
+   fi;
+   s := net.open();  # issues an error if a new socket could not be opened
+   create sequence contents;
+   r, err := net.connect(s, domain, port);
+   if not r then
+      error('Error in `net.wget`: could not connect socket ' & s & ' to ' & domain & '\n   ' & err)
+   fi;
+   r := net.send(s,
+      strings.format('GET /%s HTTP/1.0\r\nHost: %s\r\nUser-Agent: %s\r\n\r\n',
+         path, domain, 'HTMLGET 1.0', true)
+   );
+   if r = fail then
+      error('Error in `net.wget`: connection on socket ' & s & ' to ' & domain & ' has been closed.')
+   fi;
+   err := 1;
+   while err <> 0 do
+      r, err := net.receive(s);
+      if not r then
+         error('Error in `net.wget`: ' & err & 'on socket ' & s '.')
+      fi;
+      insert r into contents
+   od;
+   r, err := net.close(s);
+   if not r then
+      error('Error in `net.wget`: could not close socket ' & s & ' (' & err & ').')
+   fi;
+   return strings.join(contents)
+end;
+
+
+#/ Opens a socket, connects to a server given by the string ip (either a domain name or a numeric ip)
+   on its port port, a number, optionally sends a string to the server, and then closes the connection
+   again.
+/#
+net.smallping := proc(ip :: string, port :: number, iters, delay, message, noprint) is  # 2.1.2
+   local s, u, u1, u2, v, v1, v2, sizesent, i, messagegiven, finiteloop, success, sum, delta, count, doprint;
+   i, sum, count -> 0;
+   messagegiven := message :: string;
+   if unassigned skycrane then
+      import skycrane
+   fi;
+   if assigned iters then
+      if not(isposint(iters) or infinite iters) then
+         error('Error in `net.smallping`: invalid argument for number of iterations.')
+      fi;
+      if infinite iters then iters := -1 fi  # never return
+   else
+      iters := 1
+   fi;
+   if assigned delay then
+      if isnegint(delay) then
+         error('Error in `net.smallping`: invalid argument for delay.')
+      fi
+   elif iters = 1 then
+      delay := 0
+   else
+      delay := 1
+   fi;
+   doprint := unassigned noprint or noprint = false;
+   finiteloop := iters <> -1;  # ignore HUGE_VAL in loop
+   do
+      s := net.open();  # automatically issues an error if socket could not be opened
+      u1, u2 := os.time();
+      u := u1 + u2/1k;
+      # net.block(s, false);  # do not use non-blocking sockets ! */
+      if net.connect(s, ip, port) <> true then  # connect did not succeed ?
+         sizesent, v -> infinity
+      else
+         if messagegiven then sizesent := net.send(s, message, true) fi;
+         v1, v2 := os.time();
+         v := v1 + v2/1k
+      fi;
+      if net.close(s) = false then
+         error('Error in `net.smallping`: socket could not be closed.')
+      fi;
+      delta := v - u;
+      if finite v then  # XXX, beware of overflows
+         sum +:= delta;
+         count++
+      fi;
+      success := if messagegiven then sizesent = size message else sizesent <> infinity fi;
+      if doprint then
+         printf('%s  %6.3f  %6.3f  %s  %d\n', skycrane.todate(u), delta, sum/count, tostring(success), i)
+      fi;
+      os.wait(if finite delta then delay - delta else delay fi);
+      sizesent := null  # delete value for further connection attempts
+   until ++i >= iters and finiteloop;
+   return u, sum/count, success
+end;
+

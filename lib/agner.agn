@@ -1,0 +1,51 @@
+# A package for Queueing theory, its origins in research by Agner Krarup Erlang, who created models to describe
+# the system of incoming calls at the Copenhagen Telephone Exchange Company.
+# Agner Krarup Erlang, 1 January 1878 – 3 February 1929, was a Danish mathematician, statistician and engineer,
+# who invented the fields of traffic engineering and queueing theory.
+# The summary above has been taken from English Wikipedia. Initiated August 01, 2013
+
+create table agner;  # initialise package table, no C libraries
+
+agner.initstring := 'agner v0.0.2 as of April 10, 2025\n';
+
+# work load, ncalls: number of calls _per hour_, duration: mean time for each request in minutes
+agner.erlang := proc(calls :: nonnegint, duration :: nonnegative) is
+   return calls*duration/60
+end;
+
+
+# blocking probability: erlang = (a) work load in Erlang, lines = (n) number of lines;
+# usually, a result of 0.05 is acceptable, 0.10 is terrible, and 0.001 is so good that most callers
+# will never get a busy signal. E.g., 0.02 means that there is a 2% probability of getting a busy signal
+# see: `An Introduction to Erlang B and Erlang C` by Ian Angus.
+agner.erlangb := proc(erlang :: nonnegative, lines :: nonnegint, option) is
+   if assigned(option) then  # classic formula, possibly with numeric overflows
+      return erlang**lines/fact(lines)/sumup(<: x -> erlang**x/fact(x) :>, 0, lines)
+   else  # overflow-preventive method
+      local inverseblock := 1;
+      for i from 0 to lines do
+         inverseblock := inverseblock*i/erlang + 1
+      od;
+      return recip(inverseblock)
+   fi
+end;
+
+
+# Erlang C is most commonly used to calculate how long callers will have to wait before
+# being successfully connected to.
+agner.erlangc := proc(erlang :: nonnegative, lines :: nonnegint, option) is
+   if assigned(option) then
+      local a, b, c;
+      a := erlang**lines*exp(-erlang)/fact(lines);
+      b := lines/(lines - erlang);
+      c := a*b;
+      return c/(1 - agner.erlangb(erlang, lines) + c)
+   else
+      local rho, erlangb;
+      rho := erlang/lines;
+      return when rho >= 1 with undefined;
+      erlangb := agner.erlangb(erlang, lines);
+      return erlangb/(1 - rho + rho*erlangb);
+   fi
+end;
+

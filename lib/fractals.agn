@@ -1,0 +1,1090 @@
+
+/* The `fractals` package: initiated June 15, 2008, last update July 14, 2026.
+
+   Requirements:
+   1) Agena 7.7.5 or later,
+   2) the FRACTINT colour maps available at https://sourceforge.net/projects/agena/files/Packages/fractint.zip/download.
+
+   The destination of this file is the `lib` folder of the Agena installation.
+
+   Changes:
+   v1.1.1, July 15, 2026:
+   - Simplified `fractals.dragon` a bit,
+   - added `fractals.minkowski` computing Minkowski Islands,
+   - added `fractals.koch` generating Koch curves.
+   - Added descriptions for these new and other formerly undocumented fractals to the Agena Reference. */
+
+package.checkclib('fractals');  # has C dynamic link library been found ?
+
+fractals.initstring := 'fractals v1.1.1 as of July 14, 2026\n';
+
+unassigned(gdi) and not os.isdos() ? import gdi;
+
+# Initialisation
+
+#if unassigned(environ.fractintcolourmaps) then
+#   environ.FractOptimised := true   # Sun x86 Solaris 10 and Linux: apply image refresh optimisation
+#fi;
+
+# Path to FRACTINT's color MAPs
+
+unassigned(environ.fractintcolourmaps) ?
+   environ.fractintcolourmaps := mainlibname[1 to ('/lib' atendof mainlibname) - 1] & '/share/fractint/';
+
+# Declare math functions local in order to speed up computation
+local arctan2, sincos, hypot := arctan2, math.sincos, hypot;
+
+
+###############################################################################################
+# Basic Agena procedures                                                                      #
+###############################################################################################
+
+# Mandelbrot set implemented with trig functions, 3 times slower than mandelbrotfast
+fractals.mandelbrottrig := proc(x, y, iter, radius) is
+   local p, q, phi, a, b, ps, pc, sincos;
+   sincos := math.sincos;
+   p, q := x, y;
+   a := hypot(p, q);
+   for i from 0 to iter while a < radius do
+      phi := 2 * arctan2(q, p);
+      b := a ** 2;
+      ps, pc := sincos(phi);  # 2.11.0 RC4 improvement, 2.11.1 fix
+      p := b * pc + x;
+      q := b * ps + y;
+      a := hypot(p, q)
+   od;
+   return i
+end;
+
+
+import fastmath;
+local hypotfast := fastmath.hypotfast;
+
+# Mandelbrot set, 25 % _slower_ than fractals.mandelbrot   # hypot(p, q)
+fractals.mandelbrotfast := proc(x, y, iter, radius) is
+   local p, q, r, a;
+   p, q := x, y;
+   a := hypotfast(x, y);
+   for i from 0 to iter while a < radius do
+      r := p;
+      p := square p - square q + x;
+      q := 2*r*q + y;
+      a := hypotfast(p, q)
+   od;
+   return i
+end;
+
+
+fractals.mandelbrot := proc(x, y, iter, radius) is
+   local c, z;
+   z := x!y;
+   c := z;
+   for i from 0 to iter while |z| < radius do
+      z := square z + c
+   od;
+   return i
+end;
+
+
+fractals.mandelbrot2 := proc(x, y, iter, radius) is
+   local c, z;
+   z := x!y;
+   c := z;
+   for i from 0 to iter while |z| < radius do
+      z := z squareadd c
+   od;
+   return i
+end;
+
+
+fractals.mandelbrot3 := proc(x, y, iter, radius) is
+   local c, z;
+   z := x!y;
+   c := z;
+   for i from 0 to iter while |z| < radius do
+      z := muladd(z, z, c)
+   od;
+   return i
+end;
+
+
+local dhypot, derfc, ddual := dual.hypot, dual.erfc, dual.new;
+
+fractals.dmandelbrot := proc(x, y, iter, radius) is
+   local c, z;
+   z := ddual(x, y);
+   c := z;
+   for i from 0 to iter while dhypot(z) < radius do
+      z := square z + c
+   od;
+   return i
+end;
+
+
+fractals.manderfc := proc(x, y, iter, radius) is
+   local c, z;
+   z := x!y;
+   c := z;
+   for i from 0 to iter while |z| < radius do
+      z := square erfc(z) + c
+   od;
+   return i
+end;
+
+
+fractals.dmanderfc := proc(x, y, iter, radius) is
+   local c, z;
+   z := ddual(x, y);
+   c := z;
+   for i from 0 to iter while dhypot(z) < radius do
+      z := square derfc(z) + c
+   od;
+   return i
+end;
+
+
+fractals.amarkmandel := proc(x, y, iter, radius) is
+   # taken from the corresponding Maple procedure as of May 25, 1996
+   # The original formula 'z:=z^2*c^(p-1)+c' was developed by Mark Peterson.
+   local c, z;
+   c := x!y;
+   z := c;
+   for i from 0 to iter while |z| < radius do
+      z := square z * c**0.1 + c
+   od;
+   return i
+end;
+
+
+fractals.alcos := proc(x, y, iter, radius) is
+   local z, c;
+   z := x!y;
+   c := 1!0.4;
+   for i from 0 to iter while |z| < radius do
+      z := c * cos(z)
+   od;
+   return i
+end;
+
+
+fractals.alsin := proc(x, y, iter, radius) is
+   local z, c;
+   z := x!y;
+   c := 1!0.4;
+   for i from 0 to iter while |z| < radius do
+      z := c * sin(z)
+   od;
+   return i
+end;
+
+
+fractals.alsinh := proc(x, y, iter, radius) is
+   local z, c;
+   z := x!y;
+   c := 1!0.4;
+   for i from 0 to iter while |z| < radius do
+      z := c * sinh(z)
+   od;
+   return i
+end;
+
+
+fractals.alcosh := proc(x, y, iter, radius) is
+   local z, c;
+   z := x!y;
+   c := 1!0.4;
+   for i from 0 to iter while |z| < radius do
+      z := c * cosh(z)
+   od;
+   return i
+end;
+
+
+# Declare fractals function local in order to speed up computation
+# local cosxx := fractals.cosxx;
+
+fractals.alcosxx := proc(x, y, iter, radius) is
+   local z, c;
+   z := x!y;
+   c := 1!0.4;
+   for i from 0 to iter while |z| < radius do
+      z := c * cosxx(z)
+   od;
+   return i
+end;
+
+
+fractals.albea := proc(x, y, iter, radius, p) is
+   local z, c;
+   z := x!y;
+   c := p or 1!0.4;
+   for i from 0 to iter while |z| < radius do
+      z := c * bea(z)
+   od;
+   return i
+end;
+
+
+local bea1 := proc(z :: complex) is
+   local x, y, sihy, cohy;
+   x, y := real(z), imag(z);
+   sihy, cohy := math.sinhcosh(y);
+   return sin(x)*sihy + I*cos(x*0.5)*cohy
+end;
+
+
+fractals.albea1 := proc(x, y, iter, radius, p) is
+   local z, c;
+   z := x!y;
+   c := p or 1!0.4;
+   for i from 0 to iter while |z| < radius do
+      z := c * bea1(z)
+   od;
+   return i
+end;
+
+
+fractals.albea2 := proc(x, y, iter, radius, p) is
+   local z, c;
+   z := x!y;
+   c := z;
+   for i from 0 to iter while |z| < radius do
+      #z := c * bea(z) / (z**2 + c)
+      #z := (z**2 + c) / (c * bea(z))
+      z := c * square bea(z)
+   od;
+   return i
+end;
+
+
+fractals.albea3 := proc(x, y, iter, radius, p) is
+   local z, c;
+   z := x!y;
+   c := z;
+   for i from 0 to iter while |z| < radius do
+      z := square bea(z) / c
+   od;
+   return i
+end;
+
+
+fractals.albeacosxx := proc(x, y, iter, radius, p) is
+   local z, c;
+   z := x!y;
+   c := p or 1!0.4;
+   for i from 0 to iter while |z| < radius do
+      z := if even(i) then c * bea(z) else c * cosxx(z) fi
+   od;
+   return i
+end;
+
+
+fractals.albeacosxx2 := proc(x, y, iter, radius, p) is
+   local z, c;
+   z := x!y;
+   c := p or 1!0.4;
+   for i from 0 to iter while |z| < radius do
+      z := if even(z) then c * bea(z) else c * cosxx(-z) fi
+   od;
+   return i
+end;
+
+
+# The fractal properties of Newton's method to calculate complex roots were first
+# discovered by John Hubbard of Orsay, France.
+fractals.anewton := proc(x, y, iter, radius) is
+   local z;
+   z := x!y;
+   for i from 0 to iter while cube z |- 1 >= radius do
+      dec z, (cube z - 1) / (3*square z)
+   od;
+   return i
+end;
+
+
+# Julia Cantor set, 7.7.4 u1
+fractals.juliacantor := proc(x, y, iter, radius) is
+   return fractals.mandel(x, y, iter, radius, -0.765!0.12)
+end;
+
+
+# Julia Petal structure, 7.7.4 u1
+fractals.juliapetal := proc(x, y, iter, radius) is
+   return fractals.mandel(x, y, iter, radius, -0.481!0.532)
+end;
+
+
+
+###############################################################################################
+# Colours                                                                                     #
+###############################################################################################
+
+cyan := <: x -> 0, 0.05*x, 0.05*x :>
+cyannew := <: x -> 0, 0.02*x, 0.02*x :>
+cyanalex := <: x -> 0.05, 0.05*x, 0.05*x :>
+red  := <: x -> 0.05*x, 0, 0 :>
+blue := <: x -> 0, 0, 0.05*x :>
+violet := <: x -> 0.05*x, 0, 0.05*x :>
+white  := <: x -> 0.05*x, 0.05*x, 0.05*x :>
+
+# fractals.draw
+# takes fn, the fractal iterator, and at least three numbers x, y, l, where x, y determines the
+# center point (x, y) of the image (in coordinates, not pixels). l, a positive number, represents
+# the length of the plot, with the image drawn from x-l .. x+l, f(y-l) .. f(y+l).
+
+fractals.draw := proc(fn :: procedure, ?) is
+   # fn: the fractal function
+   local t, im, iter, arg, text, offset, a, b, c, d, radius,
+         cmap, outfile, color, xdist, xstep, ydist, ystep, xres, xspan, yspan, yres,
+         pnt, length, olda, oldb, ratio, res, mouse, update, counter, c1, c2;
+   # reads a FRACTINT color map
+   local getmap := proc(fn::string) is
+      local L, colors, ntable, linenumber;
+      try
+         L := io.readlines(fn)
+      catch in errmsg then
+         error('FRACTINT color map not found in ' & fn & '.\n\n' &
+               'Maybe you need to download the fractintmaps-*.tar.gz file from\n' &
+               'http://agena.sourceforge.net/download.html#fractintmaps and install it into\n' &
+               fn[1 to ('fractint' in fn) + 7] & '.')
+      yrt;
+      L := <: x -> x split ' ' :> @ <: x -> strings.replace(x, '\t', ' ') :> @ <: x -> strings.trim(x) :> @ L;
+      L := <: x -> size(x) >= 3 :> $ L;
+      linenumber := 0;
+      create table colors;
+      for i, j in L do
+         inc linenumber;
+         ntable := [j[1], j[2], j[3]];
+         for i, j in ntable do
+            if not(strings.isintegral(j)) then
+               error('Error, at line ' & tonumber(linenumber) & ', column ' & tonumber(i) &
+                  ',\n   in ' & fn & ':\n   invalid FRACTINT colour map format,' &
+                  '\n   number expected, got `' & tostring(j) & '`.')
+            fi
+         od;
+         colors[i - 1] := <: x -> tonumber(x)/255 :> @ ntable
+      od;
+      return colors
+   end;
+   # get one of Picture Publisher's palettes
+   local getpalette := proc(fn::string) is
+      local fd, result, a, value, c;
+      try
+         fd := binio.open(fn)
+      catch in errmsg then
+         error('file not found.')
+      yrt;
+      binio.seek(fd, 20);
+      create table result, table a(3);
+      c := 0;
+      for i to environ.kernel('maxlong') do
+         value := binio.readchar(fd);
+         break when type(value) <> number;
+         if nonzero(i % 4) then
+            insert value into a
+         else
+            result[c] := a;
+            clear a;
+            create table a(3);
+            inc c
+         fi
+      od;
+      binio.close(fd);
+      return result
+   end;
+   # transforms FRACTINT's color map to gd format
+   local map2color := proc(x) is
+      local xt;
+      xt := if x = 0 then 1 else x fi;
+      xt := if size cmap < iter then xt % size cmap else xt % iter fi
+      return cmap[xt, 1], cmap[xt, 2], cmap[xt, 3]
+   end;
+   if nargs < 4 then error('need at least four arguments.') fi;
+   if fn :: 'iteratorEsctime' then
+      offset := 6;
+      a := ?[2]; b := ?[3]; length := ?[4];
+   else
+      offset := 5;
+      a := ?[1]; b := ?[2]; length := ?[3];
+   fi;
+   not(isnumber(a, b, length)) ?
+      error('Error in `fractals.draw`: numbers expected for optional arguments.')
+   length <= 0 ?
+      error('Error in `fractals.draw`: third argument must be positive.');
+   res := 640:480;   # resolution
+   outfile := null;  # default file name
+   iter := 128;      # default number of iterations
+   color := <: x -> 0, 0, 0.05*x :>;    # default colouring scheme (blue), 2.5.0
+   radius := 2;
+   pnt := null;      # no value for lambda point pnt
+   text := null;     # no text 'Created with Agena 0.xx.y Language Demonstrator';
+   cmap := null;     # no map
+   mouse := false;   # do nor print coordinates at the console
+   if isnonnegint(environ.fractscreenupdates) then
+      update := environ.fractscreenupdates;  # update screen each 10th column
+   elif assigned(environ.fractscreenupdates) then
+      error('Error in `fractals.draw`: environ.fractscreenupdates must be assigned a positive integer.')
+   else
+      update := 1
+   fi;
+   # check options
+   for i from offset to nargs do
+      arg := ?[i - 1];
+      arg -: pair ? error('Error, option of type pair expected, got ' & tostring(arg) & '.');  # changed 2.13.1
+      local val := right(arg);
+      case left(arg)
+         of 'res' then  # resolution (x, y) in pixels
+            res := val
+            res -: pair ? error('Error in `fractals.draw`: `res` option needs a pair.');
+            type(left(res)) <> number or type(right(res)) <> number or left(res) < 1 or right(res) < 1 ?
+               error('Error, `res` option needs a pair of positive numbers.');
+         of 'iter' then  # number of iterations per point
+            iter := val
+            iter -: number ? error('Error in `fractals.draw`: number of iterations is not a number.');
+            iter < 1 ? error('Error, nonpositive number of iterations.');
+         of 'radius' then  # bailout value
+            radius := val
+            radius -: number ? error('Error in `fractals.draw`: radius is not a number.');
+            radius <= 0 ? error('Error, radius must be positive.');
+         of 'colour' then  # color procedure
+            color := val;
+            color -: procedure ? error('Error in `fractals.draw`: `colour` options needs a procedure.');
+         of 'file' then  # path and file name of the resulting picture
+            outfile := val;
+            outfile -: string ? error('Error in `fractals.draw`: `file` options needs a file name (a string).');
+         of 'text' then  # print text
+            text := val;
+            text -: string ? error('Error in `fractals.draw`: text is not a string.');
+         of 'map' then  # load one of FRACTINT's color maps
+            val -: string ? error('Error in `fractals.draw`: `map` option needs a file name (a string).');
+            cmap := getmap(environ.fractintcolourmaps & val);
+            color := map2color;
+         of 'pal' then  # load one of Picture Publisher's color palettes
+            val -: string ? error('Error in `fractals.draw`: `pal` option needs a string.');
+            cmap := getpalette(val);
+            color := map2color;
+         of 'lambda' then  # point `lambda`
+            val -: complex and typeof val <> 'dual' ? error('Error in `fractals.draw`: `lambda` option needs a complex number.');
+            pnt := val;
+         of 'mouse' then
+            val -: boolean ? error('Error in `fractals.draw`: `mouse` option needs a Boolean.');
+            mouse := val
+         of 'update' then
+            update := int(val);
+            update -: number ? error('Error in `fractals.draw`: `update` option needs a number.');
+            update < 0 ? error('Error, negative number of updates.')
+         else
+            error('Error, unknown option ' & tostring(left(arg)) & '.')
+         esle
+      esac
+   od;
+   # determine screen ratio from default or given resolution
+   ratio := left(res)/right(res);  # screen ratio, by default determined by res (e.g. 4:3, 16:9)
+   # now recompute a, b, c, d
+   olda := a; oldb := b;
+   a := olda - length; b := olda + length;
+   c := oldb - 0.5*(b - a)*ratio**(-1); d := oldb + 0.5*(b - a)*ratio**(-1);
+   xdist := b - a; xres := left(res); ydist := d - c; yres := right(res);
+   xstep := xdist/xres; ystep := ydist/yres;
+   xspan := xres/xdist; yspan := yres/ydist;
+   t := time();
+   im := gdi.open(xres, yres, outfile);
+   not im ? error('Error in `fractals.draw`: Opening window failed.');
+   local bgblack := gdi.ink(im, 0, 0, 0);
+   gdi.background(im, bgblack);
+   create local table COLOURS(iter+2);
+   for i from 0 to iter do
+      COLOURS[i] := gdi.ink(im, color(i))
+   od;
+   COLOURS[iter] := gdi.ink(im, 0, 0, 0);
+   COLOURS[iter + 1] := gdi.ink(im, 0, 0, 0);
+   environ.userinfo(fractals.draw, 1, 'Plotting from x=',
+      a, ' to ', b, ', y=', c, ' to ', d, ',\nwith xstep=', xstep, ', ystep=', ystep, '\nat resolution ',
+      left(res), ':', right(res), ' with ', iter, ' iterations, iteration radius=', radius, '\n');
+   environ.userinfo(fractals.draw, 1, 'Generating image ... ');
+   gdi.autoflush(im, false);
+   counter := 0;
+   t := time();
+   # plot them
+   if fn :: 'iteratorEsctime' then  # got user-defined escape-time fractal iterator
+      if unassigned(pnt) then
+         for x from a to b by xstep do
+            inc counter;
+            for y from c to d by ystep do  # the int operator is surprisingly fast
+               gdi.point(im, int((x - a)*xspan + 0.5), int((y - c)*yspan + 0.5),
+                  COLOURS[int(fn(?[1], x, y, x, y, iter, radius))])
+            od;
+            everyth(counter, update) ? gdi.flush(im)
+         od
+      else  # 7.7.5 extension
+         local pntr := real(pnt);
+         local pnti := imag(pnt);
+         for x from a to b by xstep do
+            inc counter;
+            for y from c to d by ystep do  # the int operator is surprisingly fast
+               gdi.point(im, int((x - a)*xspan + 0.5), int((y - c)*yspan + 0.5),
+                  COLOURS[int(fn(?[1], x, y, pntr, pnti, iter, radius))])
+            od;
+            everyth(counter, update) ? gdi.flush(im)
+         od
+      fi
+   else
+      for x from a to b by xstep do
+         inc counter;
+         for y from c to d by ystep do  # the int operator is surprisingly fast
+            gdi.point(im, int((x - a)*xspan + 0.5), int((y - c)*yspan + 0.5),
+               COLOURS[int(fn(x, y, iter, radius, pnt))])
+         od;
+         everyth(counter, update) ? gdi.flush(im)
+      od
+   fi;
+   assigned(text) ? gdi.text(im, 10, yres - 38, text, COLOURS[iter + 1]);
+      #im@stringFT(COLOURS[iter+1], '../bin/Vera.TTF', 12, 0, 10, yres-38, text)
+   t := time() - t;
+   environ.userinfo(fractals.draw, 1, 'Done in ', t, ' seconds.\n');
+   gdi.flush(im);  # final flush
+   gdi.autoflush(im, true)
+   if outfile <> null then
+      gdi.close(im)
+   elif mouse then
+      local x, y, state, posstr, sposstr;
+      do
+         x, y, state := gdi.mouse(im);
+         posstr := strings.format('x=%+011.06f y=%+011.06f', x/xspan + a, y/yspan + c);
+         sposstr := size posstr;
+         write(posstr);
+         write(strings.repeat('\b', sposstr));
+         break when state && 0x0400 = 0x0400 or io.anykey()  # right mouse button pressed ? 0x0400 = 0d1024
+      od
+   fi;
+   environ.gc();
+   return t
+end;
+
+
+local procedure initdims (?) is
+   create local table dims;
+   dims.xmin, dims.ymin -> infinity;
+   dims.xmax, dims.ymax -> -infinity
+   return dims
+end;
+
+local procedure updatedims (dims, x, y) is
+   if   x < dims.xmin then dims.xmin := x;
+   elif x > dims.xmax then dims.xmax := x fi;
+   if   y < dims.ymin then dims.ymin := y
+   elif y > dims.ymax then dims.ymax := y fi
+end;
+
+/* The function generates a realistic, organic fern structure (similar to the famous Barnsley Fern) using an Iterated Function System (IFS)
+   driven by a random mutation process. It initializes a coordinate system at (0,0) and loops through a user-defined number of iterations
+   (iter). The function returns the gdi PLOT data for subsequent visualization. */
+fractals.fern := proc(iter :: number) is
+   local a, b, c, d, e, f, k, p, x, x1, y, pk, pts, dims, xmin, xmax, ymin, ymax;
+   a := (/ 0 0.197 -0.155 0.849 \);
+   b := (/ 0 -0.226 0.283, 0.037 \);
+   c := (/ 0 0.226 0.26 -0.0377 \);
+   d := (/ 0.16 0.197 0.237 0.849 \);
+   e := (/ 0 0 0 0 \);
+   f := (/ 0 1.6 0.44 1.6 \);
+   p := (/ 0.03 0.14 0.27 1.0 \);
+   dims := initdims();
+   pts := gdi.structure(iter);  # initialise plot structure with iter entries
+   x, y -> 0; xmin, ymin -> infinity; xmax, ymax -> -infinity;
+   for i to iter do
+      pk := math.random();
+      case
+         of pk <= p[1] -> k := 1;
+         of pk <= p[2] -> k := 2;
+         of pk <= p[3] -> k := 3;
+         else k := 4 esle
+      esac;
+      x1 := a[k]*x + b[k]*y + e[k];
+      y  := c[k]*x + d[k]*y + f[k];
+      x  := x1;
+      gdi.setpoint(pts, x, y, [math.norm(i, 1:iter), 0, 0]);
+      updatedims(dims, x, y)
+   od;
+   gdi.setinfo(pts, xdim = dims.xmin:dims.xmax, ydim = dims.ymin:dims.ymax);
+   environ.gc();
+   return pts
+end;
+
+
+# Iterated Function system, generalisation of fractals.fern, created by Gemini AI, 7.7.6
+fractals.ifs := proc(iter :: number, params :: table, p :: table) is
+   local k, x, x1, y, pk, pts, dims, transforms, a, b, c, d, e, f, xmin, ymin, xmax, ymax;
+   # Automatically detect if we are using 4, 6, or any other number of rules
+   if size(params) <> 6 or empty(p) then
+      error('Error in `fractals.ifs`: wrong number of entries in IFS parameter table.');
+   fi;
+   for i to 6 do
+      if size params[i] < 1 or odd size params[i] or size params[i] <> size p then
+         error('Error in `fractals.ifs`: wrong number of entry #' & i & ' in IFS parameter table.');
+      fi
+   od;
+   a := params[1]; b := params[2]; c := params[3];
+   d := params[4]; e := params[5]; f := params[6];
+   transforms := size(p);
+   dims := initdims();
+   pts := gdi.structure(iter);  # initialise plot structure with iter entries
+   x, y -> 0; xmin, ymin -> infinity; xmax, ymax -> -infinity;
+   for i to iter do
+      pk := math.random();
+      # Dynamic transformation selector replacing the hardcoded esac/case blocks
+      k := transforms;  # Default to the last index if no earlier bounds match
+      for j from 1 to transforms - 1 do
+         if pk <= p[j] then
+            k := j;
+            break # Found our matching matrix row, stop looking
+         fi;
+      od;
+      # Vectorized matrix transform
+      x1 := a[k]*x + b[k]*y + e[k];
+      y  := c[k]*x + d[k]*y + f[k];
+      x  := x1;
+      gdi.setpoint(pts, x, y, [math.norm(i, 1:iter), 0, 0]);
+      updatedims(dims, x, y)
+   od;
+   gdi.setinfo(pts, xdim = dims.xmin:dims.xmax, ydim = dims.ymin:dims.ymax);
+   environ.gc();
+   return pts
+end;
+
+
+/* Creates a Logistic bifurcation diagram generator.
+
+   r_min is the growth rate start value, r_max the growth rate end value, r_steps is the
+   horizontal/sampling resolution, transient denotes iterations to discard, collect determines
+   the points to collect per r value.
+
+   The function returns the gdi PLOT data for subsequent visualization.
+
+   Based on code suggested by Grok (by xAI), 7.7.4 u1
+
+   Grok: "The logistic map (x := r * x * (1 - x)) only produces interesting bounded behaviour
+   (staying between 0 and 1) when r is between 0 and 4.
+      For r = 4: the values stay in [0, 1] (or at least bounded).
+      For r > 4: the iteration diverges (goes to infinity or becomes negative). After a few
+               iterations, x shoots outside [0,1] and keeps growing.
+   Changing the upper limit to 3.99 instead of 4.0 avoids occasional numerical collapse at
+   exactly r=4."
+   logistic_bifurcation(
+      2.5,   # r_min: growth rate start value
+      4.0,   # r_max: growth rate end value, may be 3.99
+      2000,  # r_steps: horizontal/sampling resolution (increase for higher resolution)
+      500,   # transient: transient iterations to discard
+      50     # collect: points to collect per r value
+   ) */
+
+if unassigned fractals.logisticmap then
+   fractals.logisticmap := <: r, x -> r * x * (1 - x) :>
+fi;
+
+procedure fractals.logbifur(r_min, r_max, r_steps, transient, collect) is
+   local logisticmap := fractals.logisticmap;
+   local pts := gdi.structure(collect*r_steps);
+   local dims := initdims();
+   for i from 0 to r_steps - 1 do
+      local r := r_min + (r_max - r_min) * i / (r_steps - 1);
+      local x := 0.5;  # initial condition
+      to transient do  # discard transient iterations
+          x := logisticmap(r, x)  /* 7.7.6 13 % tuning */
+      end;
+      to collect do  # collect points after transient
+         x := logisticmap(r, x);  /* 7.7.6 13 % tuning */
+         gdi.setpoint(pts, r, x);
+         updatedims(dims, r, x)
+      end
+   end;
+   gdi.setinfo(pts, xdim = dims.xmin:dims.xmax, ydim = dims.ymin:dims.ymax);
+   environ.gc();
+   return pts
+end;
+
+
+/* Henon map. Taken and adapted from https://github.com/blbadger/2dattractors/tree/master,
+   file henon_attractor.py; no licence available. 7.7.4 u1.
+
+   The function generates a 2D Hénon attractor by iteratively calculating points based on input parameters a and b,
+   both numbers, over a specified number of iterations iters. The function returns the gdi PLOT data for subsequent
+   visualization. */
+procedure fractals.henon(iters, a, b) is
+   local startx, starty -> 0.3;
+   local collect, last, pts, x, y := seq(seq(startx, starty));
+   local dims := initdims();
+   local henonattr := fractals.henonattr; # computes the next step in the Henon map: 1 - a*x^2 + y, b*x
+   updatedims(dims, startx, starty);
+   # starting point
+   for i to iters do
+      last := top collect;
+      x, y := henonattr(last[1], last[2], a, b);
+      insert seq(x, y) into collect;
+      updatedims(dims, x, y)
+   od;
+   pts := gdi.structure(iters + 1);
+   for i in collect do
+      gdi.setpoint(pts, i[1], i[2]);
+   od;
+   gdi.setinfo(pts, xdim = dims.xmin:dims.xmax, ydim = dims.ymin:dims.ymax);
+   clear collect;
+   return pts
+end;
+
+
+
+/* Creates the dragon curve fractal, p, the recursion depth, should be a maximum of around 20.
+   The function returns the gdi PLOT data for subsequent visualization. */
+fractals.dragon := proc(p :: nonnegint) is
+   local h, s, s', x, y, ps, m, n, d, x1, x2, x3, y1, y2, y3, dx, dy, xmin, xmax, ymin, ymax,
+      xlast, ylast, oneoone, setline, angle, idx;
+   oneoone := [1, 0, 1];
+   setline := gdi.setline;
+   ps := gdi.structure(2*antilog2(p - 1));
+   h := antilog2(-p*0.5);
+   s := 0;
+   x := +h * math.cospi(p*0.25);
+   y := -h * math.sinpi(p*0.25);
+   xlast := 0.75*x; ylast := 0.75*y;
+   setline(ps, 0, 0, xlast, ylast, oneoone);
+   create local register LUT_dx(4); create local register LUT_dx2(4); create local register LUT_dx3(4);
+   create local register LUT_dy(4); create local register LUT_dy2(4); create local register LUT_dy3(4);
+   # Loop optimizations & pre-computation tables assisted by Gemini AI, 7.7.6, no increase in speed, but a bit leaner
+   for i from 1 to 4 do  # precompute the 4 directions
+      angle := ((i - 1) - p * 0.5) * 0.5;
+      dx := h * math.cospi(angle);
+      dy := h * math.sinpi(angle);
+      LUT_dx[i]  := dx;
+      LUT_dy[i]  := dy;
+      LUT_dx2[i] := dx * 0.25;  # Removes '3*x + x1' style math
+      LUT_dy2[i] := dy * 0.25;
+      LUT_dx3[i] := dx * 0.75;  # Precalculates the 3/4 fractional offset
+      LUT_dy3[i] := dy * 0.75
+   end;
+   for n to antilog2(p - 1) do
+      # Guarantee perfect orientation
+      m := n;
+      while m % 2 = 0 do
+         m /:= 2
+      od;
+      d := signum(m % 4 = 1);
+      # 2. angle tracking state
+      s := (s + d) % 4;
+      # 3. Vectorized coordinate generation (Pure, fast additions)
+      idx := s + 1;
+      x2 := x + LUT_dx2[idx]; y2 := y + LUT_dy2[idx];
+      x3 := x + LUT_dx3[idx]; y3 := y + LUT_dy3[idx];
+      x1 := x + LUT_dx[idx];  y1 := y + LUT_dy[idx];
+      # 4. Render operations
+      setline(ps, xlast, ylast, x2, y2, oneoone);
+      setline(ps, x2, y2, x3, y3, oneoone);
+      # 5. Shift references for the next cycle
+      xlast := x3;
+      ylast := y3;
+      x     := x1;
+      y     := y1
+   end;
+   # integrating the follwoing in the loop above gives a 0.002 % increase in speed only.
+   xmin, ymin -> infinity; xmax, ymax -> -infinity;
+   for i in ps do
+      if i[1] < xmin then xmin := i[1] fi;
+      if i[1] > xmax then xmax := i[1] fi;
+      if i[2] < ymin then ymin := i[2] fi;
+      if i[2] > ymax then ymax := i[2] fi;
+      if i[3] < xmin then xmin := i[3] fi;
+      if i[3] > xmax then xmax := i[3] fi;
+      if i[4] < ymin then ymin := i[4] fi;
+      if i[4] > ymax then ymax := i[4] fi
+   od;
+   gdi.setinfo(ps, xdim = xmin:xmax, ydim = ymin:ymax);
+   return ps
+end;
+
+
+/* Koch curve, generated by Gemini AI.
+
+   The function generates a Koch curve by recursively breaking down a line segment into smaller self-similar segments up
+   to a specified max_depth.
+
+   x_start, y_start are the 2D coordinates of the starting point of the baseline, and x_end, y_end are the 2D coordinates
+   of the ending point of the baseline which is the initial, straight line segment that serves as the foundation for the
+   entire fractal.
+
+   The function returns the gdi PLOT data for subsequent visualization. */
+procedure fractals.koch(x_start, y_start, x_end, y_end, max_depth) is
+   create local table segments;
+   local xmin, ymin, xmax, ymax, oneoone, setline, ps, ctr, segment;
+   local procedure koch(x1, y1, x2, y2, depth) is
+      local x3, y3, x4, y4, x5, y5, cos60, sin60;
+      if depth = 0 then
+         # Base case reached: batch the line segment coordinates
+         # We append a structured sub-table containing the start/end bounds
+         segments[++ctr] := [x1, y1, x2, y2];
+      else
+         # Pre-calculate exact division coordinates (thirds of the line segment)
+         x3 := (x1 * 2 + x2) / 3;
+         y3 := (y1 * 2 + y2) / 3;
+         x4 := (x1 + x2 * 2) / 3;
+         y4 := (y1 + y2 * 2) / 3;
+         # Calculate the peak of the equilateral triangle (rotated 60 degrees)
+         # cospi(1/3) = 0.5, sinpi(1/3) ˜ 0.86602540378cos60 := 0.5;
+         sin60 := 0.8660254037844386;
+         x5 := x3 + (x4 - x3) * cos60 - (y4 - y3) * sin60;
+         y5 := y3 + (x4 - x3) * sin60 + (y4 - y3) * cos60;
+         # Recursively break down the 4 newly generated smaller sub-segments
+         koch(x1, y1, x3, y3, depth - 1);
+         koch(x3, y3, x5, y5, depth - 1);
+         koch(x5, y5, x4, y4, depth - 1);
+         koch(x4, y4, x2, y2, depth - 1)
+      fi
+   end;
+   oneoone := [1, 0, 1];
+   setline := gdi.setline;
+   ps := gdi.structure(4^max_depth);
+   # Step A: Run math to populate our segment batch table
+   ctr := 0;
+   koch(x_start, y_start, x_end, y_end, max_depth);
+   # Step B: Fast graphic processing loop
+   # Iterates over the batched array table cleanly without recursive math overhead
+   xmin, ymin -> infinity;
+   xmax, ymax -> -infinity;
+   for i from 1 to 4^max_depth do  # ctr do # size(segments) do
+      segment := segments[i];
+      setline(ps, segment[1], segment[2], segment[3], segment[4], oneoone)
+   end;
+   for i in ps do
+      if i[1] < xmin then xmin := i[1] fi;
+      if i[1] > xmax then xmax := i[1] fi;
+      if i[2] < ymin then ymin := i[2] fi;
+      if i[2] > ymax then ymax := i[2] fi;
+      if i[3] < xmin then xmin := i[3] fi;
+      if i[3] > xmax then xmax := i[3] fi;
+      if i[4] < ymin then ymin := i[4] fi;
+      if i[4] > ymax then ymax := i[4] fi
+   od;
+   gdi.setinfo(ps, xdim = xmin:xmax, ydim = ymin:ymax);
+   return ps
+end;
+
+
+/* Minkowski Island, generated by Gemini AI.
+   The function generates a Minkowski Island fractal by constructing a closed, square-shaped island layout and
+   deforming each of its four edges. It calculates the corner coordinates of a square based on a starting origin
+   (x_start, y_start) and a given side_length. max_depth represents the recursion level that controls the
+   geometric complexity and density of the square-wave patterns.
+
+   The function returns the gdi PLOT data for subsequent visualization. */
+procedure fractals.minkowski (x_start, y_start, side_length, max_depth) is
+   local procedure minkowski(ps, x_start, y_start, x_end, y_end, max_depth) is
+      create local table segments;
+      local ctr := 0;
+      local procedure minkowski_curve(x1, y1, x2, y2, depth) is
+         local dx, dy, ux, uy, x3, y3, x4, y4, x5, y5, x6, y6, x7, y7, x8, y8, x9, y9;
+         if depth = 0 then
+            segments[++ctr] := [x1, y1, x2, y2]
+         else
+            dx := (x2 - x1) * 0.25;
+            dy := (y2 - y1) * 0.25;
+            ux := -dy;
+            uy := dx;
+            # True right-angle node lattice paths
+            x3 := x1 + dx;          y3 := y1 + dy;
+            x4 := x3 + ux;          y4 := y3 + uy;
+            x5 := x4 + dx;          y5 := y4 + dy;
+            x6 := x5 - ux;          y6 := y5 - uy;
+            x7 := x6 + dx;          y7 := y6 + dy;
+            x8 := x7 - ux;          y8 := y7 - uy;
+            x9 := x8 + dx;          y9 := y8 + dy;
+            # Recursively map all 8 square-wave transitions
+            minkowski_curve(x1, y1, x3, y3, depth - 1);
+            minkowski_curve(x3, y3, x4, y4, depth - 1);
+            minkowski_curve(x4, y4, x5, y5, depth - 1);
+            minkowski_curve(x5, y5, x6, y6, depth - 1);
+            minkowski_curve(x6, y6, x7, y7, depth - 1);
+            minkowski_curve(x7, y7, x8, y8, depth - 1);
+            minkowski_curve(x8, y8, x9, y9, depth - 1);
+            minkowski_curve(x9, y9, x2, y2, depth - 1)
+         fi
+      end;
+      local oneoone := [1, 0, 1];
+      local setline := gdi.setline;
+      local i, segment;
+      # Step A: Run structural math
+      minkowski_curve(x_start, y_start, x_end, y_end, max_depth);
+      # Step B: Fast graphic processing loop
+      local xmin, ymin -> infinity;
+      local xmax, ymax -> -infinity;
+      for i from 1 to ctr do
+         segment := segments[i];
+         setline(ps, segment[1], segment[2], segment[3], segment[4], oneoone)
+      end;
+      return ps
+   end;
+   # Calculate the 4 corner points of a perfect square box
+   local x1 := x_start;
+   local y1 := y_start;
+   local x2 := x_start + side_length;
+   local y2 := y_start;
+   local x3 := x_start + side_length;
+   local y3 := y_start + side_length;
+   local x4 := x_start;
+   local y4 := y_start + side_length;
+   # Initialize a master structure container
+   local ps := gdi.structure(4*8^max_depth);
+   # Generate the four edges sequentially, tracking clockwise around the island
+   minkowski(ps, x1, y1, x2, y2, max_depth); # Top Edge
+   minkowski(ps, x2, y2, x3, y3, max_depth); # Right Edge
+   minkowski(ps, x3, y3, x4, y4, max_depth); # Bottom Edge
+   minkowski(ps, x4, y4, x1, y1, max_depth); # Left Edge
+   local xmin, ymin -> infinity;
+   local xmax, ymax -> -infinity;
+   for i in ps do
+      if i[1] < xmin then xmin := i[1] fi; if i[1] > xmax then xmax := i[1] fi;
+      if i[2] < ymin then ymin := i[2] fi; if i[2] > ymax then ymax := i[2] fi;
+      if i[3] < xmin then xmin := i[3] fi; if i[3] > xmax then xmax := i[3] fi;
+      if i[4] < ymin then ymin := i[4] fi; if i[4] > ymax then ymax := i[4] fi;
+   od;
+   gdi.setinfo(ps, xdim = xmin:xmax, ydim = ymin:ymax);
+   return ps
+end;
+
+
+settype(fractals.mandelbrotfast, fractals.mandelbrot, fractals.lbea, fractals.anewton,
+   fractals.alcos, fractals.alcosxx, fractals.markmandel, 'esctime');
+
+settype(fractals.lambdafn, 'lambdafn');
+
+if assigned(fractals.esctime) then
+   settype(fractals.esctime, 'iteratorEsctime');
+fi;
+
+_logs := math.logs;
+fractals.logsE := proc(x, y, iter, radius) is
+   return _logs(x!y, 2, DoubleEps/10)
+end;
+
+environ.infolevel[fractals.draw] := 1;
+
+#/ Try one of these:
+import fractals alias;
+draw(mandelbrotfast, -0.65, -0.35, .5);
+draw(lsin, 0, 0, 1, radius=512, iter=512, colour=red);
+draw(mandel, -0.5, 0, 1.5, res=1024:768, colour=blue);
+draw(mandel, -1.35, 0, 0.2, colour=red);
+draw(fractals.alsin, 0, 0, 4, radius=512);
+draw(newton, 0, 0, 1.5, radius=0.5, iter=512);
+draw(anewton, 0, 0, 1.5, radius=0.5, iter=512);
+draw(fractals.markmandel, -0.5, 0, 1.5, res=1280:768, map='basic.map');
+# fractals.esctime: creates an escape-time fractal given by procedure f.
+# syntax: fractals.esctime(f, x-coord, y-coord, iterations [, radius]), radius by default is 2.
+draw(esctime, <: (z, c) -> z^2 + c :>, -0.5, 0, 1.5);
+draw(esctime, <: (z, c) -> z**2 + c :>, -0.5, 0, 1.5);
+draw(esctime, <: (z, c) -> square z + c :>, -0.5, 0, 1.5);
+draw(esctime, <: (z, c) -> z squareadd c :>, -0.5, 0, 1.5);
+draw(esctime, <: (z, c) -> z**2 + c :>, -0.05, 0, 2, lambda=-0.765!0.12, map='topo.map', iter=255);  # Julia Cantor set
+draw(esctime, <: (z, c) -> z**4 + c :>, -0.2, 0, 1.75, map='default.map');
+draw(esctime, <: (z, c) -> z**6 + c :>, -0.1, 0, 1.75, map='default.map');
+draw(esctime, <: (z, c) -> square cos(recip z) + c :>, -0.5, 0, 1.5, map='basic.map');
+draw(esctime, <: (z, c) -> square sinc(recip z) + c :>, -0.5, 0, 1.5, map='basic.map');
+draw(esctime, <: (z, c) -> (z roll (1/8*Pi))^2 + c :>, -0.5, 0.25, 1.5, map='topo.map');
+draw(esctime, <: (z, c) -> square(z roll (1/8*Pi)) + c :>, -0.5, 0.25, 1.5, map='topo.map');  # 90/4*Pi/180 = 1/8*Pi
+draw(esctime, <: (z, c) -> square(z roll .39269908169872415481) + c :>, -0.5, 0.25, 1.5, map='topo.map');
+draw(esctime, <: (z, c) with c := -0.85-0.6*I -> c*z*(1-z) :>, 0.5, -0.05, 1.5, map='topo.map', iter=128);
+draw(mandel, -0.5, 0, 1.5, map='topo.map', iter=255);
+draw(mandel, -1.007852, 0.310870, 0.005, map='topo.map', iter=255, res=1024:768);
+draw(mandel, -1.007852, 0.310870, 0.005, map='maga.map', iter=255, res=1024:768);
+draw(mandelbrotfast, -0.5, 0, 2, map='topo.map', iter=255);
+draw(mandelbrot, -0.5, 0, 2, map='topo.map', iter=255);
+draw(mandelbrot2, -0.5, 0, 2, map='topo.map', iter=255);
+draw(mandelbrot3, -0.5, 0, 2, map='topo.map', iter=255);
+draw(dmandelbrot, -0.5, 0, 1, map='topo.map', iter=255);
+draw(mandel, -0.5, 0, 2, map='topo.map', iter=255);
+draw(mandel, -1.0037855135, 0.2770816775, 0.086686273, map='topo.map', iter=255);
+draw(fractals.lbea, 0, 0, 4, map='basic.map', radius=128, iter=255, lambda=1.0!0.1);
+draw(fractals.lbea, 1.75, 0.5, 0.001, map='basic.map', radius=1024, iter=1024, lambda=1!0.4, res=1920:1080, file='lbea.png');
+   -> lbea on Atom 330: 99.203 secs
+draw(fractals.lbea, 1.75, 0.5, 0.001, map='basic.map', radius=1024, iter=1024, lambda=1!0.4, res=1920:1080, file='lbea.jpg');
+draw(fractals.lbea, 1.75, 0.5, 0.001, map='basic.map', radius=1024, iter=1024, lambda=1!0.4, res=1920:1080, file='lbea.gif');
+draw(fractals.lbea, 1.75, 0.5, 0.001, map='basic.map', radius=1024, iter=1024, lambda=1!0.4, res=1920:1080, file='lbea.tiff');
+draw(fractals.lbea, 1.75, 0.5, 0.001, map='basic.map', radius=1024, iter=1024, lambda=1!0.4, res=1366:768);
+draw(fractals.lbea, 2.5, 0.6, 0.001, map='basic.map', radius=1024, iter=128, lambda=1!0.4);
+draw(fractals.albea, 1.75, 0.5, 0.001, map='basic.map', radius=1024, iter=1024, lambda=1!0.4);
+draw(fractals.albea, 1.75, 0.5, 0.001, map='flamey.map', radius=1024, iter=1024, lambda=1!0.4, res=1366:768);
+draw(fractals.albea1, 1.473717, -1.111, 0.5, map='basic.map', radius=128, iter=255, lambda=1.0!0.1, res=1366:768);
+draw(fractals.albea2, 0, 0, 3, map='basic.map', radius=128, iter=128, lambda=1.0!0.1, res=1366:768);
+draw(fractals.albea3, 0, 0, 1, map='basic.map', radius=128, iter=128, lambda=1.0!0.1);
+draw(fractals.albeacosxx, 1.75, 0.125, 0.001, map='basic.map', radius=1024, iter=1024, lambda=1!0.4);
+draw(fractals.albeacosxx, 1.75, 0.5, 0.001, map='basic.map', radius=1024, iter=1024, lambda=1!0.4);
+draw(fractals.albeacosxx2, 1.75, 0.5, 0.001, map='topo.map', radius=1024, iter=1024, lambda=1!0.4, res=1376:720);
+draw(fractals.alcosxx, 0, 0, 4, map='basic.map', lambda=1!0.4, radius=512);
+draw(fractals.alcos, 0, 0, 4, map='basic.map', lambda=1!0.4, radius=512);
+draw(fractals.alsin, 0, 0, 4, map='default.map', lambda=1!0.4, radius=512);
+draw(fractals.alcosh, 0, 0, 4, map='topo.map', lambda=1!0.4, radius=512);
+draw(fractals.alsinh, 0, 0, 4, map='default.map', lambda=1!0.4, radius=512);
+draw(fractals.manderfc, 0.5, 0, 3, map='basic.map', iter=255);
+draw(fractals.dmanderfc, 0.5, 0, 3, map='basic.map', iter=255);
+draw(fractals.logsE, 0, 0, 15, res=1366:768, map='basic.map', iter=1024);
+
+draw(juliacantor, -0.05, 0, 2, map='topo.map', iter=255);
+draw(juliapetal, -0.05, 0, 2, map='default.map', iter=255);
+
+gdi.plot(fern(100k), bgcolour='darkcyan', colour='yellow', axes='none', res=640:640):
+gdi.plot(dragon(20), bgcolour='darkcyan', colour='yellow', axes='none');
+gdi.plot(koch(100, 150, 700, 150, 5), bgcolour='darkcyan', colour='yellow', axes='normal', res = (1024:400));
+gdi.plot(minkowski(200, 200, 400, 6), bgcolour='darkcyan', colour='yellow', axes='none');
+gdi.plot(logbifur(2.5, 3.99, 3500, 1200, 120), bgcolour='navy', colour='chartreuse', axes='none', res=1280:720):
+gdi.plot(henon(50k, 1.4, 0.3), bgcolour='navy', colour='chartreuse', axes='none', res=1280:720):
+
+# Barnsley fern
+a := // 0 0.197 -0.155 0.849 \\;
+b := // 0 -0.226 0.283, 0.037 \\;
+c := // 0 0.226 0.26 -0.0377 \\;
+d := // 0.16 0.197 0.237 0.849 \\;
+e := // 0 0 0 0 \\;
+f := // 0 1.6 0.44 1.6 \\;
+p := // 0.03 0.14 0.27 1.0 \\;
+gdi.plot(fractals.ifs(100k, [a, b, c, d, e, f], p), bgcolour='darkcyan', colour='yellow', axes='none', res=640:640):
+
+# 6-transformation Pascal perfectly-balanced Symmetric Fractal Tree
+a := // 0.05, 0.05, 0.46, 0.46, 0.43, 0.43 \\;
+b := // 0.00, 0.00, -0.32, 0.32, -0.28, 0.28 \\;
+c := // 0.00, 0.00, 0.39, -0.39, 0.25, -0.25 \\;
+d := // 0.40, 0.40, 0.38, 0.38, 0.45, 0.45 \\;
+e := // 0.00, 0.00, 0.00, 0.00, 0.00, 0.00 \\;
+f := // 0.00, 1.00, 0.60, 0.60, 1.00, 1.00 \\;
+p := // 0.02, 0.04, 0.36, 0.68, 0.84, 1.00 \\;
+gdi.plot(fractals.ifs(100k, [a, b, c, d, e, f], p), bgcolour='darkcyan', colour='yellow', axes='none', res=640:640):
+
+# More natural 6-transformation Pascal Symmetric Fractal Tree
+a := // 0.05, 0.05, 0.46, 0.47, 0.43, 0.42 \\;
+b := // 0.00, 0.00, -0.32, 0.31, -0.28, 0.26 \\;
+c := // 0.00, 0.00, 0.39, -0.39, 0.25, -0.25 \\;
+d := // 0.40, 0.40, 0.38, 0.38, 0.45, 0.45 \\;
+e := // 0.00, 0.00, 0.00, 0.00, 0.00, 0.00 \\;
+f := // 0.00, 1.00, 0.60, 1.10, 1.00, 0.90 \\;
+p := // 0.02, 0.04, 0.36, 0.68, 0.84, 1.0 \\;
+gdi.plot(fractals.ifs(100k, [a, b, c, d, e, f], p), bgcolour='darkcyan', colour='yellow', axes='none', res=640:640):
+
+a := // 0.00, 0.85, 0.30, -0.14 \\;
+b := // 0.00, 0.02, -0.36, 0.33 \\;
+c := // 0.00, -0.02, 0.32, 0.35 \\;
+d := // 0.16, 0.83, 0.31, 0.22 \\;
+e := // 0.00, 0.00, 0.00, 0.00 \\;
+f := // 0.00, 1.00, 0.60, 0.50 \\;
+p := // 0.01, 0.84, 0.07, 0.08 \\;
+gdi.plot(fractals.ifs(100k, [a, b, c, d, e, f], p), bgcolour='darkcyan', colour='yellow', axes='none', res=640:640):
+
+/#
+# ---/-------------------------------------------------------------------------------------------
+
+#/
+maplist := os.list(environ.fractintcolourmaps & '*.map')
+for i in maplist do
+   print(i);
+   draw(mandel, -0.5, 0, 1.5, map=i, iter=255, res=640:480);
+   print()
+od
+/#
+
+# ---/-------------------------------------------------------------------------------------------
+

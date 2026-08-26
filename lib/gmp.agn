@@ -1,0 +1,141 @@
+# The gmp package, initiated September 22, 2019
+
+package.checkclib('gmp');  # has C dynamic link library been found ?
+
+gmp.initstring :=
+   'gmp package v0.1.0 as of November 10, 2025\n';
+
+/**********************************************************************
+
+  gmp.rsakg
+
+  based upon C programme written by Aggelos Keromitis <kermit@gr.forthnet>
+
+  modified by Adam Back <aba@dcs.ex.ac.uk>
+  -  changed to use bits rather than hex nibbles when specifying key sizes
+  -  added option to allow choice of small public key exponents
+
+  From Wikipedia, https://en.wikipedia.org/wiki/RSA_(cryptosystem):
+
+  "RSA (Rivest–Shamir–Adleman) is one of the first public-key cryptosystems."
+
+**********************************************************************/
+
+
+# Extracts the decimal or hexadecimal portion in a uint value and returns it as a string. See also: gmp.tostring, gmp.getstring.
+# Example: gmp.extract('gmp(616c65)') -> '616c65'
+gmp.extract := proc(str :: string) is
+   local m, ut;
+   ut := gettype(gmp.uint(0, 10));
+   m := strings.match(str, ut & '%((.-)%)');
+   unassigned m ? error('Error in `gmp.extract`: you obviously changed the name of this package, cannot extract value.');
+   return m
+end;
+
+
+# m_w, m_z := math.randomseed();  # uncomment if you want to always create the same keys
+
+/* Generates a private and a public key with the given number of `bits` and returns them in a dictionary
+   where the keys represent:
+
+   - 'd': private exponent,
+   - 'e': public modulus,
+   - 'n': public modulus. */
+gmp.rsakg := proc(bits :: integer) pre math.ispow2(bits) is
+   local i, nibbles, p, q, n, phi, nil, one, two, sixteen;
+   #math.randomseed(m_w, m_z);  # uncomment if you want to create always the same keys
+   nil := gmp.uint(0);
+   one := gmp.uint(1);
+   two := gmp.uint(2);
+   sixteen := gmp.uint(16);
+   nibbles := (bits + 3) \ 4;
+   p := nil;
+   # compute first prime
+   i := nibbles - 2;
+   while i > 0 do
+      dec i, 2;
+      p *:= sixteen;
+      p +:= gmp.uint(math.random(0, 255))
+   od;
+   # compute second prime
+   while gmp.testprime(p, 25) = 0 do
+      p +:= one
+   od;
+   q := nil;
+   i := nibbles - 2;
+   while i > 0 do
+      dec i, 2;
+      q *:= sixteen;
+      q +:= gmp.uint(math.random(0, 255))
+   od;
+   while gmp.testprime(q, 25) = 0 do
+      q +:= one
+   od;
+   # calculate RSA modulus
+   n := p * q;
+   p -:= one;
+   q -:= one;
+   phi := p * q;
+   # get a "random" secret
+   p := nil;
+   i := nibbles;
+   while i > 0 do
+      dec i;
+      p *:= sixteen;
+      p +:= gmp.uint(math.random(0, 255))
+   od;
+   while p >= n do
+      p /:= two            # chop it if larger than n
+   od;
+   do
+      p +:= one;
+      q := gmp.gcd(p, phi)     # get the GCD
+   as q <> one and q <= phi;  # until it is 1
+   create local table r;
+   r.e := gmp.extract(gmp.tostring(p));
+   p := gmp.gcdext(q, p, p, phi);
+   if q = one or q >= phi then
+      error("failed to find d, starting again, try again");
+   fi;
+   if q < nil then   # if negative, add modulus
+      q +:= phi
+   fi;
+   r.d := gmp.extract(gmp.tostring(q));
+   r.n := gmp.extract(gmp.tostring(n));
+   return r
+end;
+
+
+# expects result of gmp.rsakg as input, and a test string. Note that the longer the string, the more likely decryption will not work
+gmp.testkey := proc(tbl :: table, str :: string) is
+   local t, a;
+   str := gmp.setstring(str);
+   a := copy(tbl);
+   a.e := gmp.uint(a.e, 16);
+   a.d := gmp.uint(a.d, 16);
+   a.n := gmp.uint(a.n, 16);
+   t := gmp.powm(str, a.e, a.n);
+   t := gmp.powm(t, a.d, a.n);
+   return strings.diamap(gmp.getstring(t)) = str, gmp.getstring(t), gmp.getstring(str)
+end;
+
+# Constants
+
+gmp.naught     := gmp.uint(0);
+gmp.nought     := gmp.naught;
+gmp.one        := gmp.uint(1);
+gmp.two        := gmp.uint(2);
+gmp.three      := gmp.uint(3);
+gmp.four       := gmp.uint(4);
+gmp.five       := gmp.uint(5);
+gmp.six        := gmp.uint(6);
+gmp.seven      := gmp.uint(7);
+gmp.eight      := gmp.uint(8);
+gmp.nine       := gmp.uint(9);
+gmp.ten        := gmp.uint(10);
+gmp.eleven     := gmp.uint(11);
+gmp.twelve     := gmp.uint(12);
+gmp.fifty      := gmp.uint(50);
+gmp.hundred    := gmp.uint(100);
+gmp.thousand   := gmp.uint(1000);
+

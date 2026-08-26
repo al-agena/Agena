@@ -1,0 +1,76 @@
+/* This is an Agena port of LHF's tes.lua script that is shipped with his lpci package.
+   See below for the usage. */
+
+procedure abci.inspect(f, all) is
+   local F := abci.getheader(f)
+   print('header', f)
+   for k, v in F do
+      print('', k, v)
+   end
+
+   print('constants', F.constants)
+   for i to F.constants do
+      local a := abci.getconstant(f,  i)
+      print('', i, a)
+   end
+
+   print('locals', F.locals)
+   for i to F.locals do
+      local a, b, c := abci.getlocal(f, i)
+      print('', i, a, b, c)
+   end
+
+   print('upvalues', F.upvalues)
+   for i to F.upvalues do
+      local a := abci.getupvalue(f, i)
+      print('', i, a)
+   end
+
+   print('functions', F.functions)
+   for i to F.functions do
+      local a := abci.getfunction(f, i)
+      print('', i, a)
+   end
+
+   print('instructions', F.instructions)
+   for i to F.instructions do
+      local a, b, c, d, e := abci.getinstruction(f, i)
+      print('', i, a, b, c, d, e)
+      if b = 'GETGLOBAL' then print('>>> ', abci.getconstant(f, -d)) end
+      if b = 'SETGLOBAL' then print('>>>*', abci.getconstant(f, -d)) end
+   end
+
+   print()
+   if all then
+      for i to F.functions do
+         inspect(abci.getfunction(f, i), all)
+      end
+   end
+end
+
+/* Test the package like this:
+
+f := proc(x, y) is
+   print(x, '=', y, 23);
+   local z := x + 2*y;
+   local last;
+   X := 245;
+   return inspect
+end
+
+abci.inspect(debug.getinfo(1).func, true)
+begin return end;
+
+abci.inspect(f)
+abci.inspect(inspect)
+f(1, 2)
+abci.setconstant(f, 3, 98)
+f(1, 2)
+abci.setconstant(f, 3, 123, 987)
+f(1, 2)
+abci.setconstant(f, 3)
+f(1, 2)
+f(1, 2)
+
+*/
+

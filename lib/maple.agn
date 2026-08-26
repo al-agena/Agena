@@ -1,0 +1,47 @@
+# Just some aliases to support porting code from Maple to Agena; started April 05, 2025
+
+/* How to print internal Maple functions, for example those stored locally to the `numtheory` package:
+kernelopts(opaquemodules=false);
+interface(verboseproc=2);
+with(numtheory);
+print(numtheory:-_msqrtprime);
+
+Tip taken from `Introduction to Cryptography with Maple`, by Jose Luis Gomez Pardo, p. 128.
+
+You might also explore functions with:
+eval(`evalf/Maple`)
+where `Maple` should have been called at least once before to show up the code. */
+
+# If you change this file, change the Primer & Rerence, too !
+
+BellB := combinat.bell;
+BesselJ := besselj;
+Bessely := bessely;
+csgn := <: x -> sign(x) :>
+dilog := calc.dilog
+Ei := calc.Ei
+# eval is assigned at startup
+evalf, evalhf -> identity
+factorial := fact
+GAMMA := gamma
+Heaviside := heaviside
+ifactor := math.ifactor
+ifactors := math.ifactors
+igcd := <: x :: integer, y :: integer -> numtheory.gcd(x, y) :>
+ilcm := <: x :: integer, y :: integer -> numtheory.lcm(x, y) :>
+Im := <: x -> imag x :>
+isprime := math.isprime
+LambertW := calc.lambertw
+Li := <: x -> calc.Li(x) :>
+lnGAMMA := <: x -> lngamma x :>
+pochhammer := math.pochhammer
+polylog := calc.polylog
+power := <: x, y -> x ^ y :>
+Psi := calc.Psi
+Re := <: x -> real x :>
+RETURN := identity
+Shi := calc.Shi
+Si := calc.Si
+Ssi := calc.Ssi
+surd := root
+trunc := math.trunc

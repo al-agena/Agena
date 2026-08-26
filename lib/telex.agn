@@ -1,0 +1,291 @@
+# The telex package to pack strings to around 70 percent of their size.
+
+/* The package uses a modified version of the 5-bit International Telegraphy Alphabet No. 2 of 1924, also
+   called Baudot-Murray code, to denote 8-bit characters in 5 bits. To work well with ASCII characters
+   greater than ASCII code 127 in the Windows console, change the codepage to your local ANSI character
+   set, e.g.:
+
+   os.codepage(input = 1252, output = 1252);
+
+   It may be better to convert diacritics and umlauts according to your own rules, e.g. Norse `Þ` to `&Thorn;`,
+   `<Th>` or `<T>`, the shorter their encoding, the better.
+
+   This actually is a proof-of-concept of the `with` statement flavours. */
+
+create table telex;  # initialise package table, no C libraries
+
+# shift states
+
+with telex do
+   enum _.flower, _.fupper, _.fnumber, _.fspecial from 0
+od;
+
+telex.initstring := 'telex package v0.1.1 as of April 25, 2026\n';
+
+telex.decimal := proc(s) is
+   local r, l;
+   r := 0;
+   l := size s;
+   for i to l do
+      r +:= s[i] * 2**(l - i)
+   od;
+   return r
+end;
+
+
+# The following mapping table is based on the International telegraphy alphabet No. 2 (Baudot-Murray code)
+
+# Comments in baudot table:
+# *) probable deviation from check International telegraphy alphabet No. 2, check English Wikipedia article
+#    `Baudot code` at https://en.wikipedia.org/wiki/Baudot_code
+
+with baudot, token, pushbaudot, pushtoken, fnumber, fupper, flower, fspecial in telex do
+   local dias, states, join, tok;
+   join := strings.join;
+   baudot := [
+      # alpha Block
+      'a'  ~ seq(1, 1, 0, 0, 0, flower), #
+      'b'  ~ seq(1, 0, 0, 1, 1, flower), #
+      'c'  ~ seq(0, 1, 1, 1, 0, flower), #
+      'd'  ~ seq(1, 0, 0, 1, 0, flower), #
+      'e'  ~ seq(1, 0, 0, 0, 0, flower), #
+      'f'  ~ seq(1, 0, 1, 1, 0, flower), #
+      'g'  ~ seq(0, 1, 0, 1, 1, flower), #
+      'h'  ~ seq(0, 0, 1, 0, 1, flower), #
+      'i'  ~ seq(0, 1, 1, 0, 0, flower), #
+      'j'  ~ seq(1, 1, 0, 1, 0, flower), #
+      'k'  ~ seq(1, 1, 1, 1, 0, flower), #
+      'l'  ~ seq(0, 1, 0, 0, 1, flower), #
+      'm'  ~ seq(0, 0, 1, 1, 1, flower), #
+      'n'  ~ seq(0, 0, 1, 1, 0, flower), #
+      'o'  ~ seq(0, 0, 0, 1, 1, flower), #
+      'p'  ~ seq(0, 1, 1, 0, 1, flower), #
+      'q'  ~ seq(1, 1, 1, 0, 1, flower), #
+      'r'  ~ seq(0, 1, 0, 1, 0, flower), #
+      's'  ~ seq(1, 0, 1, 0, 0, flower), #
+      't'  ~ seq(0, 0, 0, 0, 1, flower), #
+      'u'  ~ seq(1, 1, 1, 0, 0, flower), #
+      'v'  ~ seq(0, 1, 1, 1, 1, flower), #
+      'w'  ~ seq(1, 1, 0, 0, 1, flower), #
+      'x'  ~ seq(1, 0, 1, 1, 1, flower), #
+      'y'  ~ seq(1, 0, 1, 0, 1, flower), #
+      'z'  ~ seq(1, 0, 0, 0, 1, flower), #
+      #'anything'  ~ seq(1, 1, 0, 1, 1, flower), # 27dec, non-standard
+
+      ######################################################
+
+      # num Block
+
+      '0'  ~ seq(0, 1, 1, 0, 1, fnumber), # p
+      '1'  ~ seq(1, 1, 1, 0, 1, fnumber), # q
+      '2'  ~ seq(1, 1, 0, 0, 1, fnumber), # w
+      '3'  ~ seq(1, 0, 0, 0, 0, fnumber), # e
+      '4'  ~ seq(0, 1, 0, 1, 0, fnumber), # r
+      '5'  ~ seq(0, 0, 0, 0, 1, fnumber), # t
+      '6'  ~ seq(1, 0, 1, 0, 1, fnumber), # y
+      '7'  ~ seq(1, 1, 1, 0, 0, fnumber), # u
+      '8'  ~ seq(0, 1, 1, 0, 0, fnumber), # i
+      '9'  ~ seq(0, 0, 0, 1, 1, fnumber), # o
+      '-'  ~ seq(1, 1, 0, 0, 0, fnumber), # a
+      '?'  ~ seq(1, 0, 0, 1, 1, fnumber), # b
+      ':'  ~ seq(0, 1, 1, 1, 0, fnumber), # c
+      '('  ~ seq(1, 1, 1, 1, 0, fnumber), # k
+      ')'  ~ seq(0, 1, 0, 0, 1, fnumber), # l
+      '.'  ~ seq(0, 0, 1, 1, 1, fnumber), # m
+      ','  ~ seq(0, 0, 1, 1, 0, fnumber), # n
+      '\'' ~ seq(1, 0, 1, 0, 0, fnumber), # s  *)
+      '='  ~ seq(0, 1, 1, 1, 1, fnumber), # v  *)
+      '/'  ~ seq(1, 0, 1, 1, 1, fnumber), # x
+      '+'  ~ seq(1, 0, 0, 0, 1, fnumber), # z  *)
+
+      # non-standard re-definitions
+
+      '<'  ~ seq(1, 0, 1, 1, 0, fnumber), # f
+      '>'  ~ seq(0, 1, 0, 1, 1, fnumber), # g
+      ';'  ~ seq(1, 0, 0, 1, 0, fnumber), # d
+      '!'  ~ seq(1, 1, 0, 1, 0, fnumber), # j
+      '&'  ~ seq(1, 1, 0, 1, 1, fnumber), # ß
+      '\n' ~ seq(1, 1, 0, 1, 1, fnumber),# 27dez
+
+      ######################################################
+
+      # spe Block, further non-standard re-definitions
+
+      '['  ~ seq(1, 1, 0, 0, 0, fspecial), #
+      ']'  ~ seq(1, 0, 0, 1, 1, fspecial), #
+      '{'  ~ seq(0, 1, 1, 1, 0, fspecial), #
+      '}'  ~ seq(1, 0, 0, 1, 0, fspecial), #
+      '#'  ~ seq(1, 0, 0, 0, 0, fspecial), #
+      '~'  ~ seq(1, 0, 1, 1, 0, fspecial), #
+      '*'  ~ seq(0, 1, 0, 1, 1, fspecial), #
+      '$'  ~ seq(0, 0, 1, 0, 1, fspecial), #
+      '%'  ~ seq(0, 1, 1, 0, 0, fspecial), #
+      '\"' ~ seq(1, 1, 0, 1, 0, fspecial), #
+      '^'  ~ seq(1, 1, 1, 1, 0, fspecial), #
+      'ä'  ~ seq(0, 1, 0, 0, 1, fspecial), #
+      'ö'  ~ seq(0, 0, 1, 1, 1, fspecial), #
+      'ü'  ~ seq(0, 0, 1, 1, 0, fspecial), #
+      'ß'  ~ seq(0, 0, 0, 1, 1, fspecial), #
+      'à'  ~ seq(0, 1, 1, 0, 1, fspecial), #
+      'á'  ~ seq(1, 1, 1, 0, 1, fspecial), #
+      'è'  ~ seq(0, 1, 0, 1, 0, fspecial), #
+      'é'  ~ seq(1, 0, 1, 0, 0, fspecial), #
+      'â'  ~ seq(0, 0, 0, 0, 1, fspecial), #
+      'ê'  ~ seq(1, 1, 1, 0, 0, fspecial), #
+      'î'  ~ seq(0, 1, 1, 1, 1, fspecial), #
+      #''  ~ seq(1, 1, 0, 0, 1, fspecial), #
+      #''  ~ seq(1, 0, 1, 1, 1, fspecial), #
+      #''  ~ seq(1, 0, 1, 0, 1, fspecial), #
+      #''  ~ seq(1, 0, 0, 0, 1, fspecial), #
+      '\a'  ~ seq(1, 1, 0, 1, 1, fspecial), # 27dec = bell
+
+      # shifts and termination, usable only once
+
+      ' '        ~ seq(0, 0, 0, 0, 0, ' '),      # = 0dec, space, standard for space is 4dec
+      (fnumber)  ~ seq(0, 0, 0, 1, 0, fnumber),  # = 2dec, formerly standard \n
+      (fspecial) ~ seq(1, 1, 1, 1, 1, fspecial), # = 31dec
+      (fupper)   ~ seq(0, 1, 0, 0, 0, fupper),   # = 8dec, formerly standard \r
+      (flower)   ~ seq(0, 0, 1, 0, 0, flower)    # = 4dec
+   ];
+
+   dias := seq('ä', 'ö', 'ü', 'ß', 'à', 'á', 'è', 'é', 'â', 'ê', 'î');
+   for i in dias do  # 2.12.0 RC 2 extension
+      baudot[strings.diamap(i)] := baudot[i]
+   od;
+
+   create table token;
+   states := {flower, fupper, fnumber, fspecial};
+   for i in (states union {' '}) do
+      token[i] := []
+   od;
+
+   for i, j in baudot do
+      if i notin states then  # 2.16.14 change
+         tok := if i in dias then strings.diamap(i) else i fi;
+         token[j[6], strings.join(tostring @ (j[1 to 5]))] := tok
+      fi
+   od
+od;  # of with
+
+
+telex.pushbaudot := proc(x, result, last, allocated) is
+   for x in telex.baudot[x, 1 to 5] do
+      pushd(x);
+      if allotted() - allocated = 8 then
+         insert telex.decimal(stack.dumpd(8)) into result
+      fi
+   od;
+   if last and nonzero(allocated - |allotted()|) then
+      while allotted() and (allotted() - allocated < 8) do
+         pushd(0)
+      od;
+      insert telex.decimal(stack.dumpd(8)) into result
+   fi;
+end;
+
+
+telex.pushtoken := proc(c, state, newstate, result, last, allocated) is
+   if state <> newstate then
+      telex.pushbaudot(newstate, result, false, allocated);
+      state := newstate
+   fi;
+   telex.pushbaudot(c, result, last, allocated);
+   return state
+end;
+
+
+telex.encode := proc(str :: string) is
+   local state, l, i, result, last, allocated, lower;
+   result := seq();
+   allocated := |allotted()|;
+   allocated < 0 ? allocated := 0;
+   lower := strings.lower;
+   with baudot, pushbaudot, pushtoken, fnumber, fupper, flower, fspecial in telex do
+      state := flower;
+      l := size str;
+      for x to l do
+         i := str[x];
+         last := x = l;
+         case i
+            of 'a' to 'z' then
+               state := pushtoken(i, state, flower, result, last, allocated)
+            of ' ' then
+               pushbaudot(' ', result, last, allocated)
+            of 'A' to 'Z' then
+               state := pushtoken(lower(i), state, fupper, result, last, allocated)
+            of '0' to '9' then
+               state := pushtoken(i, state, fnumber, result, last, allocated);
+            of '-', '?', ':', '(', ')', '.', ',', '\'',
+               '=', '/', '+', '<', '>', ';', '!', '&', '\n' then
+               state := pushtoken(i, state, fnumber, result, last, allocated)
+            else  # special or unknown characters
+               if state <> fspecial then
+                  pushbaudot(fspecial, result, false, allocated);
+                  state := fspecial
+               fi;
+               if baudot[i] then
+                  pushbaudot(i, result, last, allocated)
+               else
+                  pushbaudot(' ', result, last, allocated)
+               fi
+            esle
+         esac
+      od
+   od;
+   return result, strings.join(<: x -> char(x) :> @ result)  # 2.12.0 RC 2 extension
+end;
+
+
+telex.decode := proc(s :: {sequence, string}) is
+   local l, x, c, state, f, r, allocated, join;
+   join := strings.join;
+   c := 0;
+   r := '';
+   allocated := |allotted()|;
+   if s :: string then  # 2.12.0 RC 2 extension
+      s := strings.tobytes(s)
+   elif not sequences.isall(s, nonnegint) then
+      error('Error in `telex.decode`: sequence must include non-negative integers only.')
+   fi;
+   with token, fnumber, fupper, flower, fspecial in telex do
+      state := flower;
+      for i to size s do
+         x := s[i];
+         for j from 8 downto 1 do  # 7.3.3 fix
+            pushd(|getbit(x, j)|)
+            if everyth(++c, 5) then
+               f := stack.dumpd(5);
+               case f
+                  of (/ 0 0 1 0 0 \) then
+                     state := flower
+                  of (/ 0 1 0 0 0 \) then
+                     state := fupper
+                  of (/ 0 0 0 1, 0 \) then
+                     state := fnumber
+                  of (/ 1 1 1 1 1 \) then
+                     state := fspecial
+                  of (/ 0 0 0 0 0 \) then
+                     r &:= ' '
+                  else
+                     local tokenseq, tok := strings.join(tostring @ f);
+                     if state = fupper then
+                        if tok := token[flower, tokenseq] then  # 7.3.3 change, 7.5.1 fix
+                           r &:= strings.upper(tok)
+                        else
+                           error('Error in `telex.decode`: invalid token `' & char(x) & '` at position ' & i & '.')
+                        fi
+                     else
+                        r &:= token[state, tokenseq]
+                     fi
+                  esle
+               esac
+            fi
+         od
+      od
+   od;
+   popd()  # level stack, remove trailing spaces (represented as zeros), 7.5.1 fix
+   return strings.rtrim(r)
+end;
+
+# print(telex.decode(telex.encode('ClydeX1 - Into The Night remix (NERO) [Remastered]')));
+

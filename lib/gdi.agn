@@ -1,0 +1,1469 @@
+# The gdi package, based on the plots package for the luagd4agena binding
+# gdi package initiated November 22, 2009
+# plots package initiated June 28, 2008
+
+if environ.kernel().isDOS then
+   error('The gdi package is not available for DOS.')
+else
+
+package.checkclib('gdi');  # has C dynamic link library been found ?
+
+with gdi do
+
+   create table _.aux;  # create table for auxiliary functions
+
+   _.initstring :=
+      'gdi v1.3.4 as of April 15, 2017\n';
+
+   _.COLOURS := [
+      aquamarine = [112, 219, 147],
+      black      = [0,     0,   0],
+      blue       = [0,     0, 255],
+      bordeaux   = [132,   0,   0],
+      brown      = [165,  42,  42],
+      chartreuse = [127, 255,   0], # yellow-green, suggested by Grok
+      coral      = [255, 127,   0],
+      cyan       = [0,   255, 255],
+      darkblue   = [0,     0, 128],
+      darkcyan   = [10,  125, 125],
+      darkgrey   = [192, 192, 192],
+      gold       = [204, 127,  50],
+      green      = [0,   255,   0],
+      grey       = [128, 128, 128],
+      khaki      = [159, 159,  95],
+      lightgrey  = [230, 230, 230],
+      magenta    = [255,   0, 255],
+      maroon     = [142,  35, 107],
+      navy       = [35,   35, 142],
+      orange     = [204,  50,  50],
+      pink       = [188, 143, 143],
+      plum       = [234, 173, 234],
+      red        = [255,   0,   0],
+      sienna     = [142, 107,  35],
+      skyblue    = [48,  153, 204],
+      spring     = [0,   255, 127], # spring green, suggested by Grok
+      'tan'      ~ [219, 147, 112],
+      turquoise  = [173, 234, 234],
+      violet     = [79,   47,  79],
+      wheat      = [216, 216, 191],
+      white      = [255, 255, 255],
+      yellow     = [255, 255,   0],
+      yellow2    = [240, 240,   0]
+   ];
+
+   _.COLOURS.lightgray := _.COLOURS.lightgrey;
+   _.COLOURS.darkgray  := _.COLOURS.darkgrey;
+   _.COLOURS.gray      := _.COLOURS.grey;
+
+   # Transform colour values to the g2 colour format
+   for keys i in copy(_.COLOURS) do
+      _.COLOURS[i] := map(<: x -> x/255 :>, _.COLOURS[i])
+   od;
+
+od;
+
+# parse options and assign them if present
+gdi.checkoptions := proc(opt :: table) is
+   local value;
+   create local table options;
+   for arg, value in opt do
+      case arg
+         of 'res' then
+            if value -: pair or not(isposint(left(value), right(value))) then
+               error('Error in `gdi.checkoptions`: pair of positive integers for `res` option expected, got ' & tostring(value) & '.')
+            fi;
+            options.res := value
+         of 'colour' then
+            if value :: string then
+               value := [value]
+            fi;
+            if value :: table then
+               for i in value do
+                  if i -: string then
+                     error('Error in `gdi.checkoptions`: string for `colour` option expected.')
+                  elif unassigned(gdi.COLOURS[i]) then
+                     error('Error in `gdi.checkoptions`: unknown colour ' & i & '.')
+                  fi
+               od;
+               if empty value then error('Error in `gdi.checkoptions`: at least one value for `colour` option expected.') fi;
+            else
+               error('Error in `gdi.checkoptions`: string or table of strings for `colour` option expected.')
+            fi;
+            options.colour := value
+         of 'thickness' then
+            if value :: number then
+               value := [value]
+            fi;
+            if value :: table then
+               for i in value do
+                  if i -: number then
+                     error('Error in `gdi.checkoptions`: table of numbers for `thickness` option expected.')
+                  elif i < 1 then
+                     error('Error in `gdi.checkoptions`: thickness must be a positive integer.')
+                  fi
+               od;
+               if empty value then error('Error in `gdi.checkoptions`: expected at least one value for thickness option.') fi;
+            else
+               error('Error in `gdi.checkoptions`: expected a number or table of numbers for thickness option.')
+            fi;
+            options.thickness := value
+         of 'linestyle' then
+            if value :: number then
+               value := [value]
+            fi;
+            if value :: table then
+               for i in value do
+                  if i -: number then
+                     error('Error in `gdi.checkoptions`: expected a table of numbers for linestyle option.')
+                  elif i < 1 then
+                     error('Error in `gdi.checkoptions`: linestyle must be a positive integer.')
+                  fi
+               od;
+               if empty value then
+                  error('Error in `checkoptions`: expected at least one value for linestyle option.')
+               fi;
+            else
+               error('Error in `gdi.checkoptions`: expected a number or table of numbers for linestyle option.')
+            fi;
+            options.linestyle := value
+         of 'colourfn' then
+            if value -: procedure then
+               error('Error in `gdi.checkoptions`: expected procedure for colourfn option.')
+            fi;
+            options.colourfn := value
+         of 'bgcolour' then
+            if value -: string then
+               error('Error in `gdi.checkoptions`: expected string for bgcolour option.')
+            fi
+            if unassigned(gdi.COLOURS[value]) then
+               print('Warning, unknown colour ' & value)
+            else
+               options.bgcolour := value
+            fi
+         of 'axes' then  # print axis
+            if value -: string then
+               error('Error in `gdi.checkoptions`: expected a string for axes option.')
+            fi;
+            options.axes := value
+         of 'axescolour' then
+            if value -: string then
+               error('Error in `gdi.checkoptions`: expected a string for axescolour option.')
+            fi;
+            if unassigned(gdi.COLOURS[value]) then
+               print('Warning in `gdi.checkoptions`: unknown colour ' & value & '.')
+            else
+               options.axescolour := value
+            fi
+         of 'titlecolour' then
+            if value -: string then
+               error('Error in `gdi.checkoptions`: expected a string for titlecolour option.')
+            fi;
+            if unassigned(gdi.COLOURS[value]) then
+               print('Warning in `gdi.checkoptions`: unknown colour ' & value & '.')
+            else
+               options.titlecolour := value
+            fi
+         of 'file' then
+            if value -: string then
+               error('Error in `gdi.checkoptions`: expected a string for file option.')
+            fi;
+            options.file := value
+         of 'title' then
+            if value -: string then
+               error('Error in `gdi.checkoptions`: expected a string for title option.')
+            fi;
+            options.title := value
+         of 'titlesize' then
+            if value -: number then
+               error('Error in `gdi.checkoptions`: expected a number for titlesize option.')
+            fi;
+            if value < 1 then error('titlesize must be a positive integer.') fi;
+            options.titlesize := value
+         of 'labels' then
+            if value -: boolean then
+               error('Error in `gdi.checkoptions`: expected a boolean for labels option.')
+            fi;
+            options.labels := value
+         of 'labelsize' then
+            if value -: number then
+               error('Error in `gdi.checkoptions`: expected a number for labelsize option.')
+            fi;
+            if value < 1 then error('Error in `gdi.checkoptions`: labelsize must be a positive integer.') fi;
+            options.labelsize := value
+         of 'xscale' then
+            if value -: number then
+               error('Error in `gdi.checkoptions`: expected a number for xscale option.')
+            fi;
+            if value <= 0 then error('Error in `gdi.checkoptions`: xscale must be a positive integer.') fi;
+            options.xscale := value
+         of 'yscale' then
+            if value -: number then
+               error('Error in `gdi.checkoptions`: expected a number for yscale option.')
+            fi;
+            if value <= 0 then error('Error in `gdi.checkoptions`: yscale must be a positive integer.') fi;
+            options.yscale := value
+         of 'square' then
+            if value -: boolean then
+               error('Error in `gdi.checkoptions`: expected a boolean for square option.')
+            fi;
+            options['square'] := value
+         of 'mouse' then
+            if value -: boolean then
+               error('Error in `gdi.checkoptions`: expected a boolean for mouse option.')
+            fi;
+            options.mouse := value
+         of 'maxtickmarks' then
+            if value -: number then
+               error('Error in `gdi.checkoptions`: expected a number for maxtickmarks option.')
+            fi;
+            if value < 1 then error('Error in `gdi.checkoptions`: maxtickmarks must be a positive integer.') fi;
+            options.maxtickmarks := int(value)
+         of 'xdim', 'x' then
+            if value -: pair or not(isnumber(left(value), right(value))) then
+               error('Error in `gdi.checkoptions`: pair of positive integers for `xdim` option expected, got ' & tostring(value) & '.')
+            fi;
+            options.xdim := value
+         of 'ydim', 'y' then
+            if value -: pair or not(isnumber(left(value), right(value))) then
+               error('Error in `gdi.checkoptions`: pair of positive integers for `ydim` option expected, got ' & tostring(value) & '.')
+            fi;
+            options.ydim := value
+         else
+            error('Error in `gdi.checkoptions`: unknown option ' & tostring(arg) & '.')
+         esle
+      esac
+   od;
+   return options
+end;
+
+
+# Sets defaults, checks the given options for correctness and returns all in a new table
+gdi.options := proc(?) is
+   local lhs, rhs, options;
+   create table options;
+   # set defaults
+   with options do
+      _.res := 640:480;        # resolution
+      _.file := null;          # default file name
+      _.linestyle := [1];      # straight line
+      _.bgcolour := 'white';   # default background colour
+      _.axescolour, options.titlecolour -> 'black';  # default axis colour
+      _.title := null;         # no text  'Created with Agena 0.12.0 Language Demonstrator';
+      _.thickness := [1];      # default thickness of line
+      _.axes := 'normal';      # draw `axes cross` by default
+      _.titlesize := 12;       # default font size for title
+      _.labels := true;        # show axes labels
+      _.labelsize := 12;       # default font size for axis labels
+      _.mouse := false;        # do not show position of the mouse
+      _.maxtickmarks := 20;    # maximum number of tickmarks on both axes
+      _['square'] := false;    # default axes scaling is `unconstrained`
+   od;
+   # set user default options, overwriting the above defaults
+   if assigned(environ.gdidefaultoptions) then
+      for i, j in environ.gdidefaultoptions do
+         if i :: string then
+            options[i] := j
+         fi
+      od
+   fi;
+   # add varargs options
+   for i in ? do
+      if i :: pair then
+         lhs, rhs := left i, right i;
+         if rhs <> null then  # 0.34.0
+            options[lhs] := rhs
+         else
+            error('Error in `gdi.options`: right-hand side of `' & tostring(lhs) & '` option is null.')
+         fi
+      else
+         error('Error in `gdi.options`: invalid option ' & tostring(i) & '.')
+      fi
+   od;
+   # check options
+   return gdi.checkoptions(options)
+end;
+
+
+gdi.aux.showaxesaux := [];
+
+gdi.aux.showaxesaux.tickalign := proc(i, c, d, f, ys) is
+   if i - f*ys < c then
+      return 0
+   elif i + f*ys > d then
+      return -15
+   else
+      return -6
+   fi
+end;
+
+gdi.aux.showaxesaux.plotylabels := proc(im, t, c, d, f, ys, axspan, yoffset, yspan, axcolour) is
+   local tickoffset, label;
+   for i in t do
+      for j from 0 to c by -f*ys do
+         next when j > d;
+         tickoffset := gdi.aux.showaxesaux.tickalign(j, c, d, f, ys);
+         label := tostring(j);
+         gdi.text(im, i[1] + i[2]*(axspan + yoffset + size(label)*4), abs((c - j)*yspan) + tickoffset, label, axcolour)
+      od;
+      for j from 0 to d by f*ys do
+         next when j < c;
+         tickoffset := gdi.aux.showaxesaux.tickalign(j, c, d, f, ys);
+         label := tostring(j);
+         gdi.text(im, i[1] + i[2]*(axspan + yoffset + size(label)*4), abs((c - j)*yspan) + tickoffset, label, axcolour)
+      od
+   od
+end;
+
+gdi.aux.showaxesaux.normal := proc(im, a, b, c, d, xres, yres, xspan, yspan, opt, colours, xs, ys, oldxs, oldys) is
+   local f, axspan, cyspan, axcolour, xoffset, yoffset, iaxspan, label, tickoffset, shift0label;
+   axcolour := colours[opt.axescolour];
+   # draw x-axis
+   cyspan := abs(c*yspan);
+   if c > 0 then  # plot x-axis at bottom
+      cyspan := 0
+   fi;
+   if d < 0 then  # plot x-axis at top
+      cyspan := yres
+   fi;
+   gdi.line(im, 0, cyspan, xres, cyspan, axcolour);
+   # plot x-tickmarks
+   if opt.xscale then xs := opt.xscale fi;
+   for i from 0 to a by -xs do
+      iaxspan := (i - a)*xspan;
+      if iaxspan > xres - 1 then iaxspan := xres - 1 fi;
+      gdi.line(im, iaxspan, cyspan - 5, iaxspan, cyspan + 5, axcolour)
+   od;
+   for i from 0 to b by xs do
+      iaxspan := (i - a)*xspan;
+      if iaxspan > xres - 1 then iaxspan := xres - 1 fi;
+      gdi.line(im, iaxspan, cyspan - 5, iaxspan, cyspan + 5, axcolour)
+   od;
+   # print x-labels
+   # preparations of y-axis and prevention of printing x-labels if y-axis is at the left border
+   axspan := -a*xspan;
+   if axspan >= xres - 1 then
+      axspan := xres - 1
+   elif axspan < 0 then
+      axspan := 0
+   fi;
+   if opt.labels then
+      local labeloffset := 0;
+      f := if oldxs < 21 then 1 else 2 fi;
+      xoffset := if d > 0 then 10 else -25 fi;
+      for i from 0 to a by -f*xs do
+         if i <> b and -a <> i then
+            label := tostring(i);
+            if i = 0 then shift0label := 4 elif i = a then shift0label := 10 else shift0label := 0 fi;
+            gdi.text(im, (i - a)*xspan - size(label)*2 + shift0label, cyspan + xoffset, label, axcolour);
+         fi
+      od;
+      for i from f*xs to b by f*xs do
+         if i >= a then  # 1.12.4 u1 hotfix
+            label := tostring(i);
+            if i = b then labeloffset := -10 elif i = a then labeloffset := 10 else labeloffset := 0 fi;
+            gdi.text(im, (i - a)*xspan - size(label)*2 + labeloffset, cyspan + xoffset, label, axcolour)
+         fi
+      od
+   fi;
+   # draw y-axis
+   gdi.line(im, axspan, 0, axspan, yres);
+   # plot y-tickmarks
+   if opt.yscale then ys := opt.yscale fi;
+   for i from 0 to c by -ys do
+      gdi.line(im, axspan - 5, abs((c - i)*yspan), axspan + 5, abs((c - i)*yspan), axcolour)
+   od;
+   if opt['square'] then  # 1.7.8.2
+      d := c + yres/(xres/(b - a))
+   fi;
+   for i from 0 to d by ys do
+      gdi.line(im, axspan - 5, abs((c - i)*yspan), axspan + 5, abs((c - i)*yspan), axcolour)
+   od;
+   # plot y-labels
+   if opt.labels then  # changed 2.2.3
+      f := if oldys < 21 then 1 else 2 fi;
+      yoffset := if b <= 0 then -20 else 10 fi;
+      gdi.aux.showaxesaux.plotylabels(im, [[axspan + yoffset, 0]], c, d, f, ys, axspan, yoffset, yspan, axcolour);
+   fi
+end;
+
+gdi.aux.showaxesaux.boxed_framed := proc(im, mode, a, b, c, d, xres, yres, xspan, yspan, opt, colours,
+      xs, ys, oldxs, oldys) is
+   local f, fnk, axspan, axcolour, xoffset, tickoffset, label, t;
+   axcolour := colours[opt.axescolour];
+   # draw x-axis
+   gdi.line(im, 0, 0, xres, 0, axcolour);
+   if mode then gdi.line(im, 0, yres, xres, yres, axcolour) fi;
+   # plot x-tickmarks
+   if opt.xscale then xs := opt.xscale fi;
+   t := if mode then [[0, 5], [yres - 1, yres - 6]] else [[0, 5]] fi;
+   for i in t do
+      for j from 0 to a by -xs do
+         axspan := (j - a)*xspan;
+         if axspan > xres - 1 then axspan := xres - 1 fi;
+         gdi.line(im, axspan, i[1], axspan, i[2], axcolour)
+      od;
+      for j from 0 to b by xs do
+         axspan := (j - a)*xspan;
+         if axspan > xres - 1 then axspan := xres - 1 fi;
+         gdi.line(im, axspan, i[1], axspan, i[2], axcolour)
+      od
+   od;
+   # print x-labels
+   if opt.labels then
+      f := if oldxs < 21 then 1 else 2 fi;
+      t := if mode then [13, yres - 29] else [13] fi;
+      for i in t do
+         for j from 0 to a + f*xs by -f*xs do
+            if j <> b then
+               label := tostring(j);
+               gdi.text(im, (j - a)*xspan - size(label)*2, i, label, axcolour)
+            fi
+         od;
+         for j from f*xs to b - f*xs by f*xs do
+            if j <> a then  # Agena 1.12.u u1 hotfix
+               label := tostring(j);
+               gdi.text(im, (j - a)*xspan - size(label)*2, i, label, axcolour)
+            fi
+         od
+      od
+   fi;
+   gdi.line(im, 0, 0, 0, yres - 1);
+   if mode then gdi.line(im, xres - 1, 0, xres - 1, yres - 1) fi;
+   # plot y-tickmarks
+   if opt.yscale then ys := opt.yscale fi;
+   t := if mode then [[0, 5], [xres - 1, -5]] else [[0, 5]] fi;
+   if opt['square'] then  # 1.7.8.2
+      d := c + yres/(xres/(b - a))
+   fi;
+   for i in t do
+      for j from 0 to c by -ys do
+         gdi.line(im, i[1], abs((c - j)*yspan), i[1] + i[2], abs((c - j)*yspan), axcolour)
+      od;
+      for j from 0 to d by ys do
+         gdi.line(im, i[1], abs((c -j)*yspan), i[1] + i[2], abs((c - j)*yspan), axcolour)
+      od
+   od;
+   # plot y-labels
+   if opt.labels then  # changed 2.2.3
+      axspan := -a*xspan;
+      if axspan >= xres - 1 then
+         axspan := xres - 1
+      else
+         axspan := 0
+      fi;
+      f := if oldys < 21 then 1 else 2 fi;
+      yoffset := if b <= 0 then -20 else 10 fi;
+      t := if mode then [[axspan + yoffset, 0], [xres - 1, -1]] else [[axspan + yoffset, 0]] fi;
+      gdi.aux.showaxesaux.plotylabels(im, t, c, d, f, ys, axspan, yoffset, yspan, axcolour);
+   fi
+end;
+
+
+gdi.aux.showaxes := proc(im, a, b, c, d, xres, yres, xspan, yspan, opt, colours) is
+   local xs, ys, oldxs, oldys, maxticks;
+   maxticks := opt.maxtickmarks;
+   gdi.fontsize(im, opt.labelsize);
+   xs := b |- a;
+   if odd xs then  # adjust
+      inc xs
+   fi;
+   xs := b |- a;
+   if odd xs then  # adjust
+      inc xs
+   fi;
+   ys := d |- c;
+   if odd ys then  # adjust
+      inc ys
+   fi;
+   oldxs := xs;
+   xs := log(abs(xs), maxticks) + 1;  # step size for x-axes tickmarks
+   xs := int(xs^(xs - 1));
+   if oldxs/xs > maxticks or xs/oldxs > maxticks then  # 0.33.1, more than 20 tickmarks ?
+      xs := int(oldxs/maxticks);
+      xs := round(xs, -math.ndigits(xs) + 1)
+   fi;
+   oldys := ys;
+   ys := log(abs(ys), maxticks) + 1;  # step size for y-axes tickmarks
+   ys := int(ys^(ys - 1));
+   if oldys/ys > maxticks or ys/oldys > maxticks then  # 0.33.1, more than 20 tickmarks ?
+      ys := int(oldys/maxticks);
+      ys := round(ys, -math.ndigits(ys) + 1)
+   fi;
+   case opt.axes
+      of 'none' then  # do not draw axes
+      of 'normal' then
+         gdi.aux.showaxesaux.normal(im, a, b, c, d, xres, yres, xspan, yspan,
+            opt, colours, xs, ys, oldxs, oldys)
+      of 'boxed' then
+         gdi.aux.showaxesaux.boxed_framed(im, true, a, b, c, d, xres, yres, xspan, yspan,
+            opt, colours, xs, ys, oldxs, oldys)
+      of 'frame' then
+         gdi.aux.showaxesaux.boxed_framed(im, false, a, b, c, d, xres, yres, xspan, yspan,
+            opt, colours, xs, ys, oldxs, oldys)
+      else
+         gdi.close(im);
+         error('Error, unknown axes option: ' & opt.axes & '.')
+      esle
+   esac
+end;
+
+
+gdi.aux.setobject := proc(s :: PLOT, o) is
+   if top(s) :: 'INFO' then
+      put(s, size(s), o)
+   else
+      insert o into s
+   fi
+end;
+
+local aux_setobject := gdi.aux.setobject;  # this is a very minor tweak, only, 7.7.6.
+
+
+# gdi.plotfn: plot graph of a function in one real, improved by Slobodan, 2.5.1 u1
+gdi.plotfn := proc(fn, ?) is
+   # fn: the function to be plotted
+   local t, fnk, im, arg, a, b, c, d, colours, xdist, xstep, ydist, ystep,
+         xres, xspan, yspan, yres, ypoint1, ypoint2, opt, offset, tickoffset;
+   if fn :: procedure then
+      fn := [fn]
+   elif fn :: table then
+      for i in fn do
+         if i -: procedure then
+            error('Error in `gdi.plotfn`: expected a table of procedures.')
+         fi
+      od
+   else
+      error('Error in `gdi.plotfn`: expected a procedure or table of procedures as 1st argument.')
+   fi;
+   if nargs < 3 then error('Error in `gdi.plotfn`: need at least three arguments.') fi;
+   if nargs = 4 and ?[3] -: pair then error('Error in `gdi.plotfn`: expected an option of type pair.') fi;
+   if nargs = 5 and ?[3] :: number and ?[4] -: number then
+      error('Error in `gdi.plotfn`: expected y-axis coordinates (two numbers).')
+   fi;
+   a := ?[1]; b := ?[2];
+   if nargs > 4 and ?[3] :: number and ?[4] :: number then
+      c := ?[3]; d := ?[4]; offset := 5
+   else
+      c := a; d := b; offset := 3
+   fi;
+   if not(isnumber(a, b, c, d)) then
+      error('Error in `gdi.plotfn`: expected numbers as optional arguments.')
+   fi;
+   if a >= b then
+      error('Error in `gdi.plotfn`: left border equals or greater than right border.')
+   elif c >= d then
+      error('Error in `gdi.plotfn`: lower border equals or greater than upper border.')
+   fi;
+   # check options
+   opt := gdi.options(unpack(?, offset, nargs-1));
+   if unassigned(opt.colour) then opt.colour := ['black'] fi;  # default colour; Agena 1.6.0
+   t := time();
+   xres := left(opt.res); yres := right(opt.res);
+   # compute plot scaling values for x-axis
+   xdist := b - a; xstep := xdist/xres; xspan := xres/xdist;
+   # y-range not given ?
+   if offset = 3 then  # determine proper values
+      local fval, l, digs, upw, downw;
+      c, d -> 0;
+      for fnk in fn do
+         # handle intervals where function is undefined
+         for i from a to b by xstep while nan(c) do  # changed to `nan` operator, 2.1.2
+            c := fnk(i + xstep)
+         od;
+         for i from a to b by xstep while nan(d) do  # changed to `nan` operator, 2.1.2
+            d := fnk(i + xstep)
+         od;
+         for i from a to b by xstep do
+            fval := fnk(i);
+            if fval > d then
+               d := fval
+            elif fval < c then
+               c := fval
+            fi
+         od
+      od;
+      downw := <: (x, digs) -> entier(10^digs*x)*10^(-digs) :>;
+      upw := <: (x, digs) -> int(10^digs*x+0.5)*10^(-digs) :>;
+      l := log10(abs(c));
+      if nan(l) then l := 0 fi;  # changed to `nan` operator, 2.1.2
+      digs := abs(entier(l)) + 1;
+      c := downw(c, digs);
+      l := log10(abs(d));
+      if nan(l) then l := 0 fi;  # changed to `nan` operator, 2.1.2
+      digs := abs(entier(l + 1)) + 1;
+      d := upw(d, digs)
+   fi;
+   # compute plot scaling values for y-axis
+   ydist := d - c; ystep := ydist/yres;
+   if opt['square'] then
+      yspan := xspan
+   else
+      yspan := yres/ydist
+   fi;
+   # open window
+   im := gdi.open(xres, yres, opt.file);
+   if not(im) then
+      error('Error in `gdi.plotfn`: Opening window failed.')
+   fi;
+   # generate colours
+   create table colours;
+   for i, j in gdi.COLOURS do
+      colours[i] := gdi.ink(im, op(j))
+   od;
+   # create background
+   # do not move this statement further downwards because of problems in XP or with NVIDIA VGAs
+   gdi.autoflush(im, false);
+   gdi.background(im, colours[opt.bgcolour]);
+   if opt.axes then  # plot axes
+      gdi.aux.showaxes(im, a, b, c, d, xres, yres, xspan, yspan, opt, colours)
+   fi;
+   # draw graph(s)
+   for i to size fn do
+      local thickness, color, linestyle, counter, plot1;
+      thickness := alternate(opt.thickness[1], opt.thickness[i]);
+      gdi.thickness(im, thickness);
+      color := alternate(colours[opt.colour[1]], colours[opt.colour[i]]);
+      linestyle := alternate(opt.linestyle[1], opt.linestyle[i]);
+      counter := 0;
+      fnk := fn[i];
+      next when unassigned fnk;  # 2.3.3 fix
+# ============ the following lines replace commented ones, patch provided by Slobodan ==================
+      local dx0 := xstep/128  # allows 7 levels of recursion (2^7=128)
+      local u, v:= <: x -> (x - a)*xspan :>, <: y -> (y - c)*yspan :>
+      plot1 := proc(f, a, b, dx) is  # plot graph of function f
+        local y1, y2;
+        return when dx < dx0 with null;
+        for x from a to b - dx/2 by dx do
+           inc counter;
+           next when linestyle > 1 and counter && (linestyle - 1) = 0;  # for dash style: plot `holes` if linestyle > 1
+           y1, y2 := f(x), f(x + dx)
+           if nan(y1) xor nan(y2) then
+              plot1(f, x, x + dx, dx/2)  # recursion
+           elif not(nan(y1) or nan(y2)) then
+              gdi.line(im, u(x), v(y1), u(x + dx), v(y2), color)
+           fi
+        od
+      end
+      plot1(fnk, a, b, xstep)
+# ============ end of changes ==========================================================================
+#      for x from a to b by xstep do
+#         inc counter;
+#         next when linestyle > 1 and counter && (linestyle-1) = 0;
+#         ypoint1 := (fnk(x)-c)*yspan;
+#         ypoint2 := (fnk(x+xstep)-c)*yspan;
+#         if nan(fnk(x)) or nan(fnk(x+xstep)) or  # changed to `nan` operator, 2.1.2
+#            ypoint1 < 0 and ypoint2 > yres or ypoint1 > yres and ypoint2 < 0 then  # avoid vertical lines at poles
+#               next
+#         fi;
+#         gdi.line(im, (x-a)*xspan, ypoint1, (x-a+xstep)*xspan, ypoint2, color)
+#      od
+   od;
+   gdi.thickness(im, 1);  # reset it
+   if assigned(opt.title) then
+      gdi.fontsize(im, opt.titlesize);
+      #im@stringFT(colours['black'], '../bin/Vera.TTF', 12, 0, 10, right(opt.res)-38, opt.text)
+      gdi.text(im, 10, right(opt.res) - 10 - opt.titlesize, opt.title, colours[opt.titlecolour])
+   fi;
+   t := time() - t;
+   gdi.flush(im);
+   gdi.autoflush(im, true);
+   if opt.file <> null then
+      gdi.close(im)
+   elif opt.mouse then
+      local x, y, state, posstr, sposstr;
+      do
+         x, y, state := gdi.mouse(im);
+         posstr := strings.format('x=%+011.06f y=%+011.06f', x/xspan + a, y/yspan + c);
+         sposstr := size posstr;
+         write(posstr);
+         write(strings.repeat('\b', sposstr));
+         if state && 0x0400 = 0x0400 or io.anykey() then  # right mouse button or any key pressed
+            write(strings.repeat(' ', sposstr+10));
+            write(strings.repeat('\b', sposstr));
+            break
+         fi
+      od
+   fi;
+   return t
+end;
+
+
+gdi.plotfn2d := proc(fn :: procedure, ?) is
+   # fn: the function to be plotted
+   local t, fnk, im, arg, a, b, c, d, colours, xdist, xstep, ydist, ystep,
+         xres, xspan, yspan, yres, opt, offset;
+   if nargs < 5 then error('Error in `gdi.plotfn2d`: need at least four arguments.') fi;
+   a := ?[1]; b := ?[2];
+   c := ?[3]; d := ?[4]; offset := 5
+   if not(isnumber(a, b, c, d)) then
+      error('Error in `gdi.plotfn2d`: expected numbers as optional arguments.')
+   fi;
+   if a >= b then
+      error('Error in `gdi.plotfn2d`: left border equals or greater than right border.')
+   elif c >= d then
+      error('Error in `gdi.plotfn2d`: lower border equals or greater than upper border.')
+   fi;
+   # check options
+   opt := gdi.options(unpack(?, offset, nargs - 1));
+   if unassigned(opt.colour) then opt.colour := ['black'] fi;  # default colour
+   t := time();
+   xres := left(opt.res); yres := right(opt.res);
+   # compute plot scaling values for x-axis
+   xdist := b - a; xstep := xdist/xres; xspan := xres/xdist;
+   # compute plot scaling values for y-axis
+   ydist := d - c; ystep := ydist/yres;
+   if opt['square'] then
+      yspan := xspan
+   else
+      yspan := yres/ydist
+   fi;
+   # open window
+   im := gdi.open(xres, yres, opt.file);
+   if not(im) then
+      error('Error in `gdi.plotfn`: Opening window failed.')
+   fi;
+   # generate colours
+   create table colours;
+   for i, j in gdi.COLOURS do
+      colours[i] := gdi.ink(im, op(j))
+   od;
+   gdi.autoflush(im, false);
+   gdi.background(im, colours[opt.bgcolour]);
+   # create background
+   # do not move this statement further downwards because of problems in XP or with NVIDIA VGAs
+   if opt.axes then  # plot axes
+      gdi.aux.showaxes(im, a, b, c, d, xres, yres, xspan, yspan, opt, colours)
+   fi;
+   # draw graph
+   local thickness, color, plot2;
+   thickness := opt.thickness[1];
+   gdi.thickness(im, thickness);
+   color := colours[opt.colour[1]];
+# ============ the following lines replace commented ones, patch provided by Slobodan ==================
+   local dx0 := xstep/128;  # allows 7 levels of recursion (2^7=128)
+   local dy0 := ystep/128;
+   local u, v:= <: x -> (x - a)*xspan :>, <: y -> (y - c)*yspan :>
+   plot2 := proc(f, a, b, c, d, dx, dy) is  # plots graph of function f
+      local r;
+      return when dx < dx0 or dy < dy0 with null;
+      for x from a to b by dx do
+         for y from c to d by dy do
+            r := f(x, y);
+            if nan(r) then
+               return plot2(f, x, x + dx, y, y + dy, dx/2, dy/2)  # recursion
+            else
+               gdi.point(im, u(x), v(r), color)
+            fi
+         od
+      od
+   end;
+   plot2(fn, a, b, c, d, xstep, ystep);
+# ============ end of changes ==========================================================================
+   if opt.axes then  # plot axes
+      gdi.aux.showaxes(im, a, b, c, d, xres, yres, xspan, yspan, opt, colours)
+   fi;
+   gdi.thickness(im, 1);  # reset it
+   if assigned(opt.title) then
+      gdi.fontsize(im, opt.titlesize);
+      #im@stringFT(colours['black'], '../bin/Vera.TTF', 12, 0, 10, right(opt.res)-38, opt.text)
+      gdi.text(im, 10, right(opt.res) - 10 - opt.titlesize, opt.title, colours[opt.titlecolour])
+   fi;
+   t := time() - t;
+   gdi.flush(im);
+   gdi.autoflush(im, true);
+   if opt.file <> null then
+      gdi.close(im)
+   elif opt.mouse then
+      local x, y, state, posstr, sposstr;
+      do
+         x, y, state := gdi.mouse(im);
+         posstr := strings.format('x=%+011.06f y=%+011.06f', x/xspan + a, y/yspan + c);
+         sposstr := size posstr;
+         write(posstr);
+         write(strings.repeat('\b', sposstr));
+         if state && 0x0400 = 0x0400 or io.anykey() then  # right mouse button or any key pressed
+            write(strings.repeat(' ', sposstr+10));
+            write(strings.repeat('\b', sposstr));
+            break
+         fi
+      od
+   fi;
+   return t
+end;
+
+
+gdi.hasoption := proc(struct::table, x) is
+   for keys i in struct do
+      return when i :: string and i = x with true
+   od;
+   return false
+end;
+
+
+gdi.aux.getranges := proc(str :: PLOT) is
+   local xmin, xmax, ymin, ymax -> 0;
+   for i in str while i -: 'INFO' do
+       case typeof(i)
+          of 'POINT' then
+             if i[1] < xmin then xmin := i[1] fi;
+             if i[1] > xmax then xmax := i[1] fi;
+             if i[2] < ymin then ymin := i[2] fi;
+             if i[2] > ymax then ymax := i[2] fi
+          of 'LINE', 'RECTANGLE', 'RECTANGLEFILLED' then
+             for n to 3 by 2 do
+                if i[n] < xmin then xmin := i[n] fi;
+                if i[n] > xmax then xmax := i[n] fi;
+                if i[n+1] < ymin then ymin := i[n+1] fi;
+                if i[n+1] > ymax then ymax := i[n+1] fi
+             od
+          of 'TRIANGLE', 'TRIANGLEFILLED' then
+             for n to 5 by 2 do
+                if i[n] < xmin then xmin := i[n] fi;
+                if i[n] > xmax then xmax := i[n] fi;
+                if i[n+1] < ymin then ymin := i[n+1] fi;
+                if i[n+1] > ymax then ymax := i[n+1] fi
+             od
+          of 'CIRCLE', 'CIRCLEFILLED' then
+             if i[1]-i[3] < xmin then xmin := i[1]-i[3] fi;
+             if i[1]+i[3] > xmax then xmax := i[1]+i[3] fi;
+             if i[2]-i[3] < ymin then ymin := i[2]-i[3] fi;
+             if i[2]+i[3] > ymax then ymax := i[2]+i[3] fi
+          of 'ELLIPSE', 'ELLIPSEFILLED' then
+             for n to 3 by 2 do
+                if i[n] < xmin then xmin := i[n] fi;
+                if i[n] > xmax then xmax := i[n] fi;
+                if i[n+1] < ymin then ymin := i[n+1] fi;
+                if i[n+1] > ymax then ymax := i[n+1] fi
+             od
+          else
+             return fail
+          esle
+       esac
+   od;
+   return xmin, xmax, ymin, ymax
+end;
+
+
+gdi.aux.setthickness := proc(im, thickness) is  # 2.6.2
+   if thickness <> 1 then gdi.thickness(im, thickness) fi
+end;
+
+gdi.aux.unsetthickness := proc(im, thickness) is  # 2.6.2
+   if thickness <> 1 then gdi.thickness(im, 1) fi
+end;
+
+
+gdi.plot := proc(pts :: PLOT, ?) is
+   # plots a PLOT data structure with points and lines; changed and extended 1.4.0
+   local t, im, arg, a, b, c, d, xdist, ydist, xspan, xres, yspan, yres,
+         ypoint1, ypoint2, opt, offset, last, infoflag, p, constrained,
+         usecolour, colours, colourtable, colourgiven, thickness, nonthickness;
+   # check options
+   opt := gdi.options(op(?));
+   t := time();
+   xres := left(opt.res); yres := right(opt.res);
+   im := gdi.open(xres, yres, opt.file);
+   if not(im) then
+      error('Error in `gdi.plot`: Opening window failed.')
+   fi;
+   # generate colours
+   colourtable := [];
+   create table colours;
+   for i, j in copy(gdi.COLOURS) do  # assign predefined colours as defaults
+      colours[i] := gdi.ink(im, op(j))
+   od;
+   last := top(pts);
+   infoflag := 0
+   if last :: 'INFO' then  # get information on the plot, here: dimensions
+      infoflag := 1;
+      for i in last do
+         if left(i) = 'xdim' then
+            a := left(right(i)); b := right(right(i))
+         elif left(i) = 'ydim' then
+            c := left(right(i)); d := right(right(i))
+         elif left(i) = 'square' and right(i) :: boolean then
+            opt['square'] := right(i)
+         fi
+      od;
+      if unassigned(a) or unassigned(b) or unassigned(c) or unassigned(d) then
+         # FIXME: determine dimensions with the stats.minmax function
+         gdi.close(im);
+         error('Error in `gdi.plot`: one or more dimensions not specified.')
+      fi
+   else  # use defaults otherwise
+      if opt.xdim then
+         a := left(opt.xdim);
+         b := right(opt.xdim)
+      fi;
+      if opt.ydim then
+         c := left(opt.ydim);
+         d := right(opt.ydim)
+      elif opt.dim then
+         c, d := a, b
+      fi;
+      if not(isnumber(a, b, c, d)) then
+         a, b, c, d := gdi.aux.getranges(pts);  # determine ranges automatically from object elements, new 1.4.0
+         if a = fail then
+            a, b, c, d := -5, 5, -5, 5
+         fi
+      fi
+   fi;
+   # create constrained graph
+   if opt['square'] then  # patched 2.2.3
+      local abdiff, cddiff, ratio, olda := b |- a, d |- c, yres/xres, a;
+      a := a + (b - a)/2 - 1/2*abdiff;
+      b := b - (b - olda)/2 + 1/2*abdiff;  # 1.7.8.2
+   fi;
+   # compute plot scaling values
+   xdist := b - a; ydist := d - c;
+   xspan := xres/xdist;
+   yspan := if opt['square'] then xspan else yres/ydist fi;
+   # create background
+   gdi.autoflush(im, false);
+   gdi.background(im, colours[opt.bgcolour]);
+   if opt.axes then  # plot axis
+      if opt['square'] then
+         local centre, ratio;
+         centre := stats.mean([c, d]);
+         ratio := yres/xres;
+         gdi.aux.showaxes(im, a, b, c, d, xres, xres, xspan, xspan, opt, colours)
+      else
+         gdi.aux.showaxes(im, a, b, c, d, xres, yres, xspan, yspan, opt, colours)
+      fi
+   fi;
+   if opt.colour :: table then  # if coulor option has been passed, use this colour for all objects to be plotted; Agena 1.6.0
+      local col, coltable;
+      col := opt.colour[1]; coltable := gdi.COLOURS[col];
+      if col :: string and assigned(coltable) then  # colour option given ?
+         colourgiven := gdi.ink(im, op(coltable))
+      fi;
+   fi;
+   for i to size pts - infoflag do
+      p := pts[i];  # get geometric PLOT object, e.g. LINE(0, 0, 1, 1, [0, 0, 0])
+      nonthickness := typeof(p) in {'POINT', 'CIRCLEFILLED', 'ARCFILLED', 'ELLIPSEFILLED',  # 2.6.2
+                                    'RECTANGLEFILLED', 'TRIANGLEFILLED'};
+      if colourgiven then
+         usecolour := colourgiven
+      else
+         local rr, gg, bb, pos, hash;
+         pos := if nonthickness then size p else size p - 1 fi;  # position of colour in PLOT structure
+         rr, gg, bb := op(p[pos]);  # get colour information
+         hash := rr*65536 + gg*256 + bb;
+         if colourtable[hash] then  # hash already exists ?
+            usecolour := colourtable[hash]  # use it
+         else  # hash value does not yet exist ?
+            usecolour, colourtable[hash] -> gdi.ink(im, rr, gg, bb)  # create new colour entry
+         fi
+      fi;
+      thickness := if nonthickness then alternate(opt.thickness[1], opt.thickness[i]) else top p fi;  # 2.6.2
+      case typeof(p)
+         of 'POINT' then
+            gdi.point(im, int((p[1] - a)*xspan + 0.5), int((p[2] - c)*yspan + 0.5), usecolour)
+         of 'LINE' then
+            gdi.aux.setthickness(im, thickness);  # 2.6.2
+            gdi.line(im, int((p[1] - a)*xspan + 0.5), int((p[2] - c)*yspan + 0.5),
+                     int((p[3] - a)*xspan + 0.5), int((p[4] - c)*yspan + 0.5), usecolour);
+            gdi.aux.unsetthickness(im, thickness)  # 2.6.2
+         of 'CIRCLE' then
+            gdi.aux.setthickness(im, thickness);  # 2.6.2
+            if opt['square'] then
+               gdi.circle(im, int((p[1] - a)*xspan + 0.5), int((p[2] - c)*yspan + 0.5),
+                  int(p[3]*xspan + 0.5), usecolour)
+            else
+               gdi.ellipse(im, int((p[1] - a)*xspan + 0.5), int((p[2] - c)*yspan + 0.5),
+                  int(p[3]*xspan + 0.5), int(p[3]*yspan + 0.5), usecolour)
+            fi;
+            gdi.aux.unsetthickness(im, thickness)  # 2.6.2
+         of 'CIRCLEFILLED' then
+            if opt['square'] then
+               gdi.circlefilled(im, int((p[1] - a)*xspan + 0.5), int((p[2] - c)*yspan + 0.5),
+                  int(p[3]*xspan+0.5), usecolour)
+            else
+               gdi.ellipsefilled(im, int((p[1] - a)*xspan + 0.5), int((p[2] - c)*yspan + 0.5),
+                  int(p[3]*xspan + 0.5), int(p[3]*yspan + 0.5), usecolour)
+            fi
+         of 'ARC' then
+            gdi.aux.setthickness(im, thickness);  # 2.6.2
+            gdi.arc(im, int((p[1] - a)*xspan + 0.5), int((p[2] - c)*yspan + 0.5),
+                     int(p[3]*hypot(xspan, yspan) + 0.5),
+                     int(p[4]*hypot(xspan, yspan) + 0.5),
+                     int(p[5]), int(p[6]), usecolour);
+            gdi.aux.unsetthickness(im, thickness)  # 2.6.2
+         of 'ARCFILLED' then
+            gdi.arcfilled(im, int((p[1] - a)*xspan + 0.5), int((p[2] - c)*yspan + 0.5),
+                     int(p[3]*hypot(xspan, yspan) + 0.5),
+                     int(p[4]*hypot(xspan, yspan) + 0.5),
+                     int(p[5]), int(p[6]), usecolour)
+         of 'ELLIPSE' then
+            gdi.aux.setthickness(im, thickness);  # 2.6.2
+            gdi.ellipse(im, int((p[1] - a)*xspan + 0.5), int((p[2] - c)*yspan + 0.5),
+                     int(p[3]*hypot(xspan, yspan) + 0.5),
+                     int(p[4]*hypot(xspan, yspan) + 0.5), usecolour);
+            gdi.aux.unsetthickness(im, thickness)  # 2.6.2
+         of 'ELLIPSEFILLED' then
+            gdi.ellipsefilled(im, int((p[1] - a)*xspan + 0.5), int((p[2] - c)*yspan + 0.5),
+                     int(p[3]*hypot(xspan, yspan) + 0.5),
+                     int(p[4]*hypot(xspan, yspan) + 0.5), usecolour)
+         of 'RECTANGLE' then
+            gdi.aux.setthickness(im, thickness);  # 2.6.2
+            gdi.rectangle(im, int((p[1]-a)*xspan + 0.5), int((p[2] - c)*yspan + 0.5),
+                     int((p[3] - a)*xspan + 0.5), int((p[4]-c)*yspan + 0.5), usecolour);
+            gdi.aux.unsetthickness(im, thickness)  # 2.6.2
+         of 'RECTANGLEFILLED' then
+            gdi.rectanglefilled(im, int((p[1] - a)*xspan + 0.5), int((p[2] - c)*yspan + 0.5),
+                     int((p[3] - a)*xspan + 0.5), int((p[4] - c)*yspan + 0.5), usecolour)
+         of 'TRIANGLE' then
+            gdi.aux.setthickness(im, thickness);  # 2.6.2
+            gdi.triangle(im, int((p[1] - a)*xspan + 0.5), int((p[2] - c)*yspan + 0.5),
+                     int((p[3] - a)*xspan + 0.5), int((p[4] - c)*yspan + 0.5),
+                     int((p[5] - a)*xspan + 0.5), int((p[6] - c)*yspan + 0.5), usecolour);
+            gdi.aux.unsetthickness(im, thickness)  # 2.6.2
+         of 'TRIANGLEFILLED' then
+            gdi.trianglefilled(im, int((p[1] - a)*xspan + 0.5), int((p[2] - c)*yspan + 0.5),
+                     int((p[3] - a)*xspan + 0.5), int((p[4] - c)*yspan + 0.5),
+                     int((p[5] - a)*xspan + 0.5), int((p[6] - c)*yspan + 0.5), usecolour)
+         else
+            writeline('Warning, unknown structure in PLOT data: ', typeof(p), '.')
+         esle
+      esac
+   od;
+   if assigned(opt.title) then
+      gdi.fontsize(im, opt.titlesize);
+      gdi.text(im, 10, right(opt.res) - 10 - opt.titlesize, opt.title, colours[opt.titlecolour])
+   fi;
+   gdi.flush(im);
+   gdi.autoflush(im, true);
+   if opt.file <> null then
+      gdi.close(im)
+   elif opt.mouse then
+      local x, y, state, posstr, sposstr;
+      do
+         x, y, state := gdi.mouse(im);
+         posstr := strings.format('x=%+011.06f y=%+011.06f', x/xspan + a, y/yspan + c);
+         sposstr := size posstr;
+         write(posstr);
+         write(strings.repeat('\b', sposstr));
+         if state && 0x0400 = 0x0400 or io.anykey() then  # right mouse button or any key pressed
+            write(strings.repeat(' ', sposstr + 10));
+            write(strings.repeat('\b', sposstr));
+            break
+         fi
+      od
+   fi;
+   t := time() - t;
+   environ.gc();
+   return t
+end;
+
+
+# initialise plot structure with n preallocated entries
+gdi.structure := proc(n) is
+   if unassigned(n) then
+      n := 0
+   elif n -: number or n < 0 then
+      error('Error in `gdi.structure`: argument must be a non-negative number.')
+   fi;
+   create local seq r(n);
+   settype(r, 'PLOT');
+   return r
+end;
+
+
+gdi.aux.getcolour := proc(colour, prozname) is
+   local c;
+   if unassigned(colour) then
+      c := gdi.COLOURS['black'];
+   elif colour :: table and size(colour) = 3 then  # table of three RGB values
+      for i to 3 do
+         if colour[i] -: number then
+            error('Error in `' & prozname & ': table entry must be a number.')
+         fi
+      od;
+      c := colour
+   elif gdi.COLOURS[colour] then
+      c := gdi.COLOURS[colour]
+   else
+      error('Error in `' & prozname & '`: invalid colour ' & tostring(colour) & '.')
+   fi;
+   return c
+end;
+
+
+local aux_getcolour := gdi.aux.getcolour;  # this is a very minor tweak, only, 7.7.6.
+
+# insert a point into a PLOT structure
+gdi.setpoint := proc(s :: PLOT, x :: number, y :: number, colour) is
+   local c, r;
+   c := aux_getcolour(colour, 'gdi.setpoint');
+   r := seq(x, y, c);
+   settype(r, 'POINT');
+   aux_setobject(s, r)
+end;
+
+
+# insert a line into a PLOT structure
+gdi.setline := proc(s :: PLOT, x1 :: number, y1 :: number,
+                               x2 :: number, y2 :: number, colour, thickness) is
+   local c, r, t;
+   c := aux_getcolour(colour, 'gdi.setline');
+   t := alternate(1, thickness);
+   r := seq(x1, y1, x2, y2, c, t);
+   settype(r, 'LINE');
+   aux_setobject(s, r)
+end;
+
+
+# insert a circle into a PLOT structure
+gdi.setcircle := proc(s :: PLOT, x :: number, y :: number, r :: number, colour, thickness) is
+   local c, o, t;
+   c := aux_getcolour(colour, 'gdi.setcircle');
+   t := alternate(1, thickness);
+   o := seq(x, y, r, c, t);
+   settype(o, 'CIRCLE');
+   aux_setobject(s, o)
+end;
+
+
+# insert a filled circle into a PLOT structure
+gdi.setcirclefilled := proc(s :: PLOT, x :: number, y :: number, r :: number, colour) is
+   local c, o;
+   c := aux_getcolour(colour, 'gdi.setcirclefilled');
+   o := seq(x, y, r, c);
+   settype(o, 'CIRCLEFILLED');
+   aux_setobject(s, o)
+end;
+
+
+# insert a rectangle into a PLOT structure
+gdi.setrectangle := proc(s :: PLOT, x1 :: number, y1 :: number,
+                                    x2 :: number, y2 :: number, colour, thickness) is
+   local c, o, t;
+   c := aux_getcolour(colour, 'gdi.setrectangle');
+   t := alternate(1, thickness);
+   o := seq(x1, y1, x2, y2, c, t);
+   settype(o, 'RECTANGLE');
+   aux_setobject(s, o)
+end;
+
+
+# insert a filled rectangle into a PLOT structure
+gdi.setrectanglefilled := proc(s :: PLOT, x1 :: number, y1 :: number,
+                                          x2 :: number, y2 :: number, colour) is
+   local c, o;
+   c := aux_getcolour(colour, 'gdi.setrectanglefilled');
+   o := seq(x1, y1, x2, y2, c);
+   settype(o, 'RECTANGLEFILLED');
+   aux_setobject(s, o)
+end;
+
+
+# insert a triangle into a PLOT structure
+gdi.settriangle := proc(s :: PLOT, x1 :: number, y1 :: number,
+                                   x2 :: number, y2 :: number,
+                                   x3 :: number, y3 :: number, colour, thickness) is
+   local c, o, t;
+   c := aux_getcolour(colour, 'gdi.settriangle');
+   t := alternate(1, thickness);
+   o := seq(x1, y1, x2, y2, x3, y3, c, t);
+   settype(o, 'TRIANGLE');
+   aux_setobject(s, o)
+end;
+
+
+# insert a filled triangle into a PLOT structure
+gdi.settrianglefilled := proc(s :: PLOT, x1 :: number, y1 :: number,
+                                         x2 :: number, y2 :: number,
+                                         x3 :: number, y3 :: number, colour) is
+   local c, o;
+   c := aux_getcolour(colour, 'gdi.settrianglefilled');
+   o := seq(x1, y1, x2, y2, x3, y3, c);
+   settype(o, 'TRIANGLEFILLED');
+   aux_setobject(s, o)
+end;
+
+
+# insert an arc into a PLOT structure
+gdi.setarc := proc(s :: PLOT, x1 :: number, x2 :: number,
+                   r1 :: number, r2 :: number, a1 :: number, a2 :: number, colour, thickness) is
+   local c, o, t;
+   c := aux_getcolour(colour, 'gdi.setarc');
+   t := alternate(1, thickness);
+   o := seq(x1, x2, r1, r2, a1, a2, c, t);
+   settype(o, 'ARC');
+   aux_setobject(s, o)
+end;
+
+
+# insert a filled arc into a PLOT structure
+gdi.setarcfilled := proc(s :: PLOT, x1 :: number, x2 :: number,
+                         r1 :: number, r2 :: number, a1 :: number, a2 :: number, colour) is
+   local c, o;
+   c := aux_getcolour(colour, 'gdi.setarcfilled');
+   o := seq(x1, x2, r1, r2, a1, a2, c);
+   settype(o, 'ARCFILLED');
+   aux_setobject(s, o)
+end;
+
+
+# insert an ellipse into a PLOT structure
+gdi.setellipse := proc(s :: PLOT, a1 :: number, b1 :: number,
+                       r1 :: number, r2 :: number, colour, thickness) is
+   local c, o, t;
+   c := aux_getcolour(colour, 'gdi.setellipse');
+   t := alternate(1, thickness);
+   o := seq(a1, b1, r1, r2, c, t);  # 1.7.8.2
+   settype(o, 'ELLIPSE');
+   aux_setobject(s, o)
+end;
+
+
+# insert a filled ellipse into a PLOT structure
+gdi.setellipsefilled := proc(s :: PLOT, a1 :: number, b1 :: number,
+                             r1 :: number, r2 :: number, colour) is
+   local c, o;
+   c := aux_getcolour(colour, 'gdi.setellipsefilled');
+   o := seq(a1, b1, r1, r2, c);  # 1.7.8.2
+   settype(o, 'ELLIPSEFILLED');
+   aux_setobject(s, o)
+end;
+
+
+gdi.setinfo := proc(s :: PLOT, ?) is
+   local last, r, flag;
+   last := size s;
+   if s[last] :: 'INFO' then  # INFO sub-structure already included ?
+      r := s[last]; flag := 0
+   else  # create an INFO sub-structure
+      create seq r; settype(r, 'INFO'); flag := 1
+   fi;
+   for x in ? do
+      case left(x)
+         of 'xdim', 'ydim' then
+            if right(x) -: pair then error('Error in `gdi.setinfo`: pair expected for rhs of xdim/ydim.') fi;
+         of 'square' then  # Agena 1.4.0
+            if right(x) -: boolean then error('Error in `gdi.setinfo`: boolean expected for `square` option.') fi;
+      esac;
+      next when has(s, right(x));  # do not insert settings already included, Agena 1.4.0
+      insert x into r
+   od;
+   s[last + flag] := r
+end;
+
+
+# set default options for gdi.plotfn; extended 19.12.2009
+gdi.setoptions := proc(?) is
+   local options := [];
+   create table environ.gdidefaultoptions;  # create a global table, deleting the one that might already exist
+   for i in ? do
+      if i :: pair then
+         options[left(i)] := right(i)
+      else
+         error('Error in `gdi.setoptions`: all arguments must be pairs.')
+      fi
+   od;
+   for i, j in gdi.checkoptions(options) do
+      environ.gdidefaultoptions[i] := j
+   od
+end;
+
+
+gdi.aux.pointplot := proc(pts, i, j, symbol, symbolsize, xunit, yunit, issquare, colour) is
+   case symbol
+      of 'circle' then
+         local minimum := min([xunit, yunit]);
+         gdi.setellipse(pts, i, j, symbolsize*minimum, symbolsize*minimum, colour)
+      of 'circlefilled' then
+         local minimum := min([xunit, yunit]);
+         gdi.setellipsefilled(pts, i, j, symbolsize*minimum, symbolsize*minimum, colour)
+      of 'box' then
+         local offset;
+         offset := symbolsize*min([xunit, yunit]);
+         gdi.setrectangle(pts, i - offset, j + offset, i + offset, j - offset, colour);
+      of 'boxfilled' then
+         local offset;
+         offset := symbolsize*min([xunit, yunit]);
+         gdi.setrectanglefilled(pts, i - offset, j + offset, i + offset, j - offset, colour);
+      of 'triangle' then
+         local offset;
+         offset := symbolsize*min([xunit, yunit]);
+         gdi.settriangle(pts, i - offset, j - offset, i + offset, j - offset, i, j + offset, colour);
+      of 'trianglefilled' then
+         local offset;
+         offset := symbolsize*min([xunit, yunit]);
+         gdi.settrianglefilled(pts, i - offset, j - offset, i + offset, j - offset, i, j + offset, colour);
+      of 'cross' then
+         local xoffset, yoffset;
+         if issquare then yunit := xunit fi;
+         xoffset, yoffset := symbolsize*xunit, symbolsize*yunit;
+         gdi.setline(pts, i, j - yoffset, i, j + yoffset, colour);  # vertical line
+         gdi.setline(pts, i - xoffset, j, i + xoffset, j, colour)   # horizontal line
+      of 'crosscircle' then
+         local minimum, xoffset, yoffset;
+         if issquare then yunit := xunit fi;
+         minimum := min([xunit, yunit]);
+         xoffset, yoffset := symbolsize*xunit, symbolsize*yunit;
+         gdi.setellipse(pts, i, j, symbolsize*minimum, symbolsize*minimum, colour)
+         gdi.setline(pts, i - xoffset, j - yoffset, i + xoffset, j + yoffset, colour);  # vertical line
+         gdi.setline(pts, i - xoffset, j + yoffset, i + xoffset, j - yoffset, colour)   # horizontal line
+      of 'dot' then
+         gdi.setpoint(pts, i, j, colour)
+      else
+         error('Error in `gdi.pointplot`: unknown symbol `' & symbol & '`.')
+      esle
+   esac
+end;
+
+#/ gdi.pointplot
+
+Takes one or more tables or sequences consisting of points xk:yk and generates a plot. The function automatically
+determines the common proper borders automatically.
+
+By passing the option colour=c, where c is either a string denoting a colour, or a table of strings denoting
+colours, you can set individual colours for the distributions.
+
+By passing the option `symbol`=s, where s is the name of a symbol or a table of strings denoting symbols, each
+point in a distribution is plotted accordingly. Supported symbols are: 'cross', 'circle', and 'circlefilled',
+and 'dot'.
+
+The size of the symbols can be controlled by the 'symbolsize' option which denotes a radius in pixels. Only
+one size can be set for all distributions passed.
+
+Alternatively, by passing the 'connect=true' option, you can connect all points in each distribution with a line.
+
+The function supports various plotting options, see 'gdi.options'.
+
+In the first form, only one distribution p is passed, in the second form you can pass various distributions
+p1, p2, etc.
+
+The function ignores y-values if they evaluate to 'infinity' or 'undefined'. /#
+
+gdi.pointplot := proc(o :: {table, sequence}, ?) is  # initialised September 2012, 2.2.3
+   local pts, ssize, xminmax, yminmax, opt, options, a, b, c, d, symbolsize, xunit, yunit, connect,
+     mina, maxb, minc, maxd, maxsymbolsize, maxxunit, maxyunit, gotcolour, sizes, symbols;
+   # check options
+   create table options;
+   symbolsize := 3;
+   symbols := ['dot'];
+   for i in ? do
+      if i :: pair then
+         local rhs := right(i);
+         case left(i)
+            of 'symbol' then
+               if rhs :: string then
+                  symbols := [rhs]
+               elif rhs :: table then
+                  symbols := rhs
+               else
+                  error('Error in `gdi.pointplot`: invalid right-hand side of symbol option.')
+               fi
+            of 'symbolsize' then
+               symbolsize := rhs;
+               if symbolsize -: number or symbolsize < 1 then
+                  error('Error in `gdi.pointplot`: right-hand side of symbolsize option is not positive.')
+               fi
+            of 'connect' then
+               connect := rhs;
+               if connect -: boolean then
+                  error('Error in `gdi.pointplot`: right-hand side of connect option is not boolean.')
+               fi
+            of 'colour' then
+               if rhs :: string then
+                  insert 'colour':[rhs] into options
+               elif rhs :: table then
+                  insert 'colour':rhs into options
+               else
+                  error('Error in `gdi.pointplot`: invalid right-hand side to colour option.')
+               fi;
+               gotcolour := true
+            else
+               insert i into options
+            esle
+         esac
+      fi
+   od;
+   create table sizes;
+   for s in o do
+      if s -: {table, sequence} then  # assume only one structure passed
+         insert size o into sizes;
+         o := [o];
+         break
+      else
+         insert size s into sizes
+      fi
+   od;
+   pts := gdi.structure(sumup(sizes));
+   opt := gdi.options(op(options));
+   if unassigned(opt.colour) then opt.colour := ['black'] fi;
+   # compute global values
+   mina, maxb, minc, maxd, maxsymbolsize, maxxunit, maxyunit :=
+      infinity, -infinity, infinity, -infinity, -infinity, -infinity, -infinity;
+   for s in o do
+      xminmax := stats.minmax(<: x -> x[1] :> @ s);
+      yminmax := stats.minmax(<: x -> x[2] :> @ s);
+      a := xminmax[1] - 1; b := xminmax[2] + 1;
+      c := yminmax[1]; d := yminmax[2];
+      xunit := (b |- a)/left(opt.res);
+      yunit := (d |- c)/right(opt.res);
+      if a < mina then mina := a fi; if c < minc then minc := c fi;
+      if b > maxb then maxb := b fi; if d > maxd then maxd := d fi;
+      if symbolsize > maxsymbolsize then maxsymbolsize := symbolsize fi;
+      if xunit > maxxunit then maxxunit := xunit fi;
+      if yunit > maxyunit then maxyunit := yunit fi
+   od;
+   # create pointplots
+   for n to size o do
+      local colour, linestyle, thickness, s, f, i, j;  # 2.9.8 fix, symbol
+      colour := alternate(opt.colour[1], opt.colour[n]);
+      # symbol := alternate(symbols[1], symbols[n]);
+      linestyle := alternate(opt.linestyle[1], opt.linestyle[n]);  # 2.9.8 fix
+      thickness := alternate(opt.thickness[1], opt.thickness[n]);  # 2.9.8 fix
+      ssize := sizes[n];
+      s := o[n];
+      for x to ssize do  # iterate each sequence of points
+         i := s[x];
+         if not checktype(i, pair, number) then
+            argerror(i, 'gdi.pointplot`', 'co-ordinate must be a pair of numbers')
+         fi;
+         next when not finite right i;  # avoid plotting `undefined` and +/-`infinity`
+         #gdi.aux.pointplot(pts, left(i), right(i), symbol, symbolsize, maxxunit, maxyunit, opt['square'], colour);
+         if connect and x < ssize then  # draw line
+            local x0, x1, y0, y1, dx, counter;
+            dx := maxxunit;
+            j := s[x + 1];
+            if not checktype(j, pair, number) then
+               argerror(j, 'gdi.pointplot`', 'co-ordinate must be a pair of numbers')
+            fi;
+            x0, x1, y0, y1, counter := left i, left j, right i, right j, 0;
+            next when not finite y1;  # avoid plotting `undefined` and +/-`infinity`
+            f := <: x -> (y1 - y0)/(x1 - x0) * (x - x0) + y0 :>;
+            if linestyle = 1 then
+               gdi.setline(pts, x0, y0, x1, y1, colour, thickness)
+            else
+               for x from x0 to x1 - dx by dx do
+                  inc counter;
+                  next when counter && (linestyle - 1) = 0;  # line dash
+                  gdi.setline(pts, x, f(x), x + dx, f(x + dx), colour, thickness)
+               od
+            fi
+         fi
+      od;
+   od;
+   if gotcolour then  # avoid `gdi.plot` changing the colours
+      options := <: x -> left(x) <> 'colour' :> $ options
+   fi;
+   mul maxsymbolsize, 3;
+   gdi.plot(pts, x = mina - maxxunit*maxsymbolsize : maxb + maxxunit*maxsymbolsize,
+      y = minc - maxyunit*maxsymbolsize : maxd + maxyunit*maxsymbolsize, op(options))
+end;
+
+
+gdi.lineplot := proc(?) is  # 2.6.2, juist a wrapper around `gdi.pointplot`
+   local a := [?[1], 'connect' : true, 'symbol' : 'dot', 'symbolsize' : 1];
+   for i from 2 to nargs do
+      insert ?[i] into a
+   od;
+   gdi.pointplot(op(a))
+end;
+
+end;  # of _k.isLinux and _k.is64bit or _k.isDOS
+

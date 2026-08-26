@@ -1,0 +1,34 @@
+
+# This package is of no practical use - it just demonstrates how to create userdata in C - see file `double.c` - and how to 
+# extend the functionality by procedures written in the Agena language.
+
+# The C `double` package exposes a table with procedure `double.new` that creates a userdata value of user-defined type
+# 'doublevalue' storing exactly one 8-byte floating-point number along with an accompanying metatable that includes the
+# '__gc' garbage collector, plus one procedure `double.tonumber` to extract that number and `double.tonumber` that converts
+# the number to a string.
+
+# This `double.agn` file shows how further metamethods can be defined. The metamethod table has the name 'doublevalue'.
+
+local _mttbl := [
+   '__unm' ~ proc(x) is    # unary minus operator
+      return double.new(-double.tonumber(x))
+   end,
+   '__sqrt' ~ proc(x) is   # square root
+      return double.new(sqrt double.tonumber(x))
+   end,
+   '__lt' ~ proc(x, y) is  # less-then relation
+      return double.tonumber(x) < double.tonumber(y)
+   end,
+   '__eq' ~ proc(x, y) is  # equality relation
+      return double.tonumber(x) = double.tonumber(y)
+   end
+];
+
+# get the internal registry metatable
+local _mt := registry.get('doublevalue');
+
+# inject metamethods written in Agena to internal registry metatable initialised through C
+for i, j in _mttbl do
+   _mt[i] := j
+od;
+

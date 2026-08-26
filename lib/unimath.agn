@@ -1,0 +1,723 @@
+/* The `unimath` (universal math) package
+
+   The package provides functions that work with either ordinary Agena numbers, MAPM, MPFR or
+   long 80-bit precision floating-point numbers. */
+
+create table unimath, table unimath.aux, table unimath.iters;
+
+unimath.initstring := 'unimath package v0.2.0 as of April 28, 2026\n';
+
+unimath.max := proc(x, y) is  # as fast as calling mapm.xmax, long.fmax, etc. separately
+   typeof(x) <> typeof(y) ? error('Error in `unimath.max`: arguments must be of the same type.')
+   return if x > y then x else x fi
+end;
+
+
+unimath.min := proc(x, y) is
+   typeof(x) <> typeof(y) ? error('Error in `unimath.min`: arguments must be of the same type.')
+   return if x < y then x else y fi
+end;
+
+
+unimath.aux.geteps := proc(x, eps, eps0, pn) is
+   unassigned eps ? eps := eps0;
+   if x :: number then
+      return eps
+   elif x :: 'xnumber' then
+      return mapm.new(eps)
+   elif x :: 'longdouble' then
+      return long.new(eps)
+   elif x :: 'mpfr' then
+      return mpfr.new(eps)
+   elif x :: 'dd' then  # 7.4.1 extension
+      return dd.new(eps)
+   else
+      error('Error in `' & pn & '`: unsupported type ' & typeof(x) & '.')
+   fi
+end;
+
+unimath.aux.convert := proc(x, y, pn, prec) is
+   if x :: number then
+      return y
+   elif x :: 'xnumber' then
+      return mapm.new(y)
+   elif x :: 'longdouble' then
+      return long.new(y)
+   elif x :: 'mpfr' then
+      local t := mpfr.new(y);
+      prec ? mpfr.precision(t, prec);
+      return t
+   elif x :: 'dd' then  # 7.4.1 extension
+      return dd.new(y)
+   else
+      error('Error in `' & pn & '`: unsupported type ' & typeof(x) & '.')
+   fi
+end;
+
+unimath.aux.getnumber := proc(x, pn) is
+   if x :: number then
+      return x
+   elif x :: 'xnumber' then
+      return mapm.xtonumber(x)
+   elif x :: 'longdouble' then
+      return long.tonumber(x)
+   elif x :: 'mpfr' then
+      return mpfr.tonumber(x)
+   elif x :: 'dd' then  # 7.4.1 extension
+      return dd.tonumber(x)
+   else
+      error('Error in `' & pn & '`: unsupported type ' & typeof(x) & '.')
+   fi
+end;
+
+
+unimath.approx := proc(x, y, eps) is
+   typeof(x) <> typeof(y) ? error('Error in `unimath.approx`: arguments must be of the same type.')
+   return when x = y or x = undefined and y = undefined with true;
+   eps := unimath.aux.geteps(x, eps, Eps, 'unimath.approx');
+   if x :: number then  # 6.5.6 tune-up
+      return approx(x, y, eps);
+   elif x :: 'xnumber' then
+      return mapm.approx(x, y, eps)
+   elif x :: 'longdouble' then
+      return long.approx(x, y, eps)
+   elif x :: 'mpfr' then
+      return mpfr.approx(x, y, eps)
+   elif x :: 'dd' then  # 7.4.1 extension
+      return dd.approx(x, y, eps)
+   else
+      /* local dist := |x - y|;
+      return dist <> infinity and dist <= eps or dist <= eps*unimath.max(|x|, |y|) */
+      error('Error in `unimath.approx`: unsupported type ' & typeof(x) & '.')
+   fi
+end;
+
+
+unimath.iters.zeroin := 25;
+
+unimath.zeroin := proc(f :: procedure, a, b, ?) is
+   local origa, origb, c, fa, fb, fc, p, q, previous, nextone, dbleps, cureps, u, v, z, cnt;
+   local one, two, naught, half, threehalves, convert, options, eps;
+   c, origa -> a; origb := b;
+   options := checkoptions('unimath.zeroin', ?, eps = positive, doubleeps = positive, iters = posint, true);
+   eps := unimath.aux.geteps(a, options.eps, Eps, 'unimath.zeroin');
+   dbleps := unimath.aux.geteps(a, options.doubleeps, DoubleEps, 'unimath.zeroin');
+   cnt := options.iters or unimath.iters.zeroin;
+   fa, fc -> f(a);
+   fb := f(b);
+   if |fa| < eps then return a fi;
+   if |fb| < eps then return b fi;
+   convert     := unimath.aux.convert;
+   naught      := convert(a, 0, 'unimath.zeroin');
+   one         := convert(a, 1);
+   two         := convert(a, 2);
+   half        := convert(a, 0.5);
+   threehalves := convert(a, 1.5);
+   while cnt-- <> 0 do
+      previous := b - a;
+      if |fc| < |fb| then
+         a, b := b, a;
+         fa, fb := fb, fa
+      end
+      cureps := two*dbleps*|b| + half*eps;
+      nextone := half*(c - b);
+      break when |nextone| <= cureps or unimath.approx(fb, naught, dbleps);
+      if |previous| >= cureps and |fa| > |fb| then  /* can interpolation be done ? */
+         local cmb, ux, uy, uxm1, ptwice;
+         cmb := c - b;
+         if a = c then  /* do linear interpolation */
+            ux := fb/fa;
+            p := cmb*ux;
+            q := one - ux
+         else  /* do quadric inverse interpolation*/
+            q := fa/fc;
+            ux := fb/fc;
+            uy := fb/fa;
+            uxm1 := ux - one;
+            p := uy*(cmb*q*(q - ux) - (b - a)*uxm1);
+            q := (q - one)*uxm1*(uy - one)
+         fi;
+         if p > naught then
+            q := -q
+         else
+            p := -p
+         fi;
+         ptwice := two*p;
+         if ptwice < (threehalves*cmb*q - |cureps*q|) and ptwice < |previous*q| then
+            nextone := p/q
+         fi
+      fi;
+      if |nextone| < cureps then
+         nextone := if nextone > naught then cureps else -cureps fi
+      fi;
+      a := b; fa := fb;
+      b +:= nextone;
+      fb := f(b);
+      if fb > naught and fc > naught or fb < naught and fc < naught then  /* do not replace by fb*fc > 0 */
+         c := a; fc := fa
+      fi
+   od;
+   /* now refine the estimate using regula falsi if the estimate is still too coarse */
+   cnt := 2*unimath.iters.zeroin;  /* emergency brake */
+   z := undefined;
+   u := fa; v := fb;
+   while cnt-- <> 0 and |u - v| > dbleps do  /* just comparing against eps produces inaccurate results */
+      z := b - v*(b - a)/(v - u);
+      u := v;
+      a := b;
+      b := z;
+      v := f(b)
+   od;
+   if z = undefined and unimath.approx(fb, naught, eps) then  /* regula falsi loop has not been run */
+      return b
+   elif z >= origa and z <= origb then
+      return if |z| < dbleps then naught else z fi  /* z, not b */
+   else
+      return null
+   fi
+end;
+
+
+unimath.sections := proc(f :: procedure, xleft, xright, ?) is
+   local step, eps, doubleeps, naught, fl, fr, total, s, t, c, i, seqcounter, counter, options, r, convert, isnumber;
+   convert := unimath.aux.convert;
+   xright +:= convert(xleft, hEps, 'unimath.sections');
+   options := checkoptions('unimath.sections', ?, eps = anything, step = anything, true);
+   eps := convert(xleft, options.eps or hEps);
+   step := convert(xleft, options.step or 0.1);
+   if step <= eps then
+      error(L, 'Error in `unimath.sections`: step size less than threshold.')
+   fi;
+   create sequence r(4);
+   fl := f(xleft);
+   i, s -> xleft;
+   seqcounter, counter -> 0;
+   total := utils.numiters(
+      unimath.aux.getnumber(xleft, 'unimath.sections'),
+      unimath.aux.getnumber(xright, ''),
+      unimath.aux.getnumber(step, '')
+   );
+   c := 0.0;
+   doubleeps := convert(xleft, DoubleEps);
+   naught := convert(xleft, 0);
+   isnumber := xleft :: number;
+   while i <= xright - step or total > counter do
+      fr := f(i + step);
+      if (fl*fr <= naught or
+          f1 = undefined and not(fr = undefined) or
+          not(f1 = undefined) and fr = undefined
+         ) and i + step <= xright then  /* exclude ranges that are not in the bracketing interval */
+            |i| < doubleeps ? i := naught;
+            r[++seqcounter] := i:(if |i + step| < doubleeps then naught else i + step fi)
+      fi;
+      counter++;
+      /* since right border in the current iteration is equal to the left border in the next iteration, avoid calling f twice. */
+      fl := fr;
+      /* apply Adapted Neumaier summation to avoid roundoff errors; in the context of a running iterator it is better than
+         Kahan-Babuška */
+      t := s + step;
+      if isnumber then
+         c +:= if |s| >= step then (s - t) + step else (step - t) + s fi
+      fi;
+      s := t;
+      i := s + c;
+      /* Neumaier and Kx summation are inaccuarate over -step - 1 .. step + 1, so we have to adjust */
+      if isnumber then |i| < hEps ? i := 0.0 fi
+      /* internal roundoff prevention variable c and uncorrected accumulator s will be updated with the next iteration. */
+   od;
+   return r
+end;
+
+
+unimath.aux.sections := proc(f, a, b, adaptive, ?) is  # search for change(s) of sign over an interval
+   local col0, col1, step, options, convert;
+   convert := unimath.aux.convert;
+   options := checkoptions('unimath.zeros', ?, step = positive, true);
+   col0 := unimath.sections(f, a, b, op(?));
+   if assigned adaptive and adaptive > 0 then
+      # default step size in unimath.sections. 0.1, although not a power of 2, is okay because of Neumann summation
+      step := convert(a, options.step or 0.1);
+      for i to adaptive do  # as long as more zeros are found in the smaller subintervals, and adaptive is not exceeded, iterate
+         step := convert(a, math.prevpower(unimath.aux.getnumber(step, ''), 2), step);  # prevent as many round-off errors as possible
+         col1 := unimath.sections(f, a, b, step=step, op(?));
+         break when col0 = col1;  # we deliberately compare the intervals, not the sizes
+         col0 := col1
+      od
+   fi;
+   return col0
+end;
+
+unimath.zeros := proc(f :: procedure, a, b, ?) is
+   local possiblezero, f', c, rootfinder, eps, options, adaptive, poles, convert, r;
+   convert := unimath.aux.convert;
+   options := checkoptions('unimath.zeros', ?, eps = positive, step = positive, adaptive = nonnegint, poles = boolean, true);
+   eps := convert(a, options.eps or Eps);
+   rootfinder := unimath.zeroin;
+   adaptive   := options.adaptive or 0;   # default is one-pass scan of subintervals with step size 0.1 (default)
+   poles      := options.poles or false;  # get zeros, not poles by default
+   for i to size ? do  # delete options from varargs so that unimath.sections does not throw errors
+      if ?[i] :: pair and left(?[i]) in {'adaptive', 'poles'} then ?[i] := null fi
+   od;
+   c := 0;  # to prevent dumping entire stack which may be used by other functions, too.
+   r := seq();
+   # get roots in function f and check wehether they are really zeros (in case regula falsi gets out of bounds)
+   for i in unimath.aux.sections(f, a, b, adaptive, op(?)) do
+      possiblezero := rootfinder(f, left(i), right(i), op(?));
+      if assigned(possiblezero) then
+         local fposs0 := f(possiblezero);
+         if poles = false and |fposs0| < eps or
+            poles = true and (|fposs0| > eps or fposs0 = undefined) then
+            insert possiblezero into r; inc c
+         fi
+      fi
+   od;
+   if not poles then
+      # sometimes no change of sign can be found on an interval with original f, so check with first derivative
+      f' := <: x -> unimath.xpdiff(f, x, op(varargs)) :>;
+      # in case the zero is also an extremum, which regula falsi will miss: get possible roots in derivative and
+      # check whether they are zeros of f
+      for j in unimath.aux.sections(f', a, b, 1, op(?)) do
+         possiblezero := rootfinder(f', left(j), right(j), op(?));
+         if assigned(possiblezero) and |f(possiblezero)| < eps then
+            insert possiblezero into r; inc c
+         fi
+      od
+   fi;
+   zero c ? return null;  # no zeros found
+   r := unique(r);
+   # with numbers, substitute values very close to zero with zero
+  return if a :: number then map(math.chop, r, eps) else r fi
+end;
+
+
+unimath.aux.diff := proc(f :: procedure, x, eps, deriv :: nonnegint, pn) is
+   local h, q, fph, fmh, a, b, f2ph, f2mh, f3ph, f3mh, f4ph, f4mh, h2, convert;
+   create register a(4), register b(4);
+   deriv = 0 ? return f(x);
+   q := 0;
+   for i to 4 do  /* determine appropriate epsilon step size */
+      a[i] := x + (i - 3)*eps;
+      b[i] := f(a[i])
+   end;
+   for j to 4 do  /* compute divided difference table */
+      for i to 4 - j do
+         b[i] := (b[i + 1] - b[i])/(a[i + j] - a[i]);
+      end
+   end;
+   for i to 4 do q +:= b[i] od;
+   convert := unimath.aux.convert;
+   local one     := convert(x, 1, pn);
+   local two     := convert(x, 2);
+   local three   := convert(x, 3);
+   local four    := convert(x, 4);
+   local five    := convert(x, 5);
+   local six     := convert(x, 6);
+   local seven   := convert(x, 7);
+   local hundred := convert(x, 100);
+   q := |q|;
+   if deriv < 2 and q < hundred*eps then q := hundred*eps fi;  /* for second and higher derivative, results would be imprecise */
+   h := (eps/(two*q))^(one/three);
+   if deriv < 2 and h > hundred*eps then h := hundred*eps fi;  /* ditto */
+   fph, fmh := f(x + h), f(x - h);
+   /* see: https://en.wikipedia.org/wiki/Finite_difference_coefficient */
+   if deriv = 1 then
+      return (fph - fmh)/(two*h)  /* symmetric difference quotient, accuracy is much better than with 8-point diffquot */
+   end;
+   f2ph, f2mh, f3ph, f3mh := f(x + two*h), f(x - two*h), f(x + three*h), f(x - three*h);
+   if deriv = 2 then  /* second derivative */
+      local x13  := convert(x, 13.5);
+      local x135 := convert(x, 135);
+      local x245 := convert(x, 245);
+      local x90  := convert(x,  90);
+      return (f3mh - x13*f2mh + x135*fmh - x245*f(x) + x135*fph - x13*f2ph + f3ph)/(x90*h*h)
+   end;
+   f4ph := f(x + four*h);
+   f4mh := f(x - four*h);
+   h2 := h*h;
+   if deriv = 3 then  /* third derivative */
+      local x72  := convert(x,  72);
+      local x338 := convert(x, 338);
+      local x488 := convert(x, 488);
+      local x240 := convert(x, 240);
+      return (-seven*f4mh + x72*f3mh - x338*f2mh + x488*fmh - x488*fph + x338*f2ph - x72*f3ph + seven*f4ph)/(x240*h2*h)
+   elif deriv = 4 then  /* fourth derivative */
+      return (f2mh - four*fmh + six*f(x) - four*fph + f2ph)/(h2*h2)
+   else  /* fifth derivative */
+      return (-f3mh + four*f2mh - five*fmh + five*fph - four*f2ph + f3ph)/(two*h2*h2*h)
+   end
+end;
+
+unimath.diff := proc(f :: procedure, x, ?) is
+   local options, eps, deriv;
+   options := checkoptions('unimath.diff', ?, eps = positive, deriv = nonnegint, true);
+   eps := options.eps or Eps;
+   deriv := options.deriv or 1;
+   deriv > 5 ? error('Error in `' & pn & '`: cannot compute ' & deriv & '\'s derivative.');
+   return unimath.aux.diff(f, x, eps, deriv, 'unimath.diff');
+end;
+
+
+unimath.aux.isfinite := <: x -> x <> infinity and x <> undefined :>;
+
+unimath.aux.machineeps := proc(x, pn) is
+   local y;
+   x := |x|;
+   if x :: number then
+      y := math.nextafter(x) - x
+   elif x :: 'xnumber' then
+      y := mapm.tonumber(x);
+      y := mapm.new(math.nextafter(y) - y)
+   elif x :: 'longdouble' then
+      y := long.eps(x)
+   elif x :: 'mpfr' then
+      y := mpfr.tonumber(x);
+      y := mpfr.new(math.nextafter(y) - y)
+   elif x :: 'dd' then  # 7.4.1 extension
+      y := dd.tonumber(x);
+      y := dd.new(math.nextafter(y) - y)
+   else
+      error('Error in `' & pn & '`: unsupported type ' & typeof(x) & '.')
+   fi;
+   return y
+end;
+
+unimath.aux.matheps := proc(x) is
+   local one;
+   x := |x|;
+   one := unimath.aux.convert(x, 1, 'unimath.aux.matheps');
+   if x < one then
+      return unimath.aux.convert(x, hEps)
+   else
+      return x*sqrt(unimath.aux.machineeps(x))
+   fi;
+end;
+
+unimath.aux.cbrteps := proc(x) is
+   local one, three, smalleps, convert;
+   convert := unimath.aux.convert;
+   x := |x|;
+   smalleps := convert(x, 0.0123927159, 'unimath.aux.cbrteps');
+   if x < smalleps then
+      return convert(x, Eps)
+   else
+      one   := convert(x, 1);
+      three := convert(x, 3);
+      return x*unimath.aux.machineeps(x)^(one/three)
+   fi;
+end;
+
+unimath.iters.xpdiff := 30;  /* original value has been 15 */
+
+unimath.aux.defaulteps := proc(x, deriv) is  # 6.5.5 u1
+   if x :: number then
+      return if deriv < 3 then unimath.aux.matheps(x) else unimath.aux.cbrteps(x) fi
+   elif x :: 'xnumber' then
+      return unimath.aux.convert(x, 1e-15);
+   else
+      return unimath.aux.convert(x, 1e-20);
+   fi
+end;
+
+unimath.xpdiff := proc(f :: procedure, x, ?) is
+   local fx, fph, fmh, f2ph, f2mh, f3ph, f3mh, d, eps, delta, err, h, relerr, firstrelerr, small, j, k, n,
+      deriv, stencil7, options, convert, maxiters, isfinite;
+   convert := unimath.aux.convert;
+   local naught := convert(x, 0, pn);
+   local one    := convert(x, 1);
+   local two    := convert(x, 2);
+   local three  := convert(x, 3);
+   local four   := convert(x, 4);
+   local eight  := convert(x, 8);
+   local half   := convert(x, 0.5);
+   local x13    := convert(x, 13);
+   options := checkoptions('unimath.xpdiff', ?, eps = positive, deriv = nonnegint, iters = posint, small = positive, delta = positive, true);
+   maxiters := options.iters or unimath.iters.xpdiff;
+   d := registers.regofregs(maxiters + 1, maxiters + 1);
+   eps :=   convert(x, options.eps or naught);
+   delta := convert(x, options.delta or naught);
+   small := convert(x, options.small or 1e-7);
+   deriv := options.deriv or 1;
+   deriv > 5 ? error('Error in `' & pn & '`: cannot compute ' & deriv & '\'s derivative.');
+   if eps = naught then  # 6.6.5 u1 change
+      eps := unimath.aux.defaulteps(x, deriv)
+   fi;
+   if delta = naught then  # 6.6.5 u1 change
+      delta := unimath.aux.defaulteps(x, deriv)
+   fi;
+   fx := f(x);
+   if deriv = 0 then return fx
+   elif fx = infinity or x = undefined then return undefined fi;
+   stencil7 := true;  # default method for third derivative
+   n := 0;
+   h, err, relerr -> one;
+   isfinite := unimath.aux.isfinite;
+   to 10 do  /* avoid `undefined` */
+      fph := f(x + h);  # h and not eps
+      fmh := f(x - h);  # ditto
+      break when isfinite(fph) and isfinite(fmh)
+      h /:= two
+   od;
+   if deriv <> 3 and (not(isfinite(fph)) or not(isfinite(fmh))) then
+      /* fallback, as we now might get a reliable result */
+      return unimath.aux.diff(f, x, eps, deriv)
+   fi;
+   if deriv = 1 then
+      d[1, 1] := half*(fph - fmh)/h
+   elif deriv = 2 then
+      d[1, 1] := (fph - two*fx + fmh)/(h*h)  /* formula taken from Wikipedia, 'Symmetric derivative' */
+   else  /* third derivative */
+      f2ph := f(x + two*h);
+      f2mh := f(x - two*h);
+      f3ph := f(x + three*h);
+      f3mh := f(x - three*h);
+      if isfinite(f2ph) and isfinite(f2mh) and (not(isfinite(f3ph)) or not(isfinite(f3mh))) then
+         stencil7 := false
+      elif not(isfinite(f2ph)) or not(isfinite(f2mh)) or not(isfinite(f3ph)) or not(isfinite(f3mh)) then
+         /* fallback, as we might now get a reliable result */
+         return unimath.aux.diff(f, x, eps, deriv)
+      end;
+      /* 7-stencil, www.holoborodko.com/pavel/numerical-methods/numerical-derivative/central-differences/ by Pavel Holoborodko */
+      if stencil7 <> 0 then
+         d[1, 1] := (f3mh - eight*f2mh + x13*fmh - x13*fph + eight*f2ph - f3ph)/(eight*h*h*h)
+      else  /* use 5-stencil method, also published on Pavel Holoborodko's site */
+         d[1, 1] := (-f2mh + two*fmh - two*fph + two*f2ph)/(two*h*h*h)
+      end
+   end;
+   firstrelerr := relerr;
+   for j from 2 to maxiters + 1 while relerr > eps and err > delta do
+      h /:= two;
+      fph, fmh := f(x + h), f(x - h);
+      if deriv = 1 then
+         d[j, 1] := half*(fph - fmh)/h
+      elif deriv = 2 then
+         d[j, 1] := (fph - two*fx + fmh)/(h*h)
+      else  /* third derivative */
+         f2ph := f(x + two*h);
+         f2mh := f(x - two*h);
+         if stencil7 then
+            f3ph := f(x + three*h);
+            f3mh := f(x - three*h);
+            d[j, 1] := (f3mh - eight*f2mh + x13*fmh - x13*fph + eight*f2ph - f3ph)/(eight*h*h*h)
+         else
+            d[j, 1] := (-f2mh + two*fmh - two*fph + two*f2ph)/(two*h*h*h)
+         end
+      fi;
+      for k from 2 to j do
+         local k0 := convert(x, k);
+         d[j, k] := d[j, k - 1] + (d[j, k - 1] - d[j - 1, k - 1])/(four^(k0 - one) - one)
+      od;
+      err := |d[j, j] - d[j - 1, j - 1]|;
+      relerr := two*err/(|d[j, j]| + |d[j - 1, j - 1]| + small);
+      if j = 2 then firstrelerr := relerr fi;
+      n := j
+   od;
+   if deriv > 2 and relerr > half*firstrelerr then
+      /* something may have gone wrong numerically with the third derivative */
+      return unimath.aux.diff(f, x, eps, deriv)
+   else
+      return d[n, n]
+   fi
+end;
+
+
+/* Test cases:
+> import mpfr, mapm, unimath
+
+> unimath.zeroin(<: x -> sin(x) :>, 3, 4):
+3.1415926535898
+
+> mapm.xdigits(40)
+
+> mapm.Pi:
+3.1415926535897932384626433832795028841972
+
+> unimath.zeroin(<: x -> sin(x) :>, mapm.new(3), mapm.new(4)):
+3.1415926535897932384626433832795028845877
+
+> unimath.zeroin(<: x -> sin(x) :>, long.new(3), long.new(4)):
+longdouble(3.1415926535897932385)
+
+> unimath.zeroin(<: x -> sin(x) :>, mpfr.new(3), mpfr.new(4)):
+mpfr(3.141592653589793238462643383279502884583)
+
+> unimath.zeroin(<: x -> sin(x) :>, dd.new(3), dd.new(4)):
+3.1415926535897931 (1.2246467991473532e-016)
+
+> unimath.xpdiff(<: x -> sin(x) :>, mpfr.new(1)):
+mpfr(.5403023058681269184051664841845724091374)
+
+> unimath.xpdiff(<: x -> sin(x) :>, dd.new(1)):
+0.54030230587384698 (2.7290770936687987e-017)  .. hmmmm ..
+
+> cos(mpfr.new(1)):
+mpfr(.5403023058681397174009366074429766037334)
+*/
+
+unimath.fma := proc(x, y, z) is
+   if x :: 'longdouble' then
+      return long.fma(x, y, z)
+   elif x :: 'dd' then
+      return dd.fma(x, y, z)
+   elif x :: 'mpfr' then
+      return mpfr.fma(x, y, z)
+   elif x :: 'xnumber' then
+      return x*y + z
+   else  # Agena number
+      return fma(x, y, z)
+   fi
+end;
+
+unimath.aux.fma := proc(x) is
+   if x :: 'longdouble' then
+      return long.fma
+   elif x :: 'dd' then
+      return dd.fma
+   elif x :: 'mpfr' then
+      return mpfr.fma
+   elif x :: 'xnumber' then
+      return <: x, y, z -> x*y + z :>
+   else  # Agena number
+      return fma
+   fi
+end;
+
+unimath.linsolve := proc(a, x) is
+   local A, X, n, maxrow, issingular, tmp, max, prec, eps, unifma;
+   n := linalg.checksquare(a);
+   if linalg.checkvector(x) <> n then
+      error('Error in `unimath.linsolve`: expected matrix and vector with equal dimensions.')
+   fi;
+   # We do not need to change the overall precision when MPFR values are processed, it suffices to just
+   # change the precision of the values involved
+   if a[1, 1] :: 'mpfr' then
+      prec := mpfr.precision() + 32
+   fi;
+   eps := unimath.aux.convert(a[1, 1], hEps, 'unimath.linsolve', prec);
+   unifma := unimath.aux.fma(a[1, 1]);
+   A := linalg.newmatrix(n, n + 1);
+   X := linalg.vector(n, []);
+   # create augmented matrix
+   if prec then
+      for i to n do
+         for j to n do
+            A[i, j] := mpfr.clone(a[i, j], prec)
+         od;
+         tmp := mpfr.clone(x[i], prec);
+         A[i, j] := tmp;
+         X[i] := tmp
+      od
+   else
+      for i to n do
+         for j to n do
+            A[i, j] := a[i, j];
+         od;
+         tmp := x[i];
+         A[i, j] := tmp;
+         X[i] := tmp
+      od;
+   fi;
+   issingular := false;
+   # Forward Elimination
+   for j to n do
+      # Pivot Selection: Optimization for numerical stability
+      max := |A[j, j]|;
+      maxrow := j;
+      for i := j + 1 to n do
+         if |A[i, j]| > max then
+            max := |A[i, j]|;
+            maxrow := i
+         fi
+      od;
+      # Swap the maxrow and current j-th row
+      for k := j to n + 1 do
+         tmp := A[j, k];
+         A[j, k] := A[maxrow, k];
+         A[maxrow, k] := tmp
+      od;
+      # Detect singular matrices
+      if |A[j, j]| < eps then
+         return undefined, true
+      fi;
+      # Eliminate coefficients below the pivot
+      for i := j + 1 to n do
+         tmp := A[i, j]/A[j, j];
+         for k := n + 1 downto j do
+            A[i, k] := unifma(-A[j, k], tmp, A[i, k]);
+         od
+      od
+   od;
+   # Back Substitution
+   for j := n downto 1 do
+      tmp := 0;
+      for k := j + 1 to n do
+         tmp := unifma(A[j, k], X[k], tmp)
+      od;
+      # Result is stored in the (n+1)-th column of the augmented matrix
+      X[j] := (A[j, n + 1] - tmp)/A[j, j]
+   od;
+   if prec then
+      for i to n do mpfr.precision(X[i], mpfr.precision()) od
+   fi;
+   return X, issingular
+end;
+
+
+unimath.det := proc(a) is
+   local A, i, j, k, n, maxrow, tmp, max, prec, det, swaps, convert, eps, naught, unifma;
+   n := linalg.checksquare(a);
+   if a[1, 1] :: 'mpfr' then
+      prec := mpfr.precision() + 32
+   fi;
+   convert := unimath.aux.convert;
+   naught  := convert(a[1, 1],    0, 'unimath.zeroin', prec);
+   eps     := convert(a[1, 1], hEps, 'unimath.zeroin', prec);
+   unifma := unimath.aux.fma(a[1, 1]);
+   # We only need an n x n matrix, no augmented column
+   A := linalg.newmatrix(n, n);
+   for i to n do
+      for j to n do
+         A[i, j] := if prec then mpfr.clone(a[i, j], prec) else a[i, j] fi
+      od
+   od;
+   det := convert(A[1, 1], 1, 'unimath.zeroin', prec);
+   swaps := 0;
+   # Forward Elimination
+   for j to n do
+      # Pivot Selection
+      max := |A[j, j]|;
+      maxrow := j;
+      for i := j + 1 to n do
+         if |A[i, j]| > max then
+            max := |A[i, j]|;
+            maxrow := i
+         fi
+      od;
+      # Swap rows and increment swap counter
+      if maxrow <> j then
+         swaps++;
+         for k := j to n do
+            tmp := A[j, k];
+            A[j, k] := A[maxrow, k];
+            A[maxrow, k] := tmp
+         od
+      fi;
+      # If the pivot is zero (or below epsilon), determinant is 0
+      |A[j, j]| < eps ? return naught;
+      # Multiply the current diagonal into the running determinant
+      det *:= A[j, j];
+      # Eliminate coefficients below
+      for i := j + 1 to n do
+         tmp := A[i, j]/A[j, j];
+         for k := j + 1 to n do
+            A[i, k] := unifma(-A[j, k], tmp, A[i, k])
+         od
+      od
+   od;
+   # Final sign correction: (-1)^swaps
+   odd swaps ? det := -det;
+   # Return to original precision if using MPFR
+   if prec then
+      mpfr.precision(det, mpfr.precision())
+   fi;
+   return det
+end;

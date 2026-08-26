@@ -1,0 +1,8 @@
+# The ival package, initiated June 15, 2025
+
+package.checkclib('ival');  # has C dynamic link library been found ?
+
+# constants
+ival.naught, ival.nought -> ival.new(0, 0);
+ival.one := ival.new(1, 1);
+

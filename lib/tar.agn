@@ -1,0 +1,304 @@
+# The tar library, initiated May 13, 2015
+# This package lists, reads, and extracts individual files from a UNIX tar archive.
+#
+# Functions:
+#    tar.open:    Opens a tar file and sets the file pointer to the beginning of the specified
+#                 archived file. Needed by tar.lines.
+#    tar.close:   Closes a tar file.
+#    tar.lines:   Returns a factory that can iterate through an archived (text) file line-by-line.
+#    tar.extract: Extracts one or more files in a tar file and writes them to the file system.
+#
+# Version history:
+# 0.0.1, May 17, 2015: initial release
+# 0.0.2, May 26, 2015:
+#        - improved error messages,
+#        - included check for appropriate Agena version,
+#        - internal optimisation of `tar.extract`,
+#        - improved the documentation a little bit.
+#
+# See Copyright Notice at the end of this file.
+
+create table tar;  # initialise package table, no C libraries
+
+tar.initstring :=
+   'tar v0.0.7 as of May 18, 2023\n';
+
+with v := environ.release do
+   if v[2] <= 1 or v[2] = 2 and v[3] < 6 or v[2] = 2 and v[3] = 6 and v[4] = 0 then
+      error('Error, tar package requires at least Agena 2.6.1 or later.')
+   fi
+od;
+
+create table tar.aux;     # auxiliary function(s) and structures
+
+create table tar.aux.mt;  # metatable
+
+# for typeflag mapping, see: http://en.wikipedia.org/wiki/Tar_%28computing%29
+tar.aux.typemapping := [  # 0.0.2
+   '0' ~ 'normal file',
+   '\0' ~ 'normal file',
+   '1' ~ 'hard link',
+   '2' ~ 'symbolic link',
+   '3' ~ 'character special',
+   '4' ~ 'block special',
+   '5' ~ 'directory',
+   '6' ~ 'FIFO',
+   '7' ~ 'contiguous file',
+   'g' ~ 'global extended header with meta data (POSIX.1-2001)',
+   'x' ~ 'extended header with meta data for the next file in the archive (POSIX.1-2001)'
+];
+
+scope
+   local i;
+   for i from abs('A') to abs('Z') do
+      tar.aux.typemapping[char(i)] := 'vendor specific extension (POSIX.1-1988)'
+   od
+epocs;
+
+#########################################################################################################
+# List files in tar file                                                                                #
+#########################################################################################################
+
+tar.aux.octaltodec := proc(s :: sequence) is  # convert octal `bytes` to decimal
+   local r, length;
+   length := size s;
+   for start to length while s[start] = 0 do od;  # skip leading zeros
+   return when start > length with undefined;
+   for length from length downto 1 while s[length] = 0 do od;  # skip trailing zeros
+   r := strings.tochars(s[start to length]);  # converts all the integers in s to a string
+   return math.octtodec(r)
+end;
+
+tar.aux.octaltostring := proc(s :: sequence) is  # convert octal `bytes` to decimal
+   local r, length;
+   length := size s;
+   for start to length while s[start] = 0 do od;  # skip leading zeros
+   r := <: x -> char(x) :> @ s[start to length];
+   return strings.join(r)
+end;
+
+tar.aux.checksum := proc(s :: sequence) is
+   local sum, checksum;
+   sum := sumup(s);
+   checksum := s[149 to 156];
+   for i in checksum do
+      sum +:= abs(' ') - i
+   od;
+   return sum
+end;
+
+tar.aux.eof := nseq(512, init = 0);  # end-of-file indicator
+
+tar.aux.mt.__oftype := proc(x) is
+   return x :: table and tables.indices(x) = [
+      'name', 'mode', 'start', 'length', 'timestamp', 'typeflag', 'ustar', 'ownerid', 'groupid', 'checksum'
+   ]
+end;
+
+# tar.list('../libtar-1.2.11.tar'):
+# tar.list('../libtar-1.2.11.tar', 'libtar-1.2.11/COPYRIGH*'):
+
+# Returns all files in a UNIX tar file and returns a table of tables with the following information:
+#  file name (key 'name'), file mode (key 'mode'), start position (key 'start', expressed as
+#  the offset to the beginning of the file), file length in bytes (key 'length'),
+#  file time stamp in UNIX time (decimal number of seconds since the start of a given epoch, use `os.date` to
+#  convert it into calendar date/time), ustar indicator ('ustar' if set, else the empty string), numeric
+#  owner id (key 'ownerid', decimal), numeric group id (key 'groupid', decimal), and the decimal checksum (key 'checksum').
+
+tar.list := proc(fn :: string, pattern) is
+   local fd, header, eofreached, filename, length, r, offset, err, checksum, octaltodec, octaltostring, eof, fchecksum, tochars;
+   create table r;
+   fd, err := binio.open(fn, true);  # open tar file in read-only mode
+   unassigned(fd) ? error('Error in `tar.list`: ' & err);
+   eofreached := 0;  # UNIX file pos, starting from 0
+   pattern := optstring(pattern, '*', 2, 'tar.list');
+   octaltodec := tar.aux.octaltodec;  # 2.39.3 speed-ups
+   octaltostring := tar.aux.octaltostring;
+   eof := tar.aux.eof;
+   fchecksum := tar.aux.checksum;
+   tochars := strings.tochars;
+   do
+      header := binio.readbytes(fd, 512);  # read header of 512 bytes
+      if header = eof or header = null then  # end of file (eof) reached ?  In tar files, their end is indicated
+         # by at least two 512 zero blocks; other tar formats just have only one 512 `eof` block.
+         case ++eofreached  # the end of the archive is marked by two 512 zero headers
+            of 1 then next;
+            of 2 then break
+         esac
+      fi;
+      filename := tochars(header[1 to 100]);
+      checksum := octaltodec(header[149 to 156]);
+      fchecksum(header) <> checksum ?
+         error('Error in `tar.list`: invalid header checksum at position ' & binio.filepos(fd) - 512);
+      length := octaltodec(header[125 to 135]);  # expressed as an octal number
+      if strings.glob(filename, pattern) then
+         insert [
+            name       = filename,
+            mode       = octaltostring(header[101 to 107]),
+            start      = binio.filepos(fd),
+            length     = length,
+            timestamp  = octaltodec(header[137 to 147]),
+            typeflag   = if header[157] = 0 then undefined else char(header[157]) fi,  # a char
+            ustar      = strings.trim(tochars(header[258 to 263])),  # empty string otherwise
+            ownerid    = octaltodec(header[109 to 115]),
+            groupid    = octaltodec(header[117 to 123]),
+            linkedfile = tochars(header[158 to 257]),  # empty string otherwise
+            checksum   = checksum
+         ] into r
+      fi;
+      offset := ((length + 511) \ 512) * 512;
+      binio.seek(fd, offset)  /* go to next header. The actual file content is available in 512 bytes chunks,
+         with lacking bytes filled with zeros/NULLs */
+   od;
+   binio.close(fd);
+   setmetatable(r, tar.aux.mt);
+   return r
+end;
+
+#########################################################################################################
+# Extract files from tar file                                                                           #
+#########################################################################################################
+
+tar.aux.setdatemode := proc(t :: table) is  # set time stamp
+   local c := os.date('*t', t.timestamp);
+   os.fattrib(t.name, [c.year, c.month, c.day, c.hour, c.min, c.sec]);  # date
+   os.fattrib(t.name, tonumber('0o' & t.mode))  # mode
+end;
+
+tar.aux.writebytes := proc(fdin :: number, t :: table, buffersize :: number) is
+   local s, pos, rest, fdout, err, c;
+   pos := 0;
+   fdout, err := binio.open(t.name);
+   unassigned(fdout) ? error('Error in `tar.extract`: ' & err);
+   binio.rewind(fdin, t.start);
+   while pos + buffersize <= t.length do
+      s := binio.readbytes(fdin, buffersize);
+      binio.writebytes(fdout, s);
+      inc pos, buffersize
+   od;
+   rest := t.length - pos;
+   if rest <> 0 then
+      s := binio.readbytes(fdin, rest);
+      binio.writebytes(fdout, s)
+   fi;
+   binio.close(fdout);
+   tar.aux.setdatemode(t)
+end;
+
+tar.aux.extractfile := proc(fdin :: number, t :: table) is  # improved 0.0.2
+   local err, typeflag, isustar;
+   typeflag := t.typeflag;
+   isustar := t.ustar = 'ustar';
+   case typeflag
+      of '0', '\0' then  # normal file
+         tar.aux.writebytes(fdin, t, environ.kernel('buffersize'));
+      of '2' then  # symbolic, but not hard link
+         try
+            os.symlink(t.linkedfile, t.name);
+            tar.aux.setdatemode(t)
+         yrt
+      of '5' then  # directory
+         if isustar then
+            try
+               os.mkdir(t.name);
+               tar.aux.setdatemode(t);
+            yrt
+         else
+            error('Error in `tar.extract`: cannot create folder with non-ustar tar file.')
+         fi;
+      else
+         local typemeaning := if typeflag <> undefined then tar.aux.typemapping[typeflag] else 'unknown' fi;
+         if unassigned typemeaning then typemeaning := 'unknown' fi;
+         error('Error in `tar.extract`: cannot process ' & t.ustar & '\`' & typemeaning & ' flag.')
+      esle
+   esac
+end;
+
+
+# Extracts files, directories, and symbolic links from the given tar archive fn, a file name of type string
+# to the given current working directory. By default, all files are extracted. If a second argument pattern
+# is given, then only the files matching the given pattern - a string - are copied. pattern may include
+# wildcards, see `strings.glob`.
+# The return is a table of all the files extracted.
+
+tar.extract := proc(tarfile :: string, pattern) is
+   local fd, r, t;  /* t declared local in 2.26.3 */
+   create table r;
+   pattern := optstring(pattern, '*', 2, 'tar.extract');
+   t := tar.list(tarfile, pattern);
+   if filled t then  # we got hits
+      fd := binio.open(tarfile, true);
+      for i in t do
+         tar.aux.extractfile(fd, i);
+         insert i.name into r
+      od
+      binio.close(fd)
+   fi;
+   return r
+end;
+
+
+#########################################################################################################
+# Open a specific file in a tar archive                                                                 #
+#########################################################################################################
+
+#/ Opens an archived file fn (a file name) in the tar file given by tarfile (also a file name), sets
+   the file pointer to the beginning of the actual contents of the archived file (i.e. not its tar header),
+   and returns both a numeric file handle to the archived file and its size. /#
+
+tar.open := proc(tarfile :: string, fn :: string) is
+   local t, fd;
+   t := tar.list(tarfile, fn);
+   size t <> 1 ? error('Error in `tar.open`: explicit file name expected.');
+   t := t[1];
+   fd := binio.open(tarfile, true);
+   binio.seek(fd, t.start);
+   return fd, t.length
+end;
+
+
+#########################################################################################################
+# Read a a specific file in a tar archive                                                               #
+#########################################################################################################
+
+#/Creates an iterator function that with each call returns a new line of a file included in a tar file.
+The length of the archived file pointed to by fh must be given as the second argument.
+
+fh is a numeric file handle returned by calling tar.open. Since tar.open also returns the length
+as a second return, it can be easily passed to tar.lines.
+
+If the end of the archived file has been reached, the iterator function returns null. The iterator
+does not close the file connection, use tar.close to accomplish this. /#
+
+tar.lines := proc(fd :: nonnegint, length :: posint) is  # 2.12.1 modification
+   not binio.isfdesc(fd) ? error('Error in `tar.lines`: file handle is invalid.');
+   return binio.lines(fd, length)
+end;
+
+
+tar.close := binio.close;
+
+
+#/
+(C) 2015 Alexander Walz. All rights reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+/#
+
