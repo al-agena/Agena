@@ -1,3 +1,11 @@
+7.9.3 Deimos, August 28, 2026
+
+- `pushd` can now push booleans into a cache statck (stack #7).
+
+- `stack.insertd`, `stack.replaced` and `stack.enqueued` could push functions and strings into the cache statck (stack #7), causing
+  invalid reads. This has been fixed. The functions can now only insert numbers, complex numbers, booleans and strings into stack #7.
+
+
 7.9.2 Deimos, August 25, 2026
 
 - `strings.instr`: If the plain option has been set to `false`, then the function nevertheless conducted a plain search. This
@@ -5,7 +13,7 @@
 
 - The `atendof` operator has become around 10 % faster.
 
-- In some locales, string comparison with the relational `<`, `<=`, `>`, and `>=` operators could fail or even crash Agena with 
+- In some locales, string comparison with the relational `<`, `<=`, `>`, and `>=` operators could fail or even crash Agena with
   strings containing embedded zeros. This has been fixed.
 
 - An abnormally massive number of function arguments will no longer cause segmentation faults.
