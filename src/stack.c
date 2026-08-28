@@ -21,8 +21,9 @@
 #include "agnhlps.h"
 #include "agnxlib.h"
 #include "lapi.h"
-#include "lstate.h"   /* cells, stackcells, getcharcell, ... iscachestack */
+#include "lstate.h"    /* cells, stackcells, getcharcell, ... iscachestack */
 #include "prepdefs.h"  /* FORCE_INLINE */
+#include "lstring.h"   /* for luaS_newlstr */
 
 #define aux_checkstackindex(L, idx, procname) { \
   cell = agn_checkinteger(L, idx); \
@@ -32,10 +33,8 @@
     luaL_error(L, "Error in " LUA_QS ": stack position is out-of-range or empty stack.", procname); \
 }
 
-#define aux_isnonatomic(L,idx) ({ \
-  int __t = lua_type(L, idx); \
-  (__t >= LUA_TUSERDATA || __t == LUA_TCOMPLEX); \
-})
+/* Numbers, complex numbers, Booleans and strings are considered `atomic`. */
+#define aux_isnonatomic(L,idx)   (lua_type(L, idx) >= LUA_TFUNCTION)
 
 static int aux_getabsindex (lua_State *L, int *i, int retneg, const char *procname) {  /* 5.3.5 */
   int top = stacktop(L);
@@ -193,7 +192,13 @@ static int stack_insertd (lua_State *L) {  /* 2.9.4, inserts an element to the g
     p = index2adr(L, 2);
     for (q = L->C->top; q > L->C->base + cell; q--) setobjs2s(L->C, q, q - 1);
     L->C->top++;
-    setobjs2s(L, L->C->base + cell, p);
+    if (ttisstring(p)) {  /* 7.9.3 fix to prevent invalid reads */
+      const char *str = svalue(p);
+      int len = tsvalue(p)->len;
+      setsvalue(L->C, L->C->base + cell, luaS_newlstr(L->C, str, len));
+    } else {
+      setobjs2s(L, L->C->base + cell, p);
+    }
     lua_unlock(L);
   } else {  /* 2.12.7 */
     for (i=stacktop(L); i > cell; i--)
@@ -228,7 +233,13 @@ static int stack_enqueued (lua_State *L) {  /* 2.22.2, inserts element to the bo
     p = index2adr(L, 1);
     for (q = L->C->top; q > L->C->base; q--) setobjs2s(L->C, q, q - 1);
     L->C->top++;
-    setobjs2s(L, L->C->base, p);
+    if (ttisstring(p)) {  /* 7.9.3 fix to prevent invalid reads */
+      const char *str = svalue(p);
+      int len = tsvalue(p)->len;
+      setsvalue(L->C, L->C->base, luaS_newlstr(L->C, str, len));
+    } else {
+      setobjs2s(L, L->C->base, p);
+    }
     lua_unlock(L);
   } else {  /* 2.12.7 */
     for (i=stacktop(L); i > 0; i--)
@@ -629,7 +640,13 @@ static int stack_replaced (lua_State *L) {  /* 2.12.7 */
       luaL_error(L, "Error in " LUA_QS ": cannot insert %s.", "stack.replaced", luaL_typename(L, 2));
     p = index2adr(L, 2);
     lua_pushcachevalue(L, -stacktop(L) + cell);  /* push former cache value for later return */
-    setobjs2s(L, L->C->base + cell, p);
+    if (ttisstring(p)) {  /* 7.9.3 fix to prevent invalid reads */
+      const char *str = svalue(p);
+      int len = tsvalue(p)->len;
+      setsvalue(L->C, L->C->base + cell, luaS_newlstr(L->C, str, len));
+    } else {
+      setobjs2s(L, L->C->base + cell, p);
+    }
     lua_unlock(L);
   } else {  /* 2.12.7 */
     lua_pushlstring(L, getcharcell(L, cell), 1);

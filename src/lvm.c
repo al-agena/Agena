@@ -8175,7 +8175,7 @@ void luaV_execute (lua_State *L, int nexeccalls) {
               }
             }
           }
-        } else {  /* one or more numbers or strings have been passed */
+        } else {  /* one or more numbers, booleans or strings have been passed */
           if (isnumstack(L)) {  /* 2.12.7 */
             for (k=0; k < n - offset; k++) {
               if (!ttisnumber(ra + k))
@@ -8184,11 +8184,10 @@ void luaV_execute (lua_State *L, int nexeccalls) {
             }
           } else if (iscachestack(L)) {  /* cache insert, 2.36.3 */
             for (k=0; k < n - offset; k++) {
-              /* cannot push collectable datatypes from one state to another, otherwise Agena might crash, 6.5.8; so far
-                 it is unknown why non-collectable complex numbers cannot be inserted, too. */
-              if (ttisnumber(ra + k) || ttiscomplex(ra + k)) {
+              /* cannot push collectable datatypes from one state to another, otherwise Agena might crash, 6.5.8 */
+              if (ttisnumber(ra + k) || ttiscomplex(ra + k) || ttisboolean(ra + k)) {  /* 7.9.3 extension */
                 setobj2s(L->C, L->C->top++, ra + k);
-              } else if (ttisstring(ra + k)) {
+              } else if (ttisstring(ra + k)) {  /* strings are collected so create a new one on the stack */
                 const char *str = svalue(ra + k);
                 int len = tsvalue(ra + k)->len;
                 setsvalue(L->C, L->C->top++, luaS_newlstr(L->C, str, len));

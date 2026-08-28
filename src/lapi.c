@@ -337,7 +337,7 @@ LUA_API void lua_pushcachevalue (lua_State *L, int idx) {
   StkId p;
   lua_lock(L);
   p = ((idx < 0) ? L->C->top : L->C->base) + idx;
-  if (ttisstring(p)) {  /* 7.1.6 fix: strings must be duplicated when copied from L->C to L */
+  if (ttisstring(p)) {  /* 7.1.6 fix: strings must be duplicated when copied from L->C to L as they are collectible */
     const char *str = svalue(p);
     int len = tsvalue(p)->len;
     setsvalue(L, L->top, luaS_newlstr(L, str, len));
