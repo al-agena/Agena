@@ -13,7 +13,7 @@ with gdi do
    create table _.aux;  # create table for auxiliary functions
 
    _.initstring :=
-      'gdi v1.3.4 as of April 15, 2017\n';
+      'gdi v1.3.5 as of July 15, 2026\n';
 
    _.COLOURS := [
       aquamarine = [112, 219, 147],
