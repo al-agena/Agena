@@ -1,9 +1,50 @@
+7.9.3 Deimos Update 1, August 29, 2026
+
+- `fractals.draw` with the 'map' option now accepts FRACTINT colour map files that include comments introduced with a hash 
+  or a semicolon. Blank lines will now be simply ignored, too.
+  
+- `fractals.draw` also accepts a colour map table of 256 RGB values instead of the name of a FRACTINT *.map file. You can 
+  use the new `fractals.genmap` function to create such a colour map table. Define the colour stops:
+  
+  > anchors := [
+  >    [0, 0, 255],   # Blue
+  >    [0, 255, 0],   # Green
+  >    [255, 0, 0]    # Red
+  > ]
+
+  and pass them to `fractals.genmap`:
+
+  > import fractals;
+
+  > fractals.draw(fractals.markmandel, -0.5, 0, 1.5, res = 1280:768, map = fractals.genmap(anchors));
+
+  If you want to use colours defined in the gdi.COLOURS table, then multiply each component by 255 to convert it from the 
+  0 .. 1 to the 0 .. 255 range.
+
+  > anchors := [
+  >    gdi.COLOURS.bordeaux, gdi.COLOURS.spring, gdi.COLOURS.spring,
+  >    gdi.COLOURS.yellow, gdi.COLOURS.yellow, 
+  >    gdi.COLOURS.white, gdi.COLOURS.white, gdi.COLOURS.white,
+  > ]
+
+  > for i, j in anchors do
+  >    anchors[i] := map(<: x -> x*255 :>, j);
+  > od;
+
+  > fractals.genmap(anchors, 'bordeaux_spring.map');
+  Successfully generated file `bordeaux_spring.map`.
+
+- Just download the `agena-7.9.3-update1.zip` file from the SourceForge Binaries/Agena 7.9.3 folder and check the 
+  `libupdate.readme` file in the root of the ZIP archive for installation instructions. In short, you'll just need to 
+  overinstall the files in your local Agena installation folder.
+
+
 7.9.3 Deimos, August 28, 2026
 
-- `pushd` can now push booleans into a cache statck (stack #7).
+- `pushd` can now push booleans into a cache stack (stack #7).
 
-- `stack.insertd`, `stack.replaced` and `stack.enqueued` could push functions and strings into the cache statck (stack #7), causing
-  invalid reads. This has been fixed. The functions can now only insert numbers, complex numbers, booleans and strings into stack #7.
+- `stack.insertd`, `stack.replaced` and `stack.enqueued` could push functions and unsafe strings into the cache stack (stack #7),
+  causing invalid reads. This has been fixed. The functions can now only insert numbers, complex numbers, booleans and strings into stack #7.
 
 
 7.9.2 Deimos, August 25, 2026
