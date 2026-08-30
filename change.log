@@ -1,4 +1,8 @@
-7.9.3 Deimos Update 2, August 30, 2026
+7.9.4 Deimos, August 30, 2026
+
+- Simple `numarray` read access with standard indexing and `numarray.subarray` has become at least 5 % faster.
+
+- `fractals.draw` when given no colouring information now uses the default Fractint colour map instead of blue hues.
 
 - `fractals.draw` with the 'map' option now accepts FRACTINT colour map files that include comments introduced with a hash
   or a semicolon. Blank lines will now be simply ignored, too.
@@ -43,11 +47,7 @@
   >   output = 'mymap.map',
   >   header = '# my first saturation-sorted colour map');
 
-- New `fractals.readmap` reads in a FRACTINT colour map file, and new `fractals.writesmap` writes one to disk.
-
-- Just download the `agena-7.9.3-update2.zip` file from the SourceForge Binaries/Agena 7.9.3 folder and check the
-  `libupdate.readme` file in the root of the ZIP archive for installation instructions. In short, you'll just need to
-  overinstall the files in your local Agena installation folder.
+- New `fractals.readmap` reads in a FRACTINT colour map file, and new `fractals.writemap` writes one to disk.
 
 
 7.9.3 Deimos, August 28, 2026
