@@ -1,11 +1,11 @@
-7.9.3 Deimos Update 1, August 29, 2026
+7.9.3 Deimos Update 2, August 30, 2026
 
-- `fractals.draw` with the 'map' option now accepts FRACTINT colour map files that include comments introduced with a hash 
+- `fractals.draw` with the 'map' option now accepts FRACTINT colour map files that include comments introduced with a hash
   or a semicolon. Blank lines will now be simply ignored, too.
-  
-- `fractals.draw` also accepts a colour map table of 256 RGB values instead of the name of a FRACTINT *.map file. You can 
+
+- `fractals.draw` also accepts a colour map table of 256 RGB values instead of the name of a FRACTINT *.map file. You can
   use the new `fractals.genmap` function to create such a colour map table. Define the colour stops:
-  
+
   > anchors := [
   >    [0, 0, 255],   # Blue
   >    [0, 255, 0],   # Green
@@ -18,12 +18,12 @@
 
   > fractals.draw(fractals.markmandel, -0.5, 0, 1.5, res = 1280:768, map = fractals.genmap(anchors));
 
-  If you want to use colours defined in the gdi.COLOURS table, then multiply each component by 255 to convert it from the 
+  If you want to use colours defined in the gdi.COLOURS table, then multiply each component by 255 to convert it from the
   0 .. 1 to the 0 .. 255 range.
 
   > anchors := [
   >    gdi.COLOURS.bordeaux, gdi.COLOURS.spring, gdi.COLOURS.spring,
-  >    gdi.COLOURS.yellow, gdi.COLOURS.yellow, 
+  >    gdi.COLOURS.yellow, gdi.COLOURS.yellow,
   >    gdi.COLOURS.white, gdi.COLOURS.white, gdi.COLOURS.white,
   > ]
 
@@ -34,8 +34,19 @@
   > fractals.genmap(anchors, 'bordeaux_spring.map');
   Successfully generated file `bordeaux_spring.map`.
 
-- Just download the `agena-7.9.3-update1.zip` file from the SourceForge Binaries/Agena 7.9.3 folder and check the 
-  `libupdate.readme` file in the root of the ZIP archive for installation instructions. In short, you'll just need to 
+- New `fractals.sortmap` sorts a colour map non-destructively and either returns the new sorted table or writes it to a file.
+  You can sort by hue, saturation or step. Example:
+
+  > fractals.sortmap(
+  >   fractals.genmap(anchors),
+  >   mode   = 'saturation',
+  >   output = 'mymap.map',
+  >   header = '# my first saturation-sorted colour map');
+
+- New `fractals.readmap` reads in a FRACTINT colour map file, and new `fractals.writesmap` writes one to disk.
+
+- Just download the `agena-7.9.3-update2.zip` file from the SourceForge Binaries/Agena 7.9.3 folder and check the
+  `libupdate.readme` file in the root of the ZIP archive for installation instructions. In short, you'll just need to
   overinstall the files in your local Agena installation folder.
 
 
