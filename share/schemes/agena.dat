@@ -487,7 +487,9 @@ for
 foreach
 frac
 fractional
+fractals.checkcolourmap
 fractals.esctime
+fractals.genmap
 fractals.lambdafn
 fractals.lbea
 fractals.lcos
@@ -499,6 +501,10 @@ fractals.mandelbrotfast
 fractals.markmand
 fractals.newton
 fractals.paint
+fractals.readmap
+fractals.rgb2hsl
+fractals.writemap
+fractals.sortmap
 frexp
 frexp10
 from

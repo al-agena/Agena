@@ -1603,7 +1603,9 @@
       <KEYWORD3>binio.writeobject</KEYWORD3>
       <KEYWORD3>binio.writestring</KEYWORD3>
       <KEYWORD3>binio.writeuint64</KEYWORD3>
+      <KEYWORD3>fractals.checkcolourmap</KEYWORD3>
       <KEYWORD3>fractals.esctime</KEYWORD3>
+      <KEYWORD3>fractals.genmap</KEYWORD3>
       <KEYWORD3>fractals.lambdafn</KEYWORD3>
       <KEYWORD3>fractals.lbea</KEYWORD3>
       <KEYWORD3>fractals.lcos</KEYWORD3>
@@ -1615,6 +1617,10 @@
       <KEYWORD3>fractals.markmand</KEYWORD3>
       <KEYWORD3>fractals.newton</KEYWORD3>
       <KEYWORD3>fractals.paint</KEYWORD3>
+      <KEYWORD3>fractals.readmap</KEYWORD3>
+      <KEYWORD3>fractals.rgb2hsl</KEYWORD3>
+      <KEYWORD3>fractals.writemap</KEYWORD3>
+      <KEYWORD3>fractals.sortmap</KEYWORD3>
       <KEYWORD3>ads.attrib</KEYWORD3>
       <KEYWORD3>ads.closebase</KEYWORD3>
       <KEYWORD3>ads.closeall</KEYWORD3>

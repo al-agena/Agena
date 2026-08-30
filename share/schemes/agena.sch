@@ -225,7 +225,8 @@ object TPersHolder
           FontID = 7
           Name = 'fractals'
           Keywords =
-            'fractals,draw,esctime,lambdafn,lbea,lcos,lcosxx,lsin,mandel,mandelbrot,mandelbrotfast,markmand,newton,paint'
+            'fractals,checkcolourmap,draw,esctime,genmap,lambdafn,lbea,lcos,lcosxx,lsin,mandel,mandelbrot,mandelbrotfast,markmand,newton,' +
+            'paint,readmap,rgb2hsl,sortmap,writemap'
         end
         item
           FontID = 7
