@@ -34,6 +34,7 @@
 #include "agnxlib.h"
 
 #include "charbuf.h"
+#include "lapi.h"
 #include "lcomplex.h"
 #include "ldebug.h"
 #include "ldo.h"
@@ -64,13 +65,6 @@ const char lua_ident[] =
 #define api_checknelems(L, n)   api_check(L, (n) <= (L->top - L->base))
 
 #define api_checkvalidindex(L, i)   api_check(L, (i) != luaO_nilobject)
-
-#define api_incr_top(L)   {api_check(L, L->top < L->ci->top); L->top++;}
-
-#define api_incr_top_by_three(L)   {api_check(L, L->top + 1 < L->ci->top); L->top += 3;}
-
-#define api_incr_top_by_two(L)   {api_check(L, L->top + 1 < L->ci->top); L->top += 2;}
-
 
 /* Converting index2adr to a macro or declaring it inline (ala __attribute__((always_inline)))
    actually slows down the interpreter significantly by 6 % */

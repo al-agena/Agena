@@ -834,6 +834,7 @@ static int numarray_getitem (lua_State *L) {
     }
     luaL_error(L, "Error in " LUA_QS ": index %d is out of range.", "numarray.getitem", (int)idx + 1);  /* 2.17.9 fix */
   }
+  /* waiving the for loops for the n == 1 case will not speed the function up ! */
   switch (a->datatype) {
     case NAUCHAR:
       for (i=0; i < n; i++) {
@@ -1102,79 +1103,65 @@ static int numarray_subarray (lua_State *L) {
     return agn_initmethodcall(L, AGENA_NUMARRAYLIBNAME, sizeof(AGENA_NUMARRAYLIBNAME) - 1);
   start0 = agn_tointeger(L, 2);  /* 2.19.1 fix: avoid returning registry table with index < 0 and -index >= size */
   start  = tools_posrelat(start0, b->size);  /* realign Lua/Agena index to C index, starting from 0, extended 2.15.1 */
-  stop   = tools_posrelat(agnL_optinteger(L, 3, start), b->size);
+  if (nargs > 2) {  /* 7.9.4 7% tweak */
+    stop  = tools_posrelat(agnL_optinteger(L, 3, start), b->size);
+  } else {
+    stop = start;
+  }
   n = stop - start + 1;
   start--;
-  luaL_checkstack(L, n, "too many values");  /* 2.31.7 fix */
   if (nargs == 2) {  /* simple indexing a[idx] */
-    if (start < 0 || start + n - 1 >= b->size) {
+    if (start < 0 || start >= b->size) {
       if (start0 == 0) {  /* 2.15.1; 2.19.1 fix */
         lua_rawgeti(L, LUA_REGISTRYINDEX, b->registry);
         return 1;
       }
       luaL_error(L, "Error in " LUA_QS ": index %d out of range.", "numarray.subarray", (int)start0);
     }
-    switch (b->datatype) {
+    switch (b->datatype) {  /* 7.9.4 7% tweaks */
       case NAUCHAR:
-        for (i=0; i < n; i++) {
-          lua_pushnumber(L, b->data.c[start + i]);
-        }
+        lua_pushnumber(L, b->data.c[start]);
         break;
       case NADOUBLE:
-        for (i=0; i < n; i++) {
-          lua_pushnumber(L, b->data.n[start + i]);
-        }
+        lua_pushnumber(L, b->data.n[start]);
         break;
       case NACDOUBLE: {
         agn_pComplex z;
-        for (i=0; i < n; i++) {
-          z = b->data.z[start + i];
-          aux_pushcomplex(L, z);
-        }
+        z = b->data.z[start];
+        aux_pushcomplex(L, z);
         break;
       }
       case NAINT32:
-        for (i=0; i < n; i++) {
-          lua_pushnumber(L, b->data.i[start + i]);
-        }
+        lua_pushnumber(L, b->data.i[start]);
         break;
       case NAUINT16:  /* 2.18.2 */
-        for (i=0; i < n; i++) {
-          lua_pushnumber(L, b->data.us[start + i]);
-        }
+        lua_pushnumber(L, b->data.us[start]);
         break;
       case NAUINT32:  /* 2.22.1 */
-        for (i=0; i < n; i++) {
-          lua_pushnumber(L, b->data.ui[start + i]);
-        }
+        lua_pushnumber(L, b->data.ui[start]);
         break;
       case NAUINT64:  /* 6.2.3 */
-        for (i=0; i < n; i++) {
-          createuint64(L, b->data.ui64[start + i]);
-        }
+        createuint64(L, b->data.ui64[start]);
         break;
       case NAINT64:  /* 6.2.3 */
-        for (i=0; i < n; i++) {
-          createint64(L, b->data.i64[start + i]);
-        }
+        createint64(L, b->data.i64[start]);
         break;
       case NALDOUBLE:  /* 2.35.0 */
 #ifndef __ARMCPU  /* 2.37.1 */
-        for (i=0; i < n; i++) {
-          createdlong(L, b->data.ld[start + i]);
-        }
+        createdlong(L, b->data.ld[start]);
 #else
         luaL_error(L, "Error in " LUA_QS ": long doubles are not supported on ARM platforms.", "numarray.subarray");
 #endif
         break;
       default: lua_assert(0);
     }
-    return n;
+    return 1;
   } else {  /* a[start to stop] indexing */
     NumArray *a;
     if (stop == 0 || start < 0 || start + 1 > stop || start + n - 1 >= b->size) {
       luaL_error(L, "Error in " LUA_QS ": indices %d to %d out of range.", "numarray.subarray", (int)start + 1, (int)stop);
     }
+    luaL_checkstack(L, n, "too many values");  /* 2.31.7 fix */
     a = createarray(L, b->datatype, n, b->ndims, b->dims, "numarray.subarray");
     switch (b->datatype) {
       case NAUCHAR:
