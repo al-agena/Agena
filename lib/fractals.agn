@@ -327,11 +327,82 @@ blue := <: x -> 0, 0, 0.05*x :>
 violet := <: x -> 0.05*x, 0, 0.05*x :>
 white  := <: x -> 0.05*x, 0.05*x, 0.05*x :>
 
+
+###############################################################################################
+# Helpers                                                                                     #
+###############################################################################################
+
+procedure fractals.checkcolourmap(colmap, pn) is
+   if colmap -: table then
+      error('Error in `' & pn & '`: colour map must be a table, got ' & type colmap & '.')
+   fi;
+   for i, j in colmap do
+      if size j <> 3 then
+         error('Error in `' & pn & '`: invalid RGB value in row ' & i & '.')
+      fi;
+      local ntable := [j[1], j[2], j[3]];
+      for k, l in ntable do
+          if l -: nonnegint or l > 255 then
+             error('Error in `' & pn & '`: in row ' & i & ', column ' & k &
+                   ':\n   number expected, got `' & tostringx(l) & '`.')
+          fi
+      od
+   od
+end;
+
+procedure fractals.readmap(fn :: string) is
+   local colours, c, L := [], 0;
+   local errat, invalid := 'Error at line ', '`:\n   invalid FRACTINT colour map format,';
+   try
+      L := io.readlines(fn);
+   catch in errmsg then
+      error(errmsg)
+   yrt;
+   for linenumber, line in L do
+      line := strings.replace(line, '\t', ' ');
+      line := strings.trim(line);
+      next when line = '' or line[1] = ';' or line[1] = '#';
+      line := line split ' ';
+      if size line <> 3 then
+         error(errat & linenumber & ' in `' & fn & invalid &
+               '\n   expected three RGB components, got `' & size line & '`.')
+      fi;
+      line := totable(line);
+      for k, l in line do
+         if not(strings.isintegral(l)) then
+            error(errat & linenumber & ', column ' & k & ' in `' & fn & invalid &
+               '\n   number expected, got `' & tostringx(l) & '`.')
+         fi
+      od;
+      line := <: x -> tonumber(x) :> @ line
+      for k, l in line do
+         if l notin 0:255 then
+            error(errat & linenumber & ', column ' & k & ' in `' & fn & invalid &
+               '\n   RGB component must be in [0, 255], got ' & l & '.')
+         fi
+      od;
+      colours[++c] := line
+   od;
+   if c <> 256 then
+      error('Error in `' & fn & invalid & '\n   expected 256 RGB triples, got ' & c & '.')
+   fi;
+   return colours
+end;
+
+procedure fractals.writemap(colmap :: table, fn :: string, ?) is
+   fractals.checkcolourmap(colmap, 'fractals.writemap');
+   local options := checkoptions('fractals.writemap', ?, header = string, true);
+   if options.header and (options.header = '' or options.header[1] notin {'#', ';'}) then
+      error('Error: header must start with a hash or semicolon.')
+   fi;
+   utils.writecsv(colmap, fn, delim = ' ', header = options.header)
+end;
+
+
 # fractals.draw
 # takes fn, the fractal iterator, and at least three numbers x, y, l, where x, y determines the
 # center point (x, y) of the image (in coordinates, not pixels). l, a positive number, represents
 # the length of the plot, with the image drawn from x-l .. x+l, f(y-l) .. f(y+l).
-
 fractals.draw := proc(fn :: procedure, ?) is
    # fn: the fractal function
    local t, im, iter, arg, text, offset, a, b, c, d, radius,
@@ -340,47 +411,21 @@ fractals.draw := proc(fn :: procedure, ?) is
    create local table colors;
    # reads a FRACTINT color map
    local getmap := proc(fn :: {string, table}) is
-      local linenumber, L, ntable := 0;
+      local colors := [];
       if fn :: string then
-         try
-            L := io.readlines(fn);
-            remove(<: x with chr := x[1] -> chr = ';' or chr = '#' or chr = '\0' or strings.trim(x) = '' :>, L, inplace = true);
-         catch in errmsg then
+         if not os.exists(fn) then
             error('FRACTINT color map not found in ' & fn & '.\n\n' &
-                  'Maybe you need to download the fractintmaps-*.tar.gz file from\n' &
-                  'http://agena.sourceforge.net/download.html#fractintmaps and install it into\n' &
-                  fn[1 to ('fractint' in fn) + 7] & '.')
-         yrt;
-         L := <: x -> x split ' ' :> @ <: x -> strings.replace(x, '\t', ' ') :> @ <: x -> strings.trim(x) :> @ L;
-         L := <: x -> size(x) >= 3 :> $ L;
-         for i, j in L do
-            inc linenumber;
-            ntable := [j[1], j[2], j[3]];
-            for k, l in ntable do
-               if not(strings.isintegral(l)) then
-                  error('Error, at line ' & linenumber & ', column ' & tonumber(k) &
-                     ',\n   in ' & fn & ':\n   invalid FRACTINT colour map format,' &
-                     '\n   number expected, got `' & tostringx(l) & '`.')
-               fi
-            od;
-            colors[i - 1] := <: x -> tonumber(x)/255 :> @ ntable
-         od
+               'Maybe you need to download the fractint.zip file from\n' &
+               'https://sourceforge.net/projects/agena/files/Packages and install it into\n' &
+               fn[1 to ('fractint' in fn) + 7] & '.')
+         fi;
+         fn := fractals.readmap(fn)
       else  # 7.9.3 u1 extension
-         for i, j in fn do
-            if size j <> 3 then
-               error('Error, at index ' & i & ': invalid palette.')
-            fi;
-            ntable := [j[1], j[2], j[3]];
-            for k, l in ntable do
-               if l -: nonnegint or l > 255 then
-                  error('Error, at index ' & i & ', column ' & k &
-                     ',\n   in table:\n   invalid palette,' &
-                     '\n   number expected, got `' & tostringx(l) & '`.')
-               fi
-            od;
-            colors[i - 1] := <: x -> x/255 :> @ ntable
-         od
+         fractals.checkcolourmap(fn, 'fractals.draw');
       fi;
+      for i, j in fn do
+         colors[i - 1] := <: x -> tonumber(x)/255 :> @ j
+      od;
       return colors
    end;
    # get one of Picture Publisher's palettes
@@ -985,10 +1030,6 @@ anchors := [
 ]
 
 # gdi.COLOURS are in the range 0 .. 1. So convert to Fractint's 0 .. 255 range:
-for i to size anchors do
-   anchors[i] := map(<: x -> x*255 :>, anchors[i]);
-od;
-
 for i, j in anchors do
    anchors[i] := map(<: x -> x*255 :>, j);
 od;
@@ -1000,15 +1041,12 @@ fractals.genmap(anchors, 'rgb.map')
 # Linear Color Interpolation (Color Gradient Generation), created by Gemini AI
 procedure fractals.genmap(anchors :: table, tofile) is
    local map, nsegs, segentries := [], size anchors - 1;
-   if tofile and tofile -: string then
-      error('Error in `fractals.genmap`: second argument must be a filename.')
-   fi;
    # Calculate how many entries fit into each segment evenly
    segentries := 255/nsegs;
    for i from 0 to 255 do
       # Determine which two anchors we are interpolating between
       local segment, c1, c2, segstart, fraction, r, g, b;
-      segment := math.min(floor(i/segentries) + 1, nsegs);
+      segment := math.min(entier(i/segentries) + 1, nsegs);
       c1 := anchors[segment];
       c2 := anchors[segment + 1];
       # Calculate local fraction within the current segment
@@ -1018,27 +1056,94 @@ procedure fractals.genmap(anchors :: table, tofile) is
       r := entier(math.lerp(c1[1], c2[1], fraction) + 0.5);
       g := entier(math.lerp(c1[2], c2[2], fraction) + 0.5);
       b := entier(math.lerp(c1[3], c2[3], fraction) + 0.5);
-      if tofile then
-         insert strings.format('%d %d %d', r, g, b) into map
-      else
-         insert [r, g, b] into map
-      end
+      insert [r, g, b] into map
    end;
    if tofile then
-      local fh := io.open(tofile, 'w')
-      if fh then
-         fh@@write('# Fractint Color Map Generated via Agena\n');
-         for line in map do
-            fh@@write(line & '\n')
-         end
-         fh@@close();
-         print('Successfully generated file `' & tofile & '`.')
-      else
-         error('Error in `fractals.genmap`: could not create file.')
-      end
+      if tofile -: string then
+         error('Error in `fractals.genmap`: second argument must be a filename.')
+      fi;
+      fractals.writemap(map, tofile)
    else
       return map
    fi
+end;
+
+
+procedure fractals.rgb2hsl(rgb :: table, ?) is
+   fractals.checkcolourmap([rgb], 'fractals.rgb2hsl');
+   local r, g, b := rgb[1]/255, rgb[2]/255, rgb[3]/255;
+   local max := math.max(r, g, b);
+   local min := math.min(r, g, b);
+   local h, s, l := 0, 0, (max + min)/2;
+   if max <> min then
+      local d := max - min
+      s := l > 0.5 and d/(2 - max - min) or d/(max + min)
+      if max = r then
+         h := (g - b)/d + (g < b and 6 or 0)
+      elif max = g then
+         h := (b - r)/d + 2
+      elif max = b then
+         h := (r - g)/d + 4
+      end;
+      h /:= 6
+   end;
+   local options := checkoptions('fractals.rgb2hsl', ?, mode = string, true);
+   local mode := options.mode;
+   return [
+      h = h*360,  # 0 to 360 degrees, hue
+      s = s,      # 0 to 1, saturation
+      l = l,      # 0 to 1, lightness
+      lumi = mode = 'luminosity' and 0.299*r + 0.587*g + 0.114*b or
+             mode = 'simple'     and (r + g + b)/3 or
+             mode = '2020'       and 0.2627*r + 0.6780*g + 0.0593*b or
+             # else use ITU-R BT.709 standard for modern high-definition digital media
+             0.2126*r + 0.7152*g + 0.0722*b
+
+   ]
+end;
+
+procedure fractals.sortmap(colmap :: table, ?) is
+   fractals.checkcolourmap(colmap, 'fractals.rgb2hsl');
+   local options, L := checkoptions('fractals.sortmap', ?,
+      mode = string, lumi = string, output = string, header = string, true);
+   options.lumi := options.lumi or '709'
+   case options.mode
+      of 'hue' then  # sort by hue (rainbow order)
+         L := sorted(colmap, proc(a, b) is
+            local hsl_a := fractals.rgb2hsl(a, mode = options.lumi);
+            local hsl_b := fractals.rgb2hsl(b, mode = options.lumi);
+            return hsl_a.h < hsl_b.h
+         end)
+      of 'saturation', 'sat' then  # sort by saturation (vividness: rich colours to greys)
+         L := sorted(colmap, proc(a, b) is
+            local hsl_a := fractals.rgb2hsl(a, mode = options.lumi);
+            local hsl_b := fractals.rgb2hsl(b, mode = options.lumi);
+            return hsl_a.s > hsl_b.s  # Striking, saturated colors first
+         end)
+      else  # step-sorting (group by colour type, then by brightness)
+         L := sorted(colmap, proc(a, b) is
+            local hsl_a := fractals.rgb2hsl(a, mode = options.lumi);
+            local hsl_b := fractals.rgb2hsl(b, mode = options.lumi);
+            # Round hue into 8 distinct color 'buckets' (0 to 7)
+            local steps := 8;
+            local bucket_a := entier(hsl_a.h/(360/steps));
+            local bucket_b := entier(hsl_b.h/(360/steps));
+            # Treat pure grays/whites/blacks (low saturation) as a separate group
+            if hsl_a.s < 0.15 then bucket_a := -1 end;
+            if hsl_b.s < 0.15 then bucket_b := -1 end;
+            if bucket_a <> bucket_b then  # sort by color group family
+               return bucket_a < bucket_b
+            else  # sort bright to dark inside the group
+               return hsl_a.lumi > hsl_b.lumi
+            end
+         end)
+      esle
+   esac;
+   if options.output then
+      fractals.writemap(L, options.output, header = options.header)
+   else
+      return L
+   end;
 end;
 
 
@@ -1120,6 +1225,20 @@ draw(fractals.logsE, 0, 0, 15, res=1366:768, map='basic.map', iter=1024);
 
 draw(juliacantor, -0.05, 0, 2, map='topo.map', iter=255);
 draw(juliapetal, -0.05, 0, 2, map='default.map', iter=255);
+
+L := [];
+for i to 256 do
+   insert [math.random(0, 255), math.random(0, 255), math.random(0, 255)] into L
+od;
+
+draw(fractals.markmandel, -0.5, 0, 1.5, res=640:480, map=L);
+draw(fractals.markmandel, -0.5, 0, 1.5, res=640:480, map=fractals.sortmap(L, mode = 'hue'));
+draw(fractals.markmandel, -0.5, 0, 1.5, res=640:480, map=fractals.sortmap(L, mode = 'hue', lumi = 'luminocity'));
+draw(fractals.markmandel, -0.5, 0, 1.5, res=640:480, map=fractals.sortmap(L, mode = 'hue', lumi = '2020'));
+draw(fractals.markmandel, -0.5, 0, 1.5, res=640:480, map=fractals.sortmap(L, mode = 'hue', lumi = 'simple'));
+
+draw(fractals.markmandel, -0.5, 0, 1.5, res=640:480, map=fractals.sortmap(L, mode = 'saturation'));
+draw(fractals.markmandel, -0.5, 0, 1.5, res=640:480, map=fractals.sortmap(L));  # step-sorting
 
 gdi.plot(fern(100k), bgcolour='darkcyan', colour='yellow', axes='none', res=640:640):
 gdi.plot(dragon(20), bgcolour='darkcyan', colour='yellow', axes='none');
