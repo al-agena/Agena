@@ -3,6 +3,7 @@ The following FRACTINT colour maps have been created with Gemini AI and are put 
 alamo.map
 bagheram.map
 bordeaux.map
+bordsprg.map
 brgtsaph.map
 chloro.map
 chloro2.map
@@ -39,6 +40,10 @@ prism2.map
 prism3.map
 prism4.map
 prism5.map
+rand01.map
+rand02.map
+rand03.map
+rand04.map
 rauschen.map
 sapphire.map
 spectra2.map
