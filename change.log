@@ -1,6 +1,6 @@
-7.9.4 Deimos, August 30, 2026
+7.9.4 Deimos, August 31, 2026
 
-- Simple `numarray` read access with standard indexing and `numarray.subarray` has become at least 5 % faster.
+- Simple `numarray` read access with standard indexing and `numarray.subarray` have become at least 5 % faster.
 
 - `fractals.draw` when given no colouring information now uses the default Fractint colour map instead of blue hues.
 
@@ -36,7 +36,6 @@
   > od;
 
   > fractals.genmap(anchors, 'bordeaux_spring.map');
-  Successfully generated file `bordeaux_spring.map`.
 
 - New `fractals.sortmap` sorts a colour map non-destructively and either returns the new sorted table or writes it to a file.
   You can sort by hue, saturation or step. Example:
@@ -48,6 +47,9 @@
   >   header = '# my first saturation-sorted colour map');
 
 - New `fractals.readmap` reads in a FRACTINT colour map file, and new `fractals.writemap` writes one to disk.
+
+- `os.getprocesses` could crash in Windows 10 and 11. This has been fixed. Process descriptions are also no longer mangled.
+  The function now is also fully supported in Windows 2000.
 
 
 7.9.3 Deimos, August 28, 2026
@@ -61,7 +63,7 @@
 7.9.2 Deimos, August 25, 2026
 
 - `strings.instr`: If the plain option has been set to `false`, then the function nevertheless conducted a plain search. This
-  has been fixed. The function, in default pattern matching mode, has also been sped up by a factor of 7.
+  has been fixed. The function, in default pattern matching mode, has also been sped up by a factor of 7, also benefitting `strings.mfind`.
 
 - The `atendof` operator has become around 10 % faster.
 
