@@ -13,7 +13,7 @@
 # CHANGE THE PATCHLEVEL IF YOU MODIFY library.agn or any other agn library WITHOUT COMPILING
 # A NEW C VERSION. NO Agena library update: comment the following assignment.
 
-# environ.libpatchlevel := 2;
+environ.libpatchlevel := 1;
 
 ##############################################################################################
 # determine operating system and cpu type                                                    #
