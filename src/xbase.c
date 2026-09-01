@@ -292,7 +292,7 @@ DBFHandle SHPAPI_CALL DBFOpen (const char *pszFilename, const char *pszAccess) {
   pszBasename = (char *)malloc(tools_strlen(pszFilename) + 5);  /* 2.17.8 tweak */
   if (pszBasename == NULL) return NULL;  /* 4.11.5 fix */
   strcpy(pszBasename, pszFilename);
-  for (i = tools_strlen(pszBasename) - 1;  /* 2.17.8 tweak */
+  for (i=tools_strlen(pszBasename) - 1;  /* 2.17.8 tweak */
     i > 0 && pszBasename[i] != '.' && pszBasename[i] != '/'
           && pszBasename[i] != '\\';  i--) {}
   if (pszBasename[i] == '.')

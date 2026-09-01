@@ -210,11 +210,11 @@ drmem:
 	$(MAKE) "WINLUA_A=agena.dll" "WINLUA_T=agena.exe" \
 	"AR=$(CC) -g -shared -static-libgcc -o" \
 	"RANLIB=echo" \
-	"MYCFLAGS=-O0 -g -Wall -Wno-attributes -Wno-deprecated-declarations -fgnu89-inline \
+	"MYCFLAGS=-O0 -g3 -Wall -Wno-attributes -Wno-deprecated-declarations -fgnu89-inline \
 		-DWIN32_LEAN_AND_MEAN -DLUA_BUILD_AS_DLL -D_FILE_OFFSET_BITS=64 -DPCRE2_CODE_UNIT_WIDTH=8" \
 	"MYLIBS=$(MYLIBS) agena.res" \
 	"LIBS=$(MYLIBS) $(WINSYSLIBS)" \
-	"MYLDFLAGS=-g" agena.exe
+	"MYLDFLAGS=-g3 -static-libgcc" agena.exe
 
 mingwsse:
 	windres agena.rc -O coff -o agena.res

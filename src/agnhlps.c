@@ -6974,7 +6974,7 @@ static int64_t binomial_coefficient (int n, int k, int *rc) {
   for (i=1; i <= k; i++) {  /* safe multiplication verification */
     if (res > INT64_MAX/(n - i + 1)) {
       if (rc) *rc = 1;
-      return -1; 
+      return -1;
     }
     res = res*(n - i + 1)/i;
   }
