@@ -5,18 +5,20 @@
 - Minor tuning of various internal byte-processing functions that benefit `binio`, `bytes`, `hashes` and `xbase` package functions
   in Windows, Solaris, Linux, OS/2 and DOS.
 
-- With multiple values to write, the following functions have been significantly sped up: `binio.writechar`, `binio.writeint64`, 
-  `binio.writelongdouble`, `binio.writelong`, `binio.writenumber`, `binio.writeuint64`. Even with just one string, 
+- With multiple values to write, the following functions have been significantly sped up: `binio.writechar`, `binio.writeint64`,
+  `binio.writelongdouble`, `binio.writelong`, `binio.writenumber`, `binio.writeuint64`. Even with just one string,
   `binio.writeshortstring` has become 40 % faster.
 
 - `fractals.sortmap`: You can now use the 'file' option instead of the 'output' option to write a sorted colour map to a file.
 
-- The following functions crashed Agena if the internal buffer size for string operations has been set by the user to a value 
-  that is too large, for example more than 8 MBytes in Windows: `base.clean`, `base.comment`, `base.getall`, `base.index`, 
+- The following functions crashed Agena if the internal buffer size for string operations has been set by the user to a value
+  that is too large, for example more than 8 MBytes in Windows: `base.clean`, `base.comment`, `base.getall`, `base.index`,
   `binio.lines`, `binio.readbytes`, `binio.readbytes`, `io.infile`, `io.nlines`, `io.readfrom`, `io.readlines`, `io.skiplines`.
-  
-  This has been fixed: the user can no longer set the buffer size to more than 1 MBytes on all supported platforms with 
-  `environ.kernel/buffersize`. The minimum buffer size has been reduced from 512 to 256 bytes.
+
+  This has been fixed: the user can no longer set the buffer size to more than 1 MBytes on all supported platforms with
+  `environ.kernel/buffersize`. The minimum buffer size has been reduced from 512 to 256 bytes, with the default still 512.
+
+- Changed the source files a bit to prevent most warning messages in macOS, Linux and Solaris.
 
 
 7.9.4 Deimos, August 31, 2026
