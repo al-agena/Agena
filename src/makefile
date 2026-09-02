@@ -18,7 +18,7 @@ PLAT= none
 CC= gcc
 # -Wtype-limits is great to check for signed values compared to unsigned ones
 # CFLAGS= -Wall -Wtype-limits -Wno-unknown-pragmas $(MYCFLAGS)
-CFLAGS= -Wall -Wextra -Wno-unknown-pragmas $(MYCFLAGS)
+CFLAGS= -Wall -Wno-unknown-pragmas $(MYCFLAGS)
 #AR= ar rcu
 AR= ar rc
 RANLIB= ranlib
