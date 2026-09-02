@@ -19,7 +19,7 @@ For binary installers see https://agena.sourceforge.net.
 
 This repository includes compilation scripts for various operating systems and architectures:
 * DOS
-* Linux
+* Linux (Intel & ARM)
 * macOS
 * OS/2, ArcaOS
 * Solaris 10
