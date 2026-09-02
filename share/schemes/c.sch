@@ -159,14 +159,14 @@ object TPersHolder
             'luaH_getnum,agnH_hasarraypart,agnH_hashashpart,luaH_hashnum,agnH_hasholes,luaH_hashpointer,agnH_hsize,luaH_isdummy,' +
             'luaH_mainposition,luaH_next,agnH_nops,agnH_purge,agnH_readonly,agnH_reorder,agnH_rotatebottom,agnH_rotatetop,' +
             'luaH_set,luaH_setnum,luaH_setstr,agnH_subs,agnL_checkboolean,agnL_checkint,' +
-            'agnL_checkinteger,agnL_checknumber,agnL_checkoption,agnL_createpairofnumbers,agnL_datetosecs,agnL_debuginfo,' +
+            'agnL_checkinteger,lua_checkinteger,agnL_checknumber,agnL_checkoption,agnL_createpairofnumbers,agnL_datetosecs,agnL_debuginfo,' +
             'agnL_debuginfo2,agnL_fillarray,agnL_fncall,agnL_fncallx,agnL_fneps,agnL_fnunicall,agnL_geti,agnL_getmetafield,' +
             'agnL_getsetting,agnL_gettablefield,agnL_gettop,agnL_initialise,agnL_iscallable,agnL_isdlong,agnL_islinalgvector,' +
             'agnL_isvalidpattern,agnL_onexit,agnL_optboolean,agnL_optint32_t,agnL_optinteger,agnL_optnonnegative,' +
             'agnL_optnonnegint,agnL_optnumber,agnL_optoff64_t,agnL_optposint,agnL_optpositive,agnL_optstring,agnL_optuint32_t,' +
-            'agnL_paircheckbooloption,agnL_pairgeticomplex,agnL_pairgetiintegers,agnL_pairgetilongnumbers,agnL_pairgetinonnegint,' +
-            'agnL_pairgetinonnegints,agnL_pairgetinumber,agnL_pairgetinumbers,agnL_pairgetiposints,agnL_pexecute,' +
-            'agnL_printnonstruct,agnL_pushcoeffs,agnL_pushhex,agnL_pushvstring,agnL_readlines,agnL_setLibname,' +
+            'agnL_paircheckbooloption,agn_pairgetiall,agnL_pairgeticomplex,agnL_pairgetiintegers,agnL_pairgetilongnumbers,' +
+            'agnL_pairgetinonnegint,agnL_pairgetinonnegints,agnL_pairgetinumber,agnL_pairgetinumbers,agnL_pairgetiposints,' +
+            'agnL_pexecute,agnL_printnonstruct,agnL_pushcoeffs,agnL_pushhex,agnL_pushvstring,agnL_readlines,agnL_setLibname,' +
             'agnL_strmatch,agnL_strtonumber,agnL_structisnumber,agnL_structisnumeric,agnL_structisstring,agnL_strunwrap,' +
             'agnL_tonumarray,agnL_tonumberx,agnL_tostringx,agnO_aligntowordboundary,agnO_log2,agnO_newsize,agnPair_create,' +
             'agnPair_free,agnPair_new,agnPair_rawgeti,agnPair_readonly,agnPair_seti,agnReg_delete,agnReg_duplicate,' +
@@ -201,11 +201,11 @@ object TPersHolder
             'agn_reggetinoerrrange,agn_reggetinumber,agn_reggettop,agn_regisall,agn_regisboolean,agn_regiscomplex,' +
             'agn_regisintegral,agn_regisnil,agn_regisnonnegative,agn_regisnonnegint,agn_regisnumber,agn_regisnumeric,' +
             'agn_regisposint,agn_regispositive,agn_regisstring,agn_regpurge,agn_regrawget,agn_regrawgeticomplex,' +
-            'agn_regrawgetinumber,agn_regrawseti,agn_regresize,agn_regset,agn_regsettop,agn_regsize,agn_regstate,' +
+            'agn_regrawgetinumber,agn_regrawseti,agn_regresize,agn_regset,agn_regsetinumber,agn_regsettop,agn_regsize,agn_regstate,' +
             'agn_regsubs,agn_reorder,agn_replace,agn_resize,agn_sallocated,agn_seqgetinumber,agn_seqisall,agn_seqisboolean,' +
             'agn_seqiscomplex,agn_seqisintegral,agn_seqisnonnegative,agn_seqisnonnegint,agn_seqisnumber,agn_seqisnumeric,' +
             'agn_seqisposint,agn_seqispositive,agn_seqisstring,agn_seqrawgeticomplex,agn_seqrawgetiinteger,agn_seqrawgetilstring,' +
-            'agn_seqrawgetinoerr,agn_seqrawgetinumber,agn_seqrawsetilstring,agn_seqresize,agn_seqsize,agn_seqstate,' +
+            'agn_seqrawgetinoerr,agn_seqrawgetinumber,agn_seqrawsetilstring,agn_seqresize,agn_seqsetinumber,agn_seqsize,agn_seqstate,' +
             'agn_seqsubs,agn_setbitwise,agn_setbuffersize,agn_setclosetozero,agn_setconstants,agn_setconstanttoobig,' +
             'agn_setdblepsilon,agn_setdebug,agn_setdigits,agn_setduplicates,agn_setemptyline,agn_setenclose,agn_setepsilon,' +
             'agn_seterrmlinebreak,agn_setforadjust,agn_setgeqautoshrink,agn_setgui,agn_sethepsilon,agn_setinlinecache,' +
@@ -274,7 +274,7 @@ object TPersHolder
             'lua_rawsetikey,lua_rawsetilstring,lua_rawsetinumber,lua_rawsetistring,lua_rawsetp,lua_rawsetstringboolean,' +
             'lua_rawsetstringchar,lua_rawsetstringinteger,lua_rawsetstringlong,lua_rawsetstringnumber,lua_rawsetstringpairnumbers,' +
             'lua_rawsetstringstring,lua_reginsert,lua_regnext,lua_remove,lua_replace,lua_resume,lua_rotate,lua_sdelete,' +
-            'lua_seqinsert,lua_seqnext,lua_seqrawget,lua_seqrawget2,lua_seqrawgeti,lua_seqrawgetinumber,lua_seqrawseti,' +
+            'lua_seqinsert,lua_seqnext,lua_seqrawget,lua_seqrawget2,lua_seqrawgeti,lua_seqrawgetinumber,lua_seqrawset,lua_seqrawseti,' +
             'lua_seqrawsetistring,lua_seqseticachevalue,lua_setallocf,lua_setfenv,lua_setfield,lua_setglobal,' +
             'lua_sethook,lua_setiuservalue,lua_setlocal,lua_setmetatable,lua_setmetatabletoobject,lua_settable,' +
             'lua_settop,lua_setupvalue,lua_setuservalue,lua_setwarnf,lua_sget,lua_shas,lua_sinsert,lua_srawget,' +
