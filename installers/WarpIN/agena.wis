@@ -5,7 +5,7 @@
 <HEAD>
 
 <PCK INDEX=1
-     PACKAGEID="Alexander Walz\Agena\Agena\7\9\2"
+     PACKAGEID="Alexander Walz\Agena\Agena\7\9\5"
      TARGET="$(WARPIN_DEFAULTAPPSPATH)\agena"
      TITLE="Agena"
      CONFIGSYS="set AGENAPATH=$(/1)/LIB | UNIQUE"
