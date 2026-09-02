@@ -14,6 +14,7 @@
 
 #include "agncfg.h"
 #include "agnconf.h"
+#include "prepdefs.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -144,6 +145,16 @@ typedef union {
     uint64_t exponent      : 11;  /* biased exponent */
     uint64_t mantissa_high : 20;
     uint64_t mantissa_low  : 32;
+  } c;
+} double_ieee754;
+#elif defined(__APPLE__) && defined(IS32BIT)  /* get rid of the bitfield GNU exctension warnings, 7.9.6 */
+typedef union {
+  double v;
+  struct {
+    unsigned int mantissa_low  : 32;
+    unsigned int mantissa_high : 20;
+    unsigned int exponent      : 11;  /* biased exponent */
+    unsigned int sign          :  1;
   } c;
 } double_ieee754;
 #else
@@ -302,13 +313,17 @@ union IEEEl2bits {
     unsigned long long man : 64;
     unsigned int expsign   : 16;
     unsigned int junk      : 16;
+#elif defined(__APPLE__) && defined(IS32BIT)
+    /* get rid of the bitfield GNU exctension warnings in Mac OS X 10.5.8, 7.9.6 */
+    uint64_t man;
+    unsigned int expsign   : 16;
+    unsigned int junk      : 16;
 #else
     unsigned int junk      : 16;
     unsigned int expsign   : 16;
     unsigned long long man : 64;
 #endif
   } xbits;
-
 };
 
 /*
