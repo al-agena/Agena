@@ -3143,7 +3143,7 @@ LUALIB_API char *str_substr (const char *str, const size_t begin, const size_t e
   char *substring;
   size_t len, s;    /* modified by Alex Walz */
   s = tools_strlen(str);  /* modified by Alex Walz */ /* 2.17.8 tweak */
-  if (str == NULL || s == 0 || s < begin || end >= s || begin > end || begin < 0 || end < 0) {
+  if (str == NULL || s == 0 || s < begin || end >= s || begin > end) {  /* 7.9.5 change, no check for negative values any longer */
     *error = 1;     /* index out-of-range; modified by Alex Walz */
     return NULL;
   }

@@ -2360,7 +2360,7 @@ LUALIB_API int agnL_newldblarray (lua_State *L, size_t n, const char *procname) 
    a userdata LongDoubleArray. Instead of a structure, numbers or long double userdata might be given as separarate arguments. */
 
 LUALIB_API void agnL_pushcoeffs (lua_State *L, LongDoubleArray *a, size_t nops, const char *procname) {
-  size_t i;
+  int i;  /* 7.9.5 change from size_t to i to avoid compiler warnings */
   switch (lua_type(L, 1)) {
     case LUA_TTABLE : {
       nops = agn_asize(L, 1);

@@ -2944,7 +2944,7 @@ static int str_remove (lua_State *L) {
     nchars = agnL_optinteger(L, 3, 1);  /* number of characters to be deleted, Agena 1.10.0 */
     if (nchars < 1)
       luaL_error(L, "Error in " LUA_QS ": third argument must be positive.", "strings.remove");
-    if (pos < 0 || pos >= l1)
+    if (pos >= l1)  /* 7.9.5 change, no check for negative value any longer */
       luaL_error(L, "Error in " LUA_QS ": index %d out of range.", "strings.remove", pos + 1);
     offset = pos + nchars;
     if (offset > l1) offset = l1;  /* avoid invalid accesses beyond the length of the string */

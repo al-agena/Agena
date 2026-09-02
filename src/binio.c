@@ -338,8 +338,8 @@ static int binio_writenumber (lua_State *L) {
 
 
 static int binio_writelongdouble (lua_State *L) {  /* 2.35.0 */
-  int hnd, en;
-  size_t nargs, i, buf_count;
+  int hnd, en, i;
+  size_t nargs, buf_count;
   long double write_buf[8];  /* 7.9.5, local buffer to batch up system writes */
   const size_t element_size = sizeof(long double);
 #if BYTE_ORDER == BIG_ENDIAN
@@ -475,8 +475,8 @@ static int binio_writeshortstring (lua_State *L) {  /* 0.32.0; tuned 2.11.5 */
 
 
 static int binio_writeint64 (lua_State *L) {  /* 7.3.3 */
-  int hnd, en;
-  size_t nargs, i, buf_count;
+  int hnd, en, i;
+  size_t nargs, buf_count;
   int64_t write_buf[16];  /* 7.9.5, local buffer to batch up system writes */
   const size_t element_size = sizeof(int64_t);
 #if BYTE_ORDER == BIG_ENDIAN
@@ -515,8 +515,8 @@ static int binio_writeint64 (lua_State *L) {  /* 7.3.3 */
 
 
 static int binio_writeuint64 (lua_State *L) {  /* 7.3.3 */
-  int hnd, en;
-  size_t nargs, i, buf_count;
+  int hnd, en, i;
+  size_t nargs, buf_count;
   uint64_t write_buf[16];  /* 7.9.5, local buffer to batch up system writes */
   const size_t element_size = sizeof(uint64_t);
 #if BYTE_ORDER == BIG_ENDIAN
@@ -711,9 +711,9 @@ static int binio_readshortstring (lua_State *L) {
   res = read(hnd, &size, sizeof(unsigned char));  /* first, read length of the string, patched 1.12.2, changed 2.11.5 */
   if (res == (ssize_t)sizeof(unsigned char)) {
     /* Validation: Ensure size is not negative and fits in reasonable bounds, 7.3.3 fix */
-    if (size < 0) {
+    /* if (size < 0) {  // commented out 7.9.5 for size will never be negative.
       luaL_error(L, "Error in " LUA_QS ": invalid string length (%d) in file.", "binio.readstring", size);
-    }
+    } */
     char *data = agn_stralloc(L, size + 1, "binio.readstring", NULL);  /* 7.3.3 change, using a Variable-Length Array (VLA) is not faster */
     if (read(hnd, data, size) == (ssize_t)size) {  /* now read string itself */
       data[size] = '\0';

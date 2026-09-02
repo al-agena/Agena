@@ -2736,13 +2736,13 @@ static int stats_prange (lua_State *L) {  /* 1.12.9 */
   nargs = lua_gettop(L);
   if (nargs > 1) {
     p = agn_checkinteger(L, 2);
-    if (p < 0 || p > 99)
+    if (p > 99)  /* 7.9.5 change, no check for negative value any longer */
       luaL_error(L, "Error in " LUA_QS ": second argument must be in the range [0, 100).", "stats.prange");
   } else
     p = 25;
   if (nargs > 2) {
     q = agn_checkinteger(L, 3);
-    if (q < 0 || q > 99)
+    if (q > 99)  /* 7.9.5 change, no check for negative value any longer */
       luaL_error(L, "Error in " LUA_QS ": third argument must be in the range [0, 100).", "stats.prange");
   } else
     q = 100 - p;
@@ -2878,7 +2878,7 @@ static int stats_trimean (lua_State *L) {  /* 2.4.2, patched 2.4.4 */
   a = agnL_tonumarray(L, 1, &ii, "stats.trimean", 1, 0);  /* 2.4.4 change, 2.18.1 extension */
   if (a == NULL) return 1;  /* issue the error */
   p = agnL_optinteger(L, 2, 25);  /* 2.8.1 */
-  if (p < 0 || p > 99) {
+  if (p > 99) {  /* 7.9.5 change, no check for negative value any longer */
     xfree(a);
     luaL_error(L, "Error in " LUA_QS ": second argument must be in the range [0, 100).", "stats.trimean");
   }
@@ -4803,7 +4803,7 @@ static int stats_winsor (lua_State *L) {  /* 2.10.0, based on stats.trimean */
   a = agnL_tonumarray(L, 1, &ii, "stats.winsor", 1, 0);  /* 2.18.1 extension */
   if (a == NULL) return 1;  /* issue the error */
   p = agnL_optinteger(L, 2, 10);
-  if (p < 0 || p > 99) {
+  if (p > 99) {  /* 7.9.5 change, no check for negative value any longer */
     xfree(a);
     luaL_error(L, "Error in " LUA_QS ": second argument must be in the range [0, 100).", "stats.winsor");
   }

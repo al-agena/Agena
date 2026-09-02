@@ -6625,7 +6625,7 @@ LUA_API void agn_setdigits (lua_State *L, ptrdiff_t x) {  /* x must be a number 
 
 
 LUA_API void agn_setregsize (lua_State *L, size_t x) {  /* 2.3.0 RC 3, set default register size */
-  if (x < 0 || x > MAX_INT)
+  if (x > MAX_INT)  /* 7.9.5 change, no check for negative value any longer */
     luaG_runerror(L, LUA_QS "Error: setting must be an integer in [1, &ld].", "environ.kernel/regsize", MAX_INT);
   L->regsize = x;
 }

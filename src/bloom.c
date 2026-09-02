@@ -94,8 +94,7 @@ static int bloom_new (lua_State *L) {
   size_t n, nsalts;
   n = luaL_checkint(L, 1);
   luaL_argcheck(L, n > 0, 1, "invalid size");
-  nsalts = luaL_checkint(L, 2);
-  luaL_argcheck(L, nsalts >= 0, 2, "invalid number of salts");
+  nsalts = agn_checknonnegint(L, 2);  /* 7.9.6 change */
   a = (Bloom *)lua_newuserdata(L, sizeof(Bloom));
   if (!a)  /* 7.3.4 fix */
     luaL_error(L, "Error in " LUA_QS ": memory allocation failed.", "bloom.new");

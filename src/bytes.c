@@ -1284,9 +1284,11 @@ static int bytes_arshift32 (lua_State *L) {  /* 2.14.5, taken partially from Lua
       if (n >= LUA_NBITS)
         x = ALLONES;  /* like in Lua */
       else {  /* as published on StackOverflow, see link above */
+#ifdef DONOTCOMPILEME  /* 7.9.5 change, no check for negative value any longer */
         if (x < 0)
           x = x >> n | ~(~0U >> n);  /* add signal bit */
         else
+#endif
           x = x >> n;
       }
       lua_pushnumber(L, (int32_t)x);
@@ -2078,16 +2080,21 @@ static int bytes_interweave (lua_State *L) {
       luaL_error(L, "Error in " LUA_QS ": unknown option.", "hashes.interweave");
   }
   hx = (mask == 0xFFFFFFFF) ? hx : hx & mask;
+#ifdef DONOTCOMPILEME
   if (sh < 0)
     hx <<= sh;
-  else if (sh > 0)
+  else 
+#endif
+  if (sh > 0)
     hx >>= sh;
   if (n > 0) hx %= n;
+#ifdef DONOTCOMPILEME
   else if (n < 0) {  /* Fibonacci modulus, 2.38.3 */
     uint64_t t = (2654435769ULL * (uint64_t)hx) & 0x00000000FFFFFFFF;
     n &= 0x0000001F;  /* make sure shift is 31 or less */
     hx = t >> (32 + n);  /* returns a value in the uint32_t domain, n is negative */
   }
+#endif
   lua_pushnumber(L, hx);
   return 1;
 }
