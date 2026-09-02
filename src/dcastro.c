@@ -1457,7 +1457,9 @@ static astro_rotation_t precession_rot(astro_time_t time, precess_dir_t dir)
 }
 
 
-static void rotate(const double invec[3], const double rot[3][3], double outvec[3])
+/* 7.9.6, removed "const" in front of "double rot[3][3]" to avoid warnings on older GCC versions 
+   (OpenSUSE, Mac OS X 10.5.8). */
+static void rotate(const double invec[3], double rot[3][3], double outvec[3])  
 {
   outvec[0] = rot[0][0]*invec[0] + rot[1][0]*invec[1] + rot[2][0]*invec[2];
   outvec[1] = rot[0][1]*invec[0] + rot[1][1]*invec[1] + rot[2][1]*invec[2];

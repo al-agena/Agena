@@ -323,7 +323,10 @@ mz_ulong mz_crc32(mz_ulong crc, const mz_uint8 *ptr, size_t buf_len)
         memset(&stream, 0, sizeof(stream));
 
         /* In case mz_ulong is 64-bits (argh I hate longs). */
-        if ((mz_uint64)(source_len | *pDest_len) > 0xFFFFFFFFU)
+        /* if ((mz_uint64)(source_len | *pDest_len) > 0xFFFFFFFFU) */
+        /* 7.9.5 change to prevent GCC warnings on Mac OS X 10.5.8 */
+        /* if (((mz_uint64)source_len | (mz_uint64)*pDest_len) > 0xFFFFFFFFU) */
+        if (((mz_uint64)source_len | (mz_uint64)*pDest_len) >> 32)
             return MZ_PARAM_ERROR;
 
         stream.next_in = pSource;
@@ -566,7 +569,9 @@ mz_ulong mz_crc32(mz_ulong crc, const mz_uint8 *ptr, size_t buf_len)
         memset(&stream, 0, sizeof(stream));
 
         /* In case mz_ulong is 64-bits (argh I hate longs). */
-        if ((mz_uint64)(*pSource_len | *pDest_len) > 0xFFFFFFFFU)
+        /* if ((mz_uint64)(*pSource_len | (mz_uint64)(*pDest_len)) > 0xFFFFFFFFU) */
+        /* 7.9.5 change to prevent GCC warnings on Mac OS X 10.5.8 */
+        if (((mz_uint64)*pSource_len | (mz_uint64)*pDest_len) >> 32)
             return MZ_PARAM_ERROR;
 
         stream.next_in = pSource;
@@ -6326,7 +6331,9 @@ static int mz_stat64(const char *path, struct __stat64 *buffer)
                 pState->m_zip64 = MZ_TRUE;
                 /*return mz_zip_set_error(pZip, MZ_ZIP_TOO_MANY_FILES); */
             }
-            if (((mz_uint64)buf_size > 0xFFFFFFFF) || (uncomp_size > 0xFFFFFFFF))
+            /* if (((mz_uint64)buf_size > 0xFFFFFFFF) || ((mz_uint64)uncomp_size > 0xFFFFFFFF)) */
+            /* 7.9.5 change to prevent GCC warnings on Mac OS X 10.5.8 */
+            if (((mz_uint64)buf_size >> 32) || ((mz_uint64)uncomp_size >> 32))
             {
                 pState->m_zip64 = MZ_TRUE;
                 /*return mz_zip_set_error(pZip, MZ_ZIP_ARCHIVE_TOO_LARGE); */

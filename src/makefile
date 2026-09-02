@@ -17,7 +17,8 @@ PLAT= none
 
 CC= gcc
 CFLAGS= -Wall -Wno-unknown-pragmas $(MYCFLAGS)
-AR= ar rcu
+#AR= ar rcu
+AR= ar rc
 RANLIB= ranlib
 RM= rm -f
 LIBS= -lm $(MYLIBS)

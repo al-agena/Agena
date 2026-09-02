@@ -45,6 +45,28 @@
 #define CPUID
 #endif
 
+/* 7.9.6, ftime and stime have been removed with GLIBC 2.31. (GLIBC, not GCC !) */
+#undef LINUX_NOFSTIME
+
+#if defined(__linux__)
+#  include <features.h>
+#  if defined(__GLIBC__) && defined(__GLIBC_MINOR__)
+#    if (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 31))
+#      define LINUX_NOFSTIME 1
+#    endif
+#  endif
+#endif
+
+/* Fallback default value if the conditions above aren't met */
+#ifndef LINUX_NOFSTIME
+#  define LINUX_NOFSTIME 0
+#endif
+
+/* Fallback default value if the conditions above aren't met */
+#ifndef LINUX_NOFSTIME
+#  define LINUX_NOFSTIME 0
+#endif
+
 /* 32 or 64 bit ?  2.25.5 */
 #if LONG_MAX == 2147483647L
 #define IS32BIT

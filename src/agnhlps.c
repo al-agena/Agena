@@ -1904,9 +1904,8 @@ LUALIB_API double tools_time (void) {  /* 2.12.4, patched 2.12.6, changed 2.14.0
 
    Taken from newlib-4.2.0/newlib/libc/sys/phoenix/time.c */
 
-/* 2.25.5, ftime and stime have been removed with GLIBC 2.31 */
-#if (defined(__linux__) && defined(__GNUC__) && (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 31)))
-
+/* 2.25.5, ftime and stime have been removed with GLIBC 2.31. (GLIBC, not GCC !) */
+#if LINUX_NOFSTIME
 #ifndef set_errno
 #define set_errno(x) errno = (x)
 #endif
@@ -2802,9 +2801,9 @@ LUALIB_API uint32_t tools_swapuint32 (uint32_t d) {  /* 7.9.5 3 % tweak */
 #elif defined(_MSC_VER)
   return _byteswap_ulong(d);
 #else
-  return ((d & 0x000000FFU) << 24) | 
-         ((d & 0x0000FF00U) << 8)  | 
-         ((d & 0x00FF0000U) >> 8)  | 
+  return ((d & 0x000000FFU) << 24) |
+         ((d & 0x0000FF00U) << 8)  |
+         ((d & 0x00FF0000U) >> 8)  |
          ((d & 0xFF000000U) >> 24);
 #endif
 }
@@ -2846,9 +2845,9 @@ LUALIB_API void tools_swapint32_t (int32_t *n) {  /* 7.9.5, 5 % tweak */
 #else
   uint32_t v = (uint32_t)*n;
   v = ((v == 0x00000000) ? v :
-      ((v & 0x000000FFU) << 24) | 
-      ((v & 0x0000FF00U) << 8)  | 
-      ((v & 0x00FF0000U) >> 8)  | 
+      ((v & 0x000000FFU) << 24) |
+      ((v & 0x0000FF00U) << 8)  |
+      ((v & 0x00FF0000U) >> 8)  |
       ((v & 0xFF000000U) >> 24));
   *n = (int32_t)v;
 #endif
@@ -2891,9 +2890,9 @@ LUALIB_API void tools_swapuint32_t (uint32_t *n) {  /* 7.9.5, 3 % tweak */
   *n = _byteswap_ulong(*n);
 #else
   uint32_t v = *n;
-  *n = ((v & 0x000000FFU) << 24) | 
-       ((v & 0x0000FF00U) << 8)  | 
-       ((v & 0x00FF0000U) >> 8)  | 
+  *n = ((v & 0x000000FFU) << 24) |
+       ((v & 0x0000FF00U) << 8)  |
+       ((v & 0x00FF0000U) >> 8)  |
        ((v & 0xFF000000U) >> 24);
 #endif
 }

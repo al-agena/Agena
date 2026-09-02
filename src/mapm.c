@@ -127,7 +127,8 @@ static void	m_apm_set_double14 (M_APM atmp, double dd, int digits) {
 #endif
     if ((generated >= sizeof(buf)) || (cp = strstr(buf, "E")) == NULL) {
       M_apm_log_error_msg(M_APM_RETURN,
-        "\'m_apm_set_double14\', Invalid double input (likely a NAN or +/- INF)");
+        /* 7.9.5 change to prevent compiler warnings, cast to (char *) */
+        (char *)"\'m_apm_set_double14\', Invalid double input (likely a NAN or +/- INF)");
       M_set_to_zero(atmp);
       return;
     }

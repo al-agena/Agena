@@ -18,8 +18,10 @@
 #include <sys/types.h>  /* for off_t & off64_t */
 #endif
 
+#include "prepdefs.h"
+
 /* stime, ftime deprecated with GLIBC 2.31. */
-#if (defined(__linux__) && defined(__GNUC__) && (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 31)))
+#if LINUX_NOFSTIME
 #include <sys/timeb.h>
 #include <sys/times.h>
 #endif
@@ -30,7 +32,6 @@
 #include "agnt64.h"
 #include "cephes.h"
 #include "sunpro.h"  /* EXTRACT_WORDS */
-#include "prepdefs.h"
 #include "calc.h"
 /* We must define LUAI_USER_ALIGNMENT_T here again (see agnconf.h) in order to compile */
 #ifndef LUAI_USER_ALIGNMENT_T
@@ -1219,15 +1220,16 @@ LUALIB_API unsigned long tools_cksum (const unsigned char *b, size_t n);  /* 2.2
 LUALIB_API int tools_checkdatetime (int year, int month, int day, int hour, int minute, int second, int msecond);
 LUALIB_API Time64_T tools_maketime (int year, int month, int day, int hour, int minute, int second, int *rc);
 
-/* 2.25.5, ftime & stime have been deprecated with GLIBC 2.31. */
+/* 2.25.5, ftime & stime have been deprecated with GLIBC 2.31. (GLIBC, not GCC !) */
 
-#if (defined(__linux__) && defined(__GNUC__) && (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 31)))
+#if LINUX_NOFSTIME
 LUALIB_API int tools_stime (const time_t *t);
 LUALIB_API int tools_ftime (struct timeb *tb);
 #else
 #define tools_stime stime
 #define tools_ftime ftime
 #endif
+
 
 LUALIB_API double tools_esd (int y, int m, int d, int hh, int mm, int ss);
 LUALIB_API char   *tools_dtoa (double x);
