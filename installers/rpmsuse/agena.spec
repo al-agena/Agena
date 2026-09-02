@@ -2,7 +2,7 @@
 # ! build Agena in /home/proglang/agena !
 Summary: Agena Programming Language
 Name: agena
-Version: 7.9.2
+Version: 7.9.5
 Release: 1
 # change Release number in build.sh file, as well.
 #Source0: %{name}-%{version}-src.tar.gz
@@ -209,7 +209,11 @@ cp /home/proglang/agena/share/fractint/spectra2.map $RPM_BUILD_ROOT/usr/agena/sh
 cp /home/proglang/agena/share/fractint/spectra3.map $RPM_BUILD_ROOT/usr/agena/share/fractint
 cp /home/proglang/agena/share/fractint/spectra4.map $RPM_BUILD_ROOT/usr/agena/share/fractint
 cp /home/proglang/agena/share/fractint/spectral.map $RPM_BUILD_ROOT/usr/agena/share/fractint
-cp /home/proglang/agena/share/fractint/tiranga.map $RPM_BUILD_ROOT/usr/agena/share/fractint
+cp /home/proglang/agena/share/fractint/bordsprg.map $RPM_BUILD_ROOT/usr/agena/share/fractint
+cp /home/proglang/agena/share/fractint/rand01.map $RPM_BUILD_ROOT/usr/agena/share/fractint
+cp /home/proglang/agena/share/fractint/rand02.map $RPM_BUILD_ROOT/usr/agena/share/fractint
+cp /home/proglang/agena/share/fractint/rand03.map $RPM_BUILD_ROOT/usr/agena/share/fractint
+cp /home/proglang/agena/share/fractint/rand04.map $RPM_BUILD_ROOT/usr/agena/share/fractint
 cp /home/proglang/agena/share/fractint/alexmaps.txt $RPM_BUILD_ROOT/usr/agena/share/fractint
 cp /home/proglang/agena/src/agena $RPM_BUILD_ROOT/usr/local/bin
 #cp /home/proglang/fltk-1.4.4/editor/agenaedit $RPM_BUILD_ROOT/usr/local/bin

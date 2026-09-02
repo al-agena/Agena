@@ -4,7 +4,7 @@
 # Comment all `make install` statements in the Agena makefile before executing this script !
 
 # !!! DO NOT ADD A SUFFIX BEHIND THE NUMERIC VERSION NUMBER !!!
-export AGENANAME="agena-7.9.2"
+export AGENANAME="agena-7.9.5"
 
 # change the following path according to your needs
 export AGENADIR="/home/proglang/agena"
