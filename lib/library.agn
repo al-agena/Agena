@@ -13,7 +13,7 @@
 # CHANGE THE PATCHLEVEL IF YOU MODIFY library.agn or any other agn library WITHOUT COMPILING
 # A NEW C VERSION. NO Agena library update: comment the following assignment.
 
-environ.libpatchlevel := 1;
+# environ.libpatchlevel := 1;
 
 ##############################################################################################
 # determine operating system and cpu type                                                    #
@@ -1253,7 +1253,7 @@ end;
 # save an object to the given file denoted by fn (a string); 0.12.2, 26.10.2008
 
 binio.writetable := proc(o, fd) is  # 4.10.4
-   binio.writechar(fd, 5);       # mark values as table
+   binio.writechar(fd, 5);       # mark value as table
    binio.writenumber(fd, size o);  # number of entries
    for i, j in o do
       binio.writeobject(fd, i);  # write key
@@ -1273,8 +1273,7 @@ save := proc(o, fn :: string) is
    binio.lock(fd);  # Agena 1.8.5
    # write file header
    binio.writebytes(fd, strings.tobytes('AGENAWORKSPACE'));
-   binio.writechar(fd, 1);
-   binio.writechar(fd, 0);
+   binio.writechar(fd, 1, 0);  # 7.9.5 change
    # write data
    binio.writeobject(fd, o);
    # write metatable, 4.10.4
