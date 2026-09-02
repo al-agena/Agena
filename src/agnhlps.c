@@ -1333,6 +1333,20 @@ LUALIB_API void my_write (int hnd, void *data, size_t size) {
 }
 
 
+/* longs are always stored in Big Endian notation */
+LUALIB_API void my_writel (int hnd, int32_t data) {
+#if BYTE_ORDER != BIG_ENDIAN
+  tools_swapint32_t(&data);
+#endif
+  my_write(hnd, &data, sizeof(int32_t));
+}
+
+
+LUALIB_API void my_writec (int hnd, char data) {
+  my_write(hnd, &data, sizeof(char));
+}
+
+
 LUALIB_API int tools_fsync (int hnd) {  /* 2.17.8 */
   int rc;
 #ifdef _WIN32
@@ -1450,21 +1464,6 @@ LUALIB_API const char *my_ioerror (int en) {  /* 2.6.1 */
       return (errmsg == NULL) ? "unknown error" : errmsg;
     }
   }
-}
-
-
-/* longs are always stored in Big Endian notation */
-
-LUALIB_API void my_writel (int hnd, int32_t data) {
-#if BYTE_ORDER != BIG_ENDIAN
-  tools_swapint32_t(&data);
-#endif
-  my_write(hnd, &data, sizeof(int32_t));
-}
-
-
-LUALIB_API void my_writec (int hnd, char data) {
-  my_write(hnd, &data, sizeof(char));
 }
 
 
@@ -2559,7 +2558,7 @@ LUALIB_API uint64_t tools_twoint32touint64 (int32_t d, int32_t e) {  /* Little E
   return a;
 }
 
-LUALIB_API uint64_t tools_twouint32touint64 (uint32_t d, uint32_t e) {  /* Little Endian, 7.1.9 */
+LUALIB_API uint64_t tools_twouint32touint64 (uint32_t d, uint32_t e) {  /* Little Endian, 7.1.9, used by hashes.finger */
   uint64_t a;
   size_t i, s;
   unsigned char *dst = (unsigned char *)&a;
@@ -2573,66 +2572,16 @@ LUALIB_API uint64_t tools_twouint32touint64 (uint32_t d, uint32_t e) {  /* Littl
 
 /* 2.9.8, k=1: first int32_t, k=2: second one; used by xbase.DBFReadTimeStampAttribute, Little Endian */
 LUALIB_API int32_t tools_uint64toint32 (uint64_t d, char k) {
-  int32_t a;
+  return (int32_t)(d >> ((k - 1)*32));  /* 1.7 % faster, Little Endian only, 7.9.5 */
+  /* int32_t a;
   size_t i, s, q;
-  a = 0;  /* 2.25.5 */
+  a = 0;
   unsigned char *dst = (unsigned char *)&a;
   unsigned char *src = (unsigned char *)&d;
   s = sizeof(int32_t);
   q = s*(k - 1);
   for (i=q; i < k*s; i++) dst[i - q] = src[i];
-  return a;
-}
-
-/* Little Endian, signed 4-byte integer, 2.9.8, used by xbase.DBFWriteAttribute (binary I type) */
-LUALIB_API int32_t tools_swapint32 (int32_t d) {
-  int32_t a;
-  size_t i, s;
-  unsigned char *dst = (unsigned char *)&a;
-  unsigned char *src = (unsigned char *)&d;
-  s = sizeof(int32_t);
-  for (i=0; i < s; i++) dst[i] = src[i];  /* do nothing */
-  return a;
-}
-
-LUALIB_API float tools_swapfloat (float d) {
-  float a;
-  size_t i, s;
-  unsigned char *dst = (unsigned char *)&a;
-  unsigned char *src = (unsigned char *)&d;
-  s = sizeof(float);
-  for (i=0; i < s; i++) dst[i] = src[i];  /* do nothing */
-  return a;
-}
-
-LUALIB_API double tools_sint2double (int32_t a) {  /* Little Endian, 2.9.8, used by xbase.DBFReadAttribute */
-  int32_t d;
-  size_t i, s;
-  unsigned char *src = (unsigned char *)&a;
-  unsigned char *dst = (unsigned char *)&d;
-  s = sizeof(int32_t);
-  for (i=0; i < s; i++) dst[i] = src[i];  /* do nothing */
-  return (double)d;
-}
-
-LUALIB_API double tools_ushort2double (uint16_t a) {  /* Little Endian, 7.3.3, used by xbase.DBFReadAttribute */
-  uint16_t d;
-  size_t i, s;
-  unsigned char *src = (unsigned char *)&a;
-  unsigned char *dst = (unsigned char *)&d;
-  s = sizeof(uint16_t);
-  for (i=0; i < s; i++) dst[i] = src[i];  /* do nothing */
-  return (double)d;
-}
-
-LUALIB_API double tools_short2double (int16_t a) {  /* Little Endian, 7.3.3, used by xbase.DBFReadAttribute */
-  int16_t d;
-  size_t i, s;
-  unsigned char *src = (unsigned char *)&a;
-  unsigned char *dst = (unsigned char *)&d;
-  s = sizeof(int16_t);
-  for (i=0; i < s; i++) dst[i] = src[i];  /* do nothing */
-  return (double)d;
+  return a; */
 }
 
 LUALIB_API double tools_uint64todoubleandswap (uint64_t a) {  /* Little Endian */
@@ -2844,36 +2793,41 @@ LUALIB_API double tools_short2double (int16_t a) {  /* Big Endian, 7.3.3, used b
   for (i=0; i < s; i++) dst[i] = src[s - i - 1];  /* 2.9.0 */
   return (double)d;
 }
-#endif  /* end of ZZZ */
+#endif  /* end of Big Endian */
 
-LUALIB_API uint32_t tools_swapuint32 (uint32_t d) {
-  uint32_t a;
-  size_t i, s;
-  unsigned char *dst = (unsigned char *)&a;
-  unsigned char *src = (unsigned char *)&d;
-  s = sizeof(uint32_t);
-  for (i=0; i < s; i++) dst[i] = src[s - i - 1];
-  return a;
+
+LUALIB_API uint32_t tools_swapuint32 (uint32_t d) {  /* 7.9.5 3 % tweak */
+#if __GNUC_PREREQ(4, 3)
+  return __builtin_bswap32(d);
+#elif defined(_MSC_VER)
+  return _byteswap_ulong(d);
+#else
+  return ((d & 0x000000FFU) << 24) | 
+         ((d & 0x0000FF00U) << 8)  | 
+         ((d & 0x00FF0000U) >> 8)  | 
+         ((d & 0xFF000000U) >> 24);
+#endif
 }
 
-LUALIB_API uint16_t tools_swapuint16 (uint16_t d) {
-  uint16_t a;
-  size_t i, s;
-  unsigned char *dst = (unsigned char *)&a;
-  unsigned char *src = (unsigned char *)&d;
-  s = sizeof(uint16_t);
-  for (i=0; i < s; i++) dst[i] = src[s - i - 1];
-  return a;
+LUALIB_API uint16_t tools_swapuint16 (uint16_t d) {  /* 7.9.5 tweak */
+#if __GNUC_PREREQ(4, 3)
+  return __builtin_bswap16(d);
+#elif defined(_MSC_VER)
+  return _byteswap_ushort(d);
+#else
+  return (uint16_t)((d << 8) | (d >> 8));
+#endif
 }
 
-LUALIB_API int16_t tools_swapint16 (int16_t d) {
-  int16_t a;
-  size_t i, s;
-  unsigned char *dst = (unsigned char *)&a;
-  unsigned char *src = (unsigned char *)&d;
-  s = sizeof(int16_t);
-  for (i=0; i < s; i++) dst[i] = src[s - i - 1];
-  return a;
+LUALIB_API int16_t tools_swapint16 (int16_t d) {  /* 7.9.5 tweak */
+#if __GNUC_PREREQ(4, 3)
+  return (int16_t)__builtin_bswap16((uint16_t)d);
+#elif defined(_MSC_VER)
+  return (int16_t)_byteswap_ushort((unsigned short)d);
+#else
+  uint16_t v = (uint16_t)d;
+  return (int16_t)((v << 8) | (v >> 8));
+#endif
 }
 
 LUALIB_API uint32_t tools_uint64touint32 (uint64_t d, uint32_t *low) {  /* 2.25.5 */
@@ -2883,144 +2837,90 @@ LUALIB_API uint32_t tools_uint64touint32 (uint64_t d, uint32_t *low) {  /* 2.25.
   return v.parts.hx;  /* high */
 }
 
-
-LUALIB_API void tools_swapint32_t (int32_t *n) {
-  size_t i;
-#ifndef __HAIKU__
-  size_t s = sizeof(int32_t);
-#endif
-  union {
-    int32_t d;
-#ifdef __HAIKU__
-    unsigned char b[4];
+LUALIB_API void tools_swapint32_t (int32_t *n) {  /* 7.9.5, 5 % tweak */
+  if (!n) return;
+#if __GNUC_PREREQ(4, 3)
+  *n = (int32_t)__builtin_bswap32((uint32_t)*n);
+#elif defined(_MSC_VER)
+  *n = (int32_t)_byteswap_ulong((unsigned long)*n);
 #else
-    unsigned char b[s];
+  uint32_t v = (uint32_t)*n;
+  v = ((v == 0x00000000) ? v :
+      ((v & 0x000000FFU) << 24) | 
+      ((v & 0x0000FF00U) << 8)  | 
+      ((v & 0x00FF0000U) >> 8)  | 
+      ((v & 0xFF000000U) >> 24));
+  *n = (int32_t)v;
 #endif
-  } p, q;
-  p.d = *n;
-#ifndef __HAIKU__
-  for (i=0; i < s; i++) q.b[i] = p.b[s - i - 1];  /* 2.9.0 */
-#else
-  for (i=0; i < 4; i++) q.b[i] = p.b[4 - i - 1];  /* 2.9.4 */
-#endif
-  *n = q.d;
 }
 
-
-LUALIB_API void tools_swapint64_t (int64_t *n) {  /* 6.2.1 */
-  size_t i;
-#ifndef __HAIKU__
-  size_t s = sizeof(int64_t);
-#endif
-  union {
-    int64_t d;
-#ifdef __HAIKU__
-    unsigned char b[8];
+LUALIB_API void tools_swapint64_tX (int64_t *n) {  /* 7.9.5, 1 % tweak */
+  if (!n) return;
+#if __GNUC_PREREQ(4, 3)
+  *n = (int64_t)__builtin_bswap64((uint64_t)*n);
+#elif defined(_MSC_VER)
+  *n = (int64_t)_byteswap_uint64((unsigned __int64)*n);
 #else
-    unsigned char b[s];
+  uint64_t v = (uint64_t)*n;
+  v = ((v & 0x00000000FFFFFFFFULL) << 32) | ((v & 0xFFFFFFFF00000000ULL) >> 32);
+  v = ((v & 0x0000FFFF0000FFFFULL) << 16) | ((v & 0xFFFF0000FFFF0000ULL) >> 16);
+  v = ((v & 0x00FF00FF00FF00FFULL) << 8)  | ((v & 0xFF00FF00FF00FF00ULL) >> 8);
+  *n = (int64_t)v;
 #endif
-  } p, q;
-  p.d = *n;
-#ifndef __HAIKU__
-  for (i=0; i < s; i++) q.b[i] = p.b[s - i - 1];
-#else
-  for (i=0; i < 8; i++) q.b[i] = p.b[8 - i - 1];
-#endif
-  *n = q.d;
 }
 
-
-LUALIB_API void tools_swapuint64_t (uint64_t *n) {
-  size_t i;
-#ifndef __HAIKU__
-  size_t s = sizeof(uint64_t);
-#endif
-  union {
-    uint64_t d;
-#ifdef __HAIKU__
-    unsigned char b[8];
+LUALIB_API void tools_swapuint64_t (uint64_t *n) {  /* 7.9.5, 2 % tweak */
+  if (!n) return;
+#if __GNUC_PREREQ(4, 3)
+  *n = __builtin_bswap64(*n);
+#elif defined(_MSC_VER)
+  *n = _byteswap_uint64(*n);
 #else
-    unsigned char b[s];
+  uint64_t v = *n;
+  v = ((v & 0x00000000FFFFFFFFULL) << 32) | ((v & 0xFFFFFFFF00000000ULL) >> 32);
+  v = ((v & 0x0000FFFF0000FFFFULL) << 16) | ((v & 0xFFFF0000FFFF0000ULL) >> 16);
+  *n = ((v & 0x00FF00FF00FF00FFULL) << 8)  | ((v & 0xFF00FF00FF00FF00ULL) >> 8);
 #endif
-  } p, q;
-  p.d = *n;
-#ifndef __HAIKU__
-  for (i=0; i < s; i++) q.b[i] = p.b[s - i - 1];  /* 2.9.0 */
-#else
-  for (i=0; i < 8; i++) q.b[i] = p.b[4 - i - 1];  /* 2.9.4 */
-#endif
-  *n = q.d;
 }
 
-
-LUALIB_API void tools_swapuint32_t (uint32_t *n) {
-  size_t i;
-#ifndef __HAIKU__
-  size_t s = sizeof(uint32_t);
-#endif
-  union {
-    uint32_t d;
-#ifdef __HAIKU__
-    unsigned char b[4];
+LUALIB_API void tools_swapuint32_t (uint32_t *n) {  /* 7.9.5, 3 % tweak */
+  if (!n) return;
+#if __GNUC_PREREQ(4, 3)
+  *n = __builtin_bswap32(*n);
+#elif defined(_MSC_VER)
+  *n = _byteswap_ulong(*n);
 #else
-    unsigned char b[s];
+  uint32_t v = *n;
+  *n = ((v & 0x000000FFU) << 24) | 
+       ((v & 0x0000FF00U) << 8)  | 
+       ((v & 0x00FF0000U) >> 8)  | 
+       ((v & 0xFF000000U) >> 24);
 #endif
-  } p, q;
-  p.d = *n;
-#ifndef __HAIKU__
-  for (i=0; i < s; i++) q.b[i] = p.b[s - i - 1];  /* 2.9.0 */
-#else
-  for (i=0; i < 4; i++) q.b[i] = p.b[4 - i - 1];  /* 2.9.4 */
-#endif
-  *n = q.d;
 }
 
-
-LUALIB_API void tools_swapuint16_t (uint16_t *n) {  /* new 2.18.2 */
-  size_t i;
-#ifndef __HAIKU__
-  size_t s = sizeof(uint16_t);
-#endif
-  union {
-    uint16_t d;
-#ifdef __HAIKU__
-    unsigned char b[2];
+LUALIB_API void tools_swapuint16_t (uint16_t *n) {  /* 7.9.5, 4 % tweak */
+  if (!n) return;
+#if __GNUC_PREREQ(4, 3)
+  *n = __builtin_bswap16(*n);
+#elif defined(_MSC_VER)
+  *n = _byteswap_ushort(*n);
 #else
-    unsigned char b[s];
+  uint16_t v = *n;
+  *n = (uint16_t)((v << 8) | (v >> 8));
 #endif
-  } p, q;
-  p.d = *n;
-#ifndef __HAIKU__
-  for (i=0; i < s; i++) q.b[i] = p.b[s - i - 1];
-#else
-  for (i=0; i < 2; i++) q.b[i] = p.b[2 - i - 1];
-#endif
-  *n = q.d;
 }
 
-
-LUALIB_API void tools_swapint16_t (int16_t *n) {  /* new 2.38.3 */
-  size_t i;
-#ifndef __HAIKU__
-  size_t s = sizeof(int16_t);
-#endif
-  union {
-    int16_t d;
-#ifdef __HAIKU__
-    unsigned char b[2];
+LUALIB_API void tools_swapint16_t (int16_t *n) {  /* 7.9.5, 2 % tweak */
+  if (!n) return;
+#if __GNUC_PREREQ(4, 3)
+  *n = (int16_t)__builtin_bswap16((uint16_t)*n);
+#elif defined(_MSC_VER)
+  *n = (int16_t)_byteswap_ushort((unsigned short)*n);
 #else
-    unsigned char b[s];
+  uint16_t v = (uint16_t)*n;
+  *n = (int16_t)((v << 8) | (v >> 8));
 #endif
-  } p, q;
-  p.d = *n;
-#ifndef __HAIKU__
-  for (i=0; i < s; i++) q.b[i] = p.b[s - i - 1];
-#else
-  for (i=0; i < 2; i++) q.b[i] = p.b[2 - i - 1];
-#endif
-  *n = q.d;
 }
-
 
 /* Swaps the lower n bytes of word x; bytes above those will be discarded. */
 LUALIB_API uint32_t tools_swaplower32 (uint32_t x, unsigned int n) {
@@ -3033,7 +2933,6 @@ LUALIB_API uint32_t tools_swaplower32 (uint32_t x, unsigned int n) {
   }
   return y;
 }
-
 
 /* Swaps the upper n bytes of word x; bytes below those will be discarded. */
 #define SWAPLEFTSHIFT32  ((sizeof(uint32_t) - 1)*CHAR_BIT)

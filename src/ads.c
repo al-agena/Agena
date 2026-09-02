@@ -1416,9 +1416,10 @@ static int base_comment (lua_State *L) {
   off64_t pos, cpos, length, clen, cur, cnt, i, ind;
   size_t l, len, bufsize;
   int try, hnd;
-  char listflag, buffer[agn_getbuffersize(L)];  /* 2.34.9 adaption */
+  char listflag;  /* 2.34.9 adaption */
   const char *comment;
   bufsize = agn_getbuffersize(L);
+  char buffer[bufsize];
   hnd = agnL_checkinteger(L, 1);
   try = my_seek(hnd, 0L);
   if (try == -1) {  /* file is not open ? */
@@ -1601,7 +1602,8 @@ static int base_clean (lua_State *L) {
   char listflag;
   double time;
   off64_t tobeshortened;
-  char buffer[agn_getbuffersize(L)];  /* 2.34.9 adaption */
+  bufsize = agn_getbuffersize(L);
+  char buffer[bufsize];  /* 2.34.9 adaption */
   /* _vector_init(indices, sizeof(off64_t)); */
   Vector indices, invalid;
   vector_init(&indices);
@@ -1616,7 +1618,6 @@ static int base_clean (lua_State *L) {
   if (my_seek(hnd, 0L) == -1) {  /* file is not open ? */
     luaL_error(L, "Error in " LUA_QS ": file #%d is not open.", "ads.clean", hnd);
   }
-  bufsize = agn_getbuffersize(L);
   time = clock();
   length = my_lof(hnd);
   my_seek(hnd, MAXNRECORDS);

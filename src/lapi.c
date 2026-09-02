@@ -3377,27 +3377,6 @@ static FORCE_INLINE TString *getutype (lua_State *L, int idx) {
   return r;
 }
 
-
-LUA_API lua_Number agn_getepsilon (lua_State *L) {  /* 7.6.3 */
-  return L->Eps;
-}
-
-
-LUA_API lua_Number agn_getdblepsilon (lua_State *L) {  /* 7.6.3 */
-  return L->DoubleEps;
-}
-
-
-LUA_API lua_Number agn_gethepsilon (lua_State *L) {  /* 7.6.3 */
-  return L->hEps;
-}
-
-
-LUA_API lua_Number agn_getstarttime (lua_State *L) {  /* 7.6.3 */
-  return L->starttime;
-}
-
-
 LUA_API int agn_getutype (lua_State *L, int idx) {  /* 0.11.1; extended 0.14.0, modified 0.28.0 */
   TString *r = getutype(L, idx);
   if (r == NULL)
@@ -3576,6 +3555,26 @@ LUA_API int lua_setfenv (lua_State *L, int idx) {
   L->top--;
   lua_unlock(L);
   return res;
+}
+
+
+LUA_API lua_Number agn_getepsilon (lua_State *L) {  /* 7.6.3 */
+  return L->Eps;
+}
+
+
+LUA_API lua_Number agn_getdblepsilon (lua_State *L) {  /* 7.6.3 */
+  return L->DoubleEps;
+}
+
+
+LUA_API lua_Number agn_gethepsilon (lua_State *L) {  /* 7.6.3 */
+  return L->hEps;
+}
+
+
+LUA_API lua_Number agn_getstarttime (lua_State *L) {  /* 7.6.3 */
+  return L->starttime;
 }
 
 
@@ -6599,8 +6598,10 @@ LUA_API char *agn_gethistfile (lua_State *L) {  /* 5.2.2 */
 
 
 LUA_API void agn_setbuffersize (lua_State *L, int value) {  /* 2.2.0 */
-  if (value > 1073741824 || value < 512)
-    luaG_runerror(L, "Error in " LUA_QS ": value must be in the range [512, 1024^3].", "environ.kernel/buffersize");
+  if (value > 1048576 || value < 256)  /* 7.9.5 fix */
+    /* In Windows the maximum size of a Variable-Length Array (VLA) is 1 MegaBytes, Linux 2 to 8 MegaBytes and
+       Solaris 10 from 1 to 2 MegaBytes. Larger VLAs will segfault the interpreter. */
+    luaG_runerror(L, "Error in " LUA_QS ": value must be in the range [256, 1024^2].", "environ.kernel/buffersize");
   else
     L->buffersize = value;
 }

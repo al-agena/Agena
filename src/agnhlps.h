@@ -591,8 +591,14 @@ LUALIB_API double   tools_unswapdouble (uint64_t n);
 LUALIB_API float    tools_unswapfloat (uint32_t a);
 #endif  /* of BYTE_ORDER != BIG_ENDIAN */
 
+#if BYTE_ORDER != BIG_ENDIAN
+#define tools_swapint32(d) ((int32_t)(d))  /* used by xbase.DBFWriteAttribute, DBFReadAttribute (binary I type) */
+#define tools_swapfloat(d) ((float)(d))
+#else
 LUALIB_API int32_t  tools_swapint32 (int32_t d);
 LUALIB_API float    tools_swapfloat (float a);
+#endif
+
 LUALIB_API uint16_t tools_swapuint16 (uint16_t d);
 LUALIB_API int16_t  tools_swapint16 (int16_t d);
 LUALIB_API uint32_t tools_swapuint32 (uint32_t d);
@@ -625,9 +631,15 @@ LUALIB_API double   tools_uint64todoubleandswap (uint64_t a);
 LUALIB_API uint64_t tools_twoint32touint64 (int32_t d, int32_t e);
 LUALIB_API int32_t  tools_uint64toint32 (uint64_t d, char k);
 LUALIB_API uint32_t tools_uint64touint32 (uint64_t d, uint32_t *low);  /* 2.25.5 */
+#if BYTE_ORDER != BIG_ENDIAN
+#define tools_sint2double(a)   ((double)((int32_t)(a)))   /* used by xbase.DBFReadAttribute */
+#define tools_ushort2double(a) ((double)((uint16_t)(a)))  /* dito */
+#define tools_short2double(a)  ((double)((int16_t)(a)))   /* dito */
+#else
 LUALIB_API double   tools_sint2double (int32_t a);
 LUALIB_API double   tools_ushort2double (uint16_t a);
 LUALIB_API double   tools_short2double (int16_t a);
+#endif
 
 /* IEEE simulators */
 
@@ -1357,7 +1369,7 @@ typedef union {
 #  define cpackf(x,y) CMPLXF(x,y)
 #  define cpack(x,y)  CMPLX(x,y)
 #  define cpackl(x,y) CMPLXL(x,y)
-#elif (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 7)) && !defined(__INTEL_COMPILER)
+#elif __GNUC_PREREQ(4, 7) && !defined(__INTEL_COMPILER)
 #  define cpackf(x,y) __builtin_complex ((float) (x), (float) (y))
 #  define cpack(x,y)  __builtin_complex ((double) (x), (double) (y))
 #  define cpackl(x,y) __builtin_complex ((long double) (x), (long double) (y))

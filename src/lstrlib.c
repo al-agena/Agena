@@ -406,7 +406,7 @@ static int str_tobytes (lua_State *L) {
   str = luaL_checklstring(L, 1, &l);
   uint32 = (lua_type(L, 2) == LUA_TBOOLEAN) ? lua_toboolean(L, 2) : luaL_optint(L, 2, 0);
   tobigendian = agnL_optboolean(L, 3, 0);
-  if (!uint32) {
+  if (!uint32) {  /* single unsigned bytes, the default */
     agn_createseq(L, l);
     for (i=0; i < l; i++) {
       agn_seqsetinumber(L, -1, i + 1, cast_num(uchar(str[i])));

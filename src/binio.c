@@ -235,19 +235,28 @@ static int binio_length (lua_State *L) {  /* faster than using fstat */
 
 static int binio_writechar (lua_State *L) {
   int hnd, en;
-  size_t size, nargs, i;
-  unsigned char data;
+  size_t nargs, i, buf_count;
+  unsigned char write_buf[128];  /* 7.9.5, local buffer to batch up system writes */
   hnd = agn_tofileno(L, 1, 0);
   if (hnd == -1) luaL_error(L, "Error in " LUA_QS ": file handle is invalid or closed.", "binio.writechar");  /* 2.37.5 */
   nargs = lua_gettop(L);
-  luaL_checkstack(L, nargs, "too many arguments");
   if (nargs == 1)
     luaL_error(L, "Error in " LUA_QS ": expected at least a second argument.", "binio.writechar");
+  buf_count = 0;
   for (i=2; i <= nargs; i++) {
-    data = agn_checknumber(L, i);
-    size = sizeof(data);
-    set_errno(0);  /* 2.39.5 reset, better be sure than sorry, as Windows 2000 seems susceptible to uncleared errno's */
-    if (write(hnd, &data, size) != (ssize_t)size) {
+    write_buf[buf_count++] = (unsigned char)agn_checknumber(L, i);
+    if (buf_count == 128) {  /* 7.9.5, flush if the stack buffer is full (128 items) */
+      set_errno(0);  /* 2.39.5 reset */
+      if (write(hnd, write_buf, 128) != 128) {
+        en = errno;
+        luaL_error(L, "Error in " LUA_QS " with file #%d: %s.", "binio.writechar", hnd, my_ioerror(en));
+      }
+      buf_count = 0;
+    }
+  }
+  if (buf_count > 0) {  /* 7.9.5, flush out any remaining characters left over in the buffer */
+    set_errno(0);  /* 2.39.5 reset */
+    if (write(hnd, write_buf, buf_count) != (ssize_t)buf_count) {
       en = errno;
       luaL_error(L, "Error in " LUA_QS " with file #%d: %s.", "binio.writechar", hnd, my_ioerror(en));
     }
@@ -256,23 +265,25 @@ static int binio_writechar (lua_State *L) {
   return 1;
 }
 
-
 /* writes bytes stored in a sequence to a file, 0.25.0, 19.07.2009, extended 1.10.5, 05.04.2013 */
 static int binio_writebytes (lua_State *L) {
   int hnd, en;
-  size_t size, i, nargs, type;
+  size_t size, i, nseq, type;
   hnd = agn_tofileno(L, 1, 0);
   if (hnd == -1) luaL_error(L, "Error in " LUA_QS ": file handle is invalid or closed.", "binio.writebytes");  /* 2.37.5 */
   type = lua_type(L, 2);
   luaL_typecheck(L, type == LUA_TSEQ, 2, "sequence expected", type);
-  nargs = agn_seqsize(L, 2);
-  if (nargs == 0)
+  nseq = agn_seqsize(L, 2);
+  if (nseq == 0)
     lua_pushfail(L);  /* better sure than sorry */
   else {
-    unsigned char buffer[nargs];
+    int rc;
+    unsigned char buffer[nseq];
     size = sizeof(buffer);
-    for (i=0; i < nargs; i++)
-      buffer[i] = (unsigned char)lua_seqrawgetinumber(L, 2, i + 1);
+    for (i=0; i < nseq; i++)
+      buffer[i] = (unsigned char)agn_seqrawgetiinteger(L, 2, i + 1, &rc);
+    if (!rc)
+      luaL_error(L, "Error in " LUA_QS " sequence value must be an integer.", "binio.writebytes");
     set_errno(0);  /* 2.39.5 reset, better be sure than sorry, as Windows 2000 seems susceptible to uncleared errno's */
     if (write(hnd, &buffer, size) != (ssize_t)size) {
       en = errno;
@@ -285,26 +296,38 @@ static int binio_writebytes (lua_State *L) {
 }
 
 
-static int binio_writenumber (lua_State *L) {  /* extended 1.10.5, 05.04.2013 */
+static int binio_writenumber (lua_State *L) {
   int hnd, en;
-  size_t size, nargs, i;
-  uint64_t ulong;
-  double_cast x;  /* 2.16.3 */
+  size_t nargs, i, buf_count;
+  double_cast x;
+  uint64_t write_buf[16];  /* local stack buffer to batch up system writes, 7.9.5 */
+  const size_t element_size = sizeof(uint64_t);
   hnd = agn_tofileno(L, 1, 0);
-  if (hnd == -1) luaL_error(L, "Error in " LUA_QS ": file handle is invalid or closed.", "binio.writenumber");  /* 2.37.5 */
+  if (hnd == -1) luaL_error(L, "Error in " LUA_QS ": file handle is invalid or closed.", "binio.writenumber");
   nargs = lua_gettop(L);
-  luaL_checkstack(L, nargs, "too many arguments");
-  size = sizeof(ulong);
   if (nargs == 1)
     luaL_error(L, "Error in " LUA_QS ": expected at least a second argument.", "binio.writenumber");
+  buf_count = 0;
   for (i=2; i <= nargs; i++) {
     x.f = agn_checknumber(L, i);
 #if BYTE_ORDER != BIG_ENDIAN   /* 2.16.6 code optimisation, 2.17.1 change */
-    x.i = tools_swapu64(x.i);  /* only swap Little Endian bytes */
+    x.i = tools_swapu64(x.i);
 #endif
-    ulong = x.i;
-    set_errno(0);  /* 2.39.5 reset, better be sure than sorry, as Windows 2000 seems susceptible to uncleared errno's */
-    if (write(hnd, &ulong, size) != (ssize_t)size) {
+    write_buf[buf_count++] = x.i;
+    if (buf_count == 16) {  /* flush if the stack buffer is full (16 items), 7.9.5 tweak */
+      size_t bytes_to_write = 16 * element_size;
+      set_errno(0);
+      if (write(hnd, write_buf, bytes_to_write) != (ssize_t)bytes_to_write) {
+        en = errno;
+        luaL_error(L, "Error in " LUA_QS " with #%d: %s.", "binio.writenumber", hnd, my_ioerror(en));
+      }
+      buf_count = 0;
+    }
+  }
+  if (buf_count > 0) {  /* flush out any remaining numbers left over in the buffer, 7.9.5 tweak */
+    size_t bytes_to_write = buf_count * element_size;
+    set_errno(0);
+    if (write(hnd, write_buf, bytes_to_write) != (ssize_t)bytes_to_write) {
       en = errno;
       luaL_error(L, "Error in " LUA_QS " with #%d: %s.", "binio.writenumber", hnd, my_ioerror(en));
     }
@@ -316,22 +339,34 @@ static int binio_writenumber (lua_State *L) {  /* extended 1.10.5, 05.04.2013 */
 
 static int binio_writelongdouble (lua_State *L) {  /* 2.35.0 */
   int hnd, en;
-  size_t size, nargs, i;
-  long double x;
+  size_t nargs, i, buf_count;
+  long double write_buf[8];  /* 7.9.5, local buffer to batch up system writes */
+  const size_t element_size = sizeof(long double);
 #if BYTE_ORDER == BIG_ENDIAN
-    luaL_error(L, "Error in " LUA_QS ": Big Endian platforms are not supported.", "binio.writelongdouble");
+  luaL_error(L, "Error in " LUA_QS ": Big Endian platforms are not supported.", "binio.writelongdouble");
 #endif
   hnd = agn_tofileno(L, 1, 0);
   if (hnd == -1) luaL_error(L, "Error in " LUA_QS ": file handle is invalid or closed.", "binio.writelongdouble");  /* 2.37.5 */
   nargs = lua_gettop(L);
-  luaL_checkstack(L, nargs, "too many arguments");
-  size = sizeof(long double);
   if (nargs == 1)
     luaL_error(L, "Error in " LUA_QS ": expected at least a second argument.", "binio.writelongdouble");
+  buf_count = 0;
   for (i=2; i <= nargs; i++) {
-    x = agnL_checkdlongnum(L, i, "binio.writelongdouble");
-    set_errno(0);  /* 2.39.5 reset, better be sure than sorry, as Windows 2000 seems susceptible to uncleared errno's */
-    if (write(hnd, &x, size) != (ssize_t)size) {
+    write_buf[buf_count++] = agnL_checkdlongnum(L, i, "binio.writelongdouble");
+    if (buf_count == 8) {  /* 7.9.5, flush if the stack buffer is full (8 items) */
+      size_t bytes_to_write = 8 * element_size;
+      set_errno(0);  /* 2.39.5 reset */
+      if (write(hnd, write_buf, bytes_to_write) != (ssize_t)bytes_to_write) {
+        en = errno;
+        luaL_error(L, "Error in " LUA_QS " with #%d: %s.", "binio.writelongdouble", hnd, my_ioerror(en));
+      }
+      buf_count = 0;
+    }
+  }
+  if (buf_count > 0) {  /* 7.9.5, flush out any remaining numbers left over in the buffer */
+    size_t bytes_to_write = buf_count * element_size;
+    set_errno(0);  /* 2.39.5 reset */
+    if (write(hnd, write_buf, bytes_to_write) != (ssize_t)bytes_to_write) {
       en = errno;
       luaL_error(L, "Error in " LUA_QS " with #%d: %s.", "binio.writelongdouble", hnd, my_ioerror(en));
     }
@@ -343,22 +378,37 @@ static int binio_writelongdouble (lua_State *L) {  /* 2.35.0 */
 
 static int binio_writelong (lua_State *L) {  /* extended 1.10.5, 05.04.2013 */
   int hnd, en;
-  size_t size, nargs, i;
+  size_t nargs, i, buf_count;
   int32_t data;
+  int32_t write_buf[32];  /* 7.9.5, local stack buffer to batch up system writes */
+  const size_t element_size = sizeof(int32_t);
   hnd = agn_tofileno(L, 1, 0);
   if (hnd == -1) luaL_error(L, "Error in " LUA_QS ": file handle is invalid or closed.", "binio.writelong");  /* 2.37.5 */
   nargs = lua_gettop(L);
   luaL_checkstack(L, nargs, "too many arguments");
   if (nargs == 1)
     luaL_error(L, "Error in " LUA_QS ": expected at least a second argument.", "binio.writelong");
+  buf_count = 0;
   for (i=2; i <= nargs; i++) {
     data = agn_checknumber(L, i);
 #if BYTE_ORDER != BIG_ENDIAN
     tools_swapint32_t(&data);
 #endif
-    size = sizeof(data);
-    set_errno(0);  /* 2.39.5 reset, better be sure than sorry, as Windows 2000 seems susceptible to uncleared errno's */
-    if (write(hnd, &data, size) != (ssize_t)size) {
+    write_buf[buf_count++] = data;
+    if (buf_count == 32) {  /* 7.9.5, flush if the stack buffer is full (32 items) */
+      size_t bytes_to_write = 32 * element_size;
+      set_errno(0);  /* 2.39.5 reset */
+      if (write(hnd, write_buf, bytes_to_write) != (ssize_t)bytes_to_write) {
+        en = errno;
+        luaL_error(L, "Error in " LUA_QS " with file #%d: %s.", "binio.writelong", hnd, my_ioerror(en));
+      }
+      buf_count = 0;
+    }
+  }
+  if (buf_count > 0) {  /* 7.9.5, flush out any remaining numbers left over in the buffer */
+    size_t bytes_to_write = buf_count * element_size;
+    set_errno(0);  /* 2.39.5 reset */
+    if (write(hnd, write_buf, bytes_to_write) != (ssize_t)bytes_to_write) {
       en = errno;
       luaL_error(L, "Error in " LUA_QS " with file #%d: %s.", "binio.writelong", hnd, my_ioerror(en));
     }
@@ -380,7 +430,7 @@ static int binio_writestring (lua_State *L) {  /* extended 1.10.5, 05.04.2013; t
     luaL_error(L, "Error in " LUA_QS ": expected at least a second argument.", "binio.writestring");
   for (i=2; i <= nargs; i++) {
     value = agn_checklstring(L, i, &size);
-    my_writel(hnd, size);
+    my_writel(hnd, size);  /* write length of the following string */
     set_errno(0);  /* 2.39.5 reset, better be sure than sorry, as Windows 2000 seems susceptible to uncleared errno's */
     if (write(hnd, value, size) != (ssize_t)size) {
       en = errno;
@@ -396,8 +446,9 @@ static int binio_writeshortstring (lua_State *L) {  /* 0.32.0; tuned 2.11.5 */
   int hnd, en;
   size_t size, nargs, i;
   const char *value;
+  unsigned char item_buf[256];  /* 7.9.5 2-fold tweak; fixed size: 1 length byte + max 255 payload */
   hnd = agn_tofileno(L, 1, 0);
-    if (hnd == -1) luaL_error(L, "Error in " LUA_QS ": file handle is invalid or closed.", "binio.writeshortstring");  /* 2.37.5 */
+  if (hnd == -1) luaL_error(L, "Error in " LUA_QS ": file handle is invalid or closed.", "binio.writeshortstring");  /* 2.37.5 */
   nargs = lua_gettop(L);
   luaL_checkstack(L, nargs, "too many arguments");
   if (nargs == 1)
@@ -406,9 +457,14 @@ static int binio_writeshortstring (lua_State *L) {  /* 0.32.0; tuned 2.11.5 */
     value = agn_checklstring(L, i, &size);
     if (size > 255)
       luaL_error(L, "Error in " LUA_QS " with writing data to file #%d: string too long", "binio.writeshortstring", hnd);
-    my_writec(hnd, (unsigned char)size);
-    set_errno(0);  /* 2.39.5 reset, better be sure than sorry, as Windows 2000 seems susceptible to uncleared errno's */
-    if (write(hnd, value, size) != (ssize_t)size) {
+    /* 7.9.5 2-fold tweak; pack length and string data into a single continuous block */
+    item_buf[0] = (unsigned char)size;
+    if (size > 0) {
+      memcpy(&item_buf[1], value, size);
+    }
+    size_t total_size = 1 + size;
+    set_errno(0);  /* 2.39.5 reset */
+    if (write(hnd, item_buf, total_size) != (ssize_t)total_size) {
       en = errno;
       luaL_error(L, "Error in " LUA_QS " with file #%d: %s.", "binio.writeshortstring", hnd, my_ioerror(en));
     }
@@ -420,22 +476,35 @@ static int binio_writeshortstring (lua_State *L) {  /* 0.32.0; tuned 2.11.5 */
 
 static int binio_writeint64 (lua_State *L) {  /* 7.3.3 */
   int hnd, en;
-  size_t size, nargs, i;
-  int64_t x;
+  size_t nargs, i, buf_count;
+  int64_t write_buf[16];  /* 7.9.5, local buffer to batch up system writes */
+  const size_t element_size = sizeof(int64_t);
 #if BYTE_ORDER == BIG_ENDIAN
-    luaL_error(L, "Error in " LUA_QS ": Big Endian platforms are not supported.", "binio.writeint64");
+  luaL_error(L, "Error in " LUA_QS ": Big Endian platforms are not supported.", "binio.writeint64");
 #endif
   hnd = agn_tofileno(L, 1, 0);
   if (hnd == -1) luaL_error(L, "Error in " LUA_QS ": file handle is invalid or closed.", "binio.writeint64");
   nargs = lua_gettop(L);
   luaL_checkstack(L, nargs, "too many arguments");
-  size = sizeof(int64_t);
   if (nargs == 1)
     luaL_error(L, "Error in " LUA_QS ": expected at least a second argument.", "binio.writeint64");
+  buf_count = 0;
   for (i=2; i <= nargs; i++) {
-    x = agnL_checkint64(L, i, "binio.writeint64");
+    write_buf[buf_count++] = agnL_checkint64(L, i, "binio.writeint64");
+    if (buf_count == 16) {  /* 7.9.5, flush if the stack buffer is full (16 items) */
+      size_t bytes_to_write = 16*element_size;
+      set_errno(0);  /* reset, better be sure than sorry, as Windows 2000 seems susceptible to uncleared errno's */
+      if (write(hnd, write_buf, bytes_to_write) != (ssize_t)bytes_to_write) {
+        en = errno;
+        luaL_error(L, "Error in " LUA_QS " with #%d: %s.", "binio.writeint64", hnd, my_ioerror(en));
+      }
+      buf_count = 0;
+    }
+  }
+  if (buf_count > 0) {  /* 7.9.5, flush out any remaining numbers left over in the buffer */
+    size_t bytes_to_write = buf_count * element_size;
     set_errno(0);  /* reset, better be sure than sorry, as Windows 2000 seems susceptible to uncleared errno's */
-    if (write(hnd, &x, size) != (ssize_t)size) {
+    if (write(hnd, write_buf, bytes_to_write) != (ssize_t)bytes_to_write) {
       en = errno;
       luaL_error(L, "Error in " LUA_QS " with #%d: %s.", "binio.writeint64", hnd, my_ioerror(en));
     }
@@ -447,22 +516,35 @@ static int binio_writeint64 (lua_State *L) {  /* 7.3.3 */
 
 static int binio_writeuint64 (lua_State *L) {  /* 7.3.3 */
   int hnd, en;
-  size_t size, nargs, i;
-  uint64_t x;
+  size_t nargs, i, buf_count;
+  uint64_t write_buf[16];  /* 7.9.5, local buffer to batch up system writes */
+  const size_t element_size = sizeof(uint64_t);
 #if BYTE_ORDER == BIG_ENDIAN
-    luaL_error(L, "Error in " LUA_QS ": Big Endian platforms are not supported.", "binio.writeuint64");
+  luaL_error(L, "Error in " LUA_QS ": Big Endian platforms are not supported.", "binio.writeuint64");
 #endif
   hnd = agn_tofileno(L, 1, 0);
   if (hnd == -1) luaL_error(L, "Error in " LUA_QS ": file handle is invalid or closed.", "binio.writeuint64");
   nargs = lua_gettop(L);
   luaL_checkstack(L, nargs, "too many arguments");
-  size = sizeof(uint64_t);
   if (nargs == 1)
     luaL_error(L, "Error in " LUA_QS ": expected at least a second argument.", "binio.writeuint64");
+  buf_count = 0;
   for (i=2; i <= nargs; i++) {
-    x = agnL_checkuint64(L, i, "binio.writeuint64");
+    write_buf[buf_count++] = agnL_checkuint64(L, i, "binio.writeuint64");
+    if (buf_count == 16) {  /* 7.9.5, flush if the stack buffer is full (16 items) */
+      size_t bytes_to_write = 16*element_size;
+      set_errno(0);  /* reset, better be sure than sorry, as Windows 2000 seems susceptible to uncleared errno's */
+      if (write(hnd, write_buf, bytes_to_write) != (ssize_t)bytes_to_write) {
+        en = errno;
+        luaL_error(L, "Error in " LUA_QS " with #%d: %s.", "binio.writeuint64", hnd, my_ioerror(en));
+      }
+      buf_count = 0;
+    }
+  }
+  if (buf_count > 0) {  /* 7.9.5, flush out any remaining numbers left over in the buffer */
+    size_t bytes_to_write = buf_count * element_size;
     set_errno(0);  /* reset, better be sure than sorry, as Windows 2000 seems susceptible to uncleared errno's */
-    if (write(hnd, &x, size) != (ssize_t)size) {
+    if (write(hnd, write_buf, bytes_to_write) != (ssize_t)bytes_to_write) {
       en = errno;
       luaL_error(L, "Error in " LUA_QS " with #%d: %s.", "binio.writeuint64", hnd, my_ioerror(en));
     }
@@ -632,7 +714,7 @@ static int binio_readshortstring (lua_State *L) {
     if (size < 0) {
       luaL_error(L, "Error in " LUA_QS ": invalid string length (%d) in file.", "binio.readstring", size);
     }
-    char *data = agn_stralloc(L, size + 1, "binio.readstring", NULL);  /* 7.3.3 change */
+    char *data = agn_stralloc(L, size + 1, "binio.readstring", NULL);  /* 7.3.3 change, using a Variable-Length Array (VLA) is not faster */
     if (read(hnd, data, size) == (ssize_t)size) {  /* now read string itself */
       data[size] = '\0';
       lua_pushlstring(L, data, size);

@@ -1295,7 +1295,6 @@ static void *DBFReadAttribute (DBFHandle psDBF, int hEntity, int iField, char ch
   if (iField < 0 || iField >= psDBF->nFields) return NULL;
   /* Have we read the record ? */
   if (psDBF->nCurrentRecord != hEntity) {
-    int i;
     DBFFlushRecord(psDBF);
     nRecordOffset = psDBF->nRecordLength * hEntity + psDBF->nHeaderLength;
     if (_fseeki64(psDBF->fp, nRecordOffset, 0) != 0) {
@@ -1304,17 +1303,14 @@ static void *DBFReadAttribute (DBFHandle psDBF, int hEntity, int iField, char ch
       *iofailure = 1;
       return NULL;
     }
-    /* make sure that the entire record is read, including embedded 0's that may be part of a
-       binary Double, 2.2.0 RC 3 */
-    for (i=0; i < psDBF->nRecordLength; i++) {
-      if (fread(psDBF->pszCurrentRecord++, 1, 1, psDBF->fp) != 1) {
-        fprintf(stderr, "Error in " LUA_QS ": fread(%d) failed on DBF file.\n",
-          "xbase", psDBF->nRecordLength);
-        *iofailure = 1;
-        return NULL;
-      }
+    /* 7.9.5: ensures that exactly psDBF->nRecordLength bytes will be read in, including embedded zeros. 
+       Fallback to the original Shapelib 1.3.0 code. Speedup << 1 %. */
+    if (fread(psDBF->pszCurrentRecord, psDBF->nRecordLength, 1, psDBF->fp) != 1) {
+      fprintf(stderr, "Error in " LUA_QS ": fread(%d) failed on DBF file.\n",
+        "xbase", psDBF->nRecordLength);
+      *iofailure = 1;
+      return NULL;
     }
-    psDBF->pszCurrentRecord -= psDBF->nRecordLength;
     psDBF->nCurrentRecord = hEntity;
   }
   pabyRec = (unsigned char *) psDBF->pszCurrentRecord;
@@ -1324,10 +1320,6 @@ static void *DBFReadAttribute (DBFHandle psDBF, int hEntity, int iField, char ch
     nStringFieldLen = (psDBF->panFieldSize[iField] - offset)*2 + 10;
     pszStringField = (char *)SfRealloc(pszStringField, nStringFieldLen);
   }
-  /* if (psDBF->panFieldSize[iField] + 1 > nStringFieldLen) {
-    nStringFieldLen = psDBF->panFieldSize[iField]*2 + 10;  // ! Do NOT subtract offset as this will lead to lost bytes !
-    pszStringField = (char *)SfRealloc(pszStringField, nStringFieldLen);
-  } */
   /* Extract the requested field. */
   tools_memcpy(pszStringField,  /* copy the entire record including embedded 0's that may constiture a binary Double, 2.2.0 RC 3, 2.21.5 tweak */
     ((const char *)pabyRec) + psDBF->panFieldOffset[iField] + offset,

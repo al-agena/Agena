@@ -773,12 +773,13 @@ static int io_readfile (lua_State *L) {
 
 static int io_infile (lua_State *L) {  /* 1.11.6 */
   const char *filename, *pattern;
-  char *line, buf[agn_getbuffersize(L)];  /* 2.34.9 adaption */
+  char *line;  /* 2.34.9 adaption */
   int r, found, hasspec;
   size_t linelength, plength, bufsize, maxbufsize;
   ptrdiff_t start, end;
   FILE *fp;
   bufsize = agn_getbuffersize(L);
+  char buf[bufsize];
   found = 0;
   maxbufsize = 0;
   line = NULL;
@@ -1155,10 +1156,11 @@ static int io_readlines (lua_State *L) {
   int hasoption, hasfunction, r;
   size_t i, linelength, bufsize, maxbufsize;
   unsigned int c, convert;
-  char *line, buf[agn_getbuffersize(L)];  /* 2.34.9 adaption */
+  char *line;  /* 2.34.9 adaption */
   const char *skip, *filename;
   FILE *fp;
   bufsize = agn_getbuffersize(L);
+  char buf[bufsize];
   skip = "";
   maxbufsize = convert = hasoption = hasfunction = c = 0;
   for (i=2; i <= lua_gettop(L); i++) {
@@ -1211,10 +1213,11 @@ static int io_nlines (lua_State *L) {
   size_t linelength, bufsize, maxbufsize;
   uint32_t c;
   FILE *fp;
-  char *line, buf[agn_getbuffersize(L)];  /* 2.34.9 adaption */
+  char *line;  /* 2.34.9 adaption */
   const char *filename = NULL;
   line = NULL;
   bufsize = agn_getbuffersize(L);
+  char buf[bufsize];
   maxbufsize = 0;
   c = 0;
   fp = aux_gethandle(L, &filename, "rb", "io.nlines");  /* 2.2.0, 2.14.12 */
@@ -1249,10 +1252,11 @@ static int io_nlines (lua_State *L) {
 static int io_skiplines (lua_State *L) {
   size_t c, linelength, nchars, nlines, bufsize, maxbufsize;
   int r;
-  char *line, buf[agn_getbuffersize(L)];  /* 2.34.9 adaption */
+  char *line;  /* 2.34.9 adaption */
   const char *filename;
   FILE *fp;
   bufsize = agn_getbuffersize(L);
+  char buf[bufsize];
   c = 0;
   nchars = 0;
   maxbufsize = 0;
