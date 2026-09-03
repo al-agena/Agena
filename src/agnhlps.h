@@ -325,7 +325,7 @@ LUALIB_API FILE    *my_fcreate (const char *file);
 LUALIB_API int     my_close (int hnd);
 LUALIB_API off64_t my_seek (int hnd, off64_t pos);
 LUALIB_API off64_t my_lof (int hnd);
-LUALIB_API void    my_read (int hnd, void *data, size_t size);
+LUALIB_API ssize_t my_read (int hnd, void *data, size_t size);
 LUALIB_API int32_t my_readl (int hnd);
 LUALIB_API char    my_readc (int hnd);
 LUALIB_API void    my_write (int hnd, void *data, size_t size);
@@ -338,8 +338,10 @@ LUALIB_API void    my_expand (int hnd, int mrc, int cnt, int count, int *error);
 LUALIB_API off64_t my_fpos (int hnd);
 LUALIB_API const char *my_ioerror (int en);
 
-LUALIB_API size_t   sec_read (int hnd, void *data, size_t size);
-LUALIB_API int32_t  sec_readl (int hnd, ssize_t *success);
+LUALIB_API int      sec_read (int hnd, void *data, size_t size);
+LUALIB_API char     sec_readc (int hnd, int *success);
+LUALIB_API int32_t  sec_readl (int hnd, int *success);
+LUALIB_API off64_t  sec_lof (int hnd, int *success);
 
 LUALIB_API int tools_fsync (int hnd);
 LUALIB_API int tools_eof (FILE *f);
@@ -1190,10 +1192,11 @@ LUALIB_API uint32_t tools_crc32 (const char *buf, size_t len, uint32_t crc);  /*
 /* In tools_md5(), `len` is the size of the input string. `output` should be "unsigned char str[32 + 1]". */
 LUALIB_API void tools_md5 (char *input, size_t len, unsigned char *output);  /* 7.7.10 */
 LUALIB_API unsigned int lua_hashnum (double x);  /* 7.7.11 */
-LUALIB_API INLINE uint32_t tools_ntohl (uint32_t const net32);
+LUALIB_API INLINE uint32_t tools_ntohl (uint32_t net32);
 LUALIB_API INLINE float tools_ntohf (uint32_t net32);
 LUALIB_API INLINE uint16_t tools_htons (uint16_t net16);
 LUALIB_API INLINE uint32_t tools_htonl (uint32_t net32);
+LUALIB_API INLINE uint32_t tools_htonf (float f);
 LUALIB_API INLINE uint16_t tools_ntohs (uint16_t net16);
 LUALIB_API INLINE uint16_t tools_rfc1071 (void *buf, size_t size);  /* 3.17.3 */
 LUALIB_API unsigned long tools_cksum (const unsigned char *b, size_t n);  /* 2.22.1 */

@@ -219,10 +219,13 @@ static int com_read (lua_State *L) {
       } else {
         lua_pushlstring(L, buffer, n); goto readlabel;  /* bail out after one read operation */
       }
-    } else if (n < 0) {
+    }
+#ifndef _WIN32  /* 7.9.6 DWORDs are always unsigned */
+    else if (n < 0) {
       xfree(buffer);
       luaL_error(L, "Error in " LUA_QS " with port %p: %s.", "com.read", lua_topointer(L, 1), my_ioerror(en));
     }
+#endif
   } while (n > 0 && all);
   if (readsth)
     lua_pushlstring(L, buf.data, buf.size);

@@ -38,7 +38,7 @@
 #define agena_h
 
 #define AGENA_VERSION     "agena 7.9"
-#define AGENA_EDITION     "7.9.5"
+#define AGENA_EDITION     "7.9.6"
 #define AGENA_MOTTO       "deimos"
 #define AGENA_NAME        "agena"
 #define AGENA_LOGO        ">>"

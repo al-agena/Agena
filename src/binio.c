@@ -1268,7 +1268,7 @@ static void binio_readobjecterror (lua_State *L, int hnd, int message) {  /* May
 
 static void binio_readobjectutypename (lua_State *L, int hnd, int idx) {
   size_t size;
-  ssize_t success;
+  int success;
   size = sec_readl(hnd, &success);  /* first read length of the string */
   if (success) {
     char data[size + 1];
@@ -1327,7 +1327,7 @@ static int binio_readobjectaux (lua_State *L, int hnd) {  /* May 03, 2010 */
       }
       case 3: {  /* read string */
         size_t size;
-        ssize_t success;
+        int success;
         size = sec_readl(hnd, &success);  /* first read length of the string */
         if (success) {
           char data[size + 1];
@@ -1421,7 +1421,7 @@ static int binio_readobjectaux (lua_State *L, int hnd) {  /* May 03, 2010 */
         int typeset = ((data & 32) == 32);
         if (typeset) {  /* read user defined type */
           size_t size;
-          ssize_t success;
+          int success;
           size = sec_readl(hnd, &success);  /* first read length of the string */
           if (success) {
             char data[size + 1];
@@ -1480,7 +1480,7 @@ static int binio_readobjectaux (lua_State *L, int hnd) {  /* May 03, 2010 */
       }
       case 12: {  /* read procedure, Agena 1.6.1 */
         size_t size;
-        ssize_t success;
+        int success;
         size = sec_readl(hnd, &success);  /* first read length of the string */
         if (success) {
           char data[size + 1];

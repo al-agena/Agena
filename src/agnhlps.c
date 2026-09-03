@@ -1265,11 +1265,23 @@ LUALIB_API off64_t my_seek (int hnd, off64_t pos) {  /* 2.11.0 fix */
 }
 
 
-LUALIB_API off64_t my_lof (int hnd) {  /* length of file 2.11.0 fix */
+LUALIB_API off64_t my_lof (int hnd) {  /* get length of file 2.11.0 fix */
   off64_t size;
   size = lseek64(hnd, 0L, SEEK_END);
   if (size == -1)
     fprintf(stderr, "Agena IO subsystem: length-of-file error\n");
+  return size;
+}
+
+
+LUALIB_API off64_t sec_lof (int hnd, int *success) {  /* get length of file, 9.7.6 */
+  off64_t size = 0;
+  *success = 1;
+  size = lseek64(hnd, 0L, SEEK_END);
+  if (size == -1) {
+    *success = 0;
+    fprintf(stderr, "Agena IO subsystem: length-of-file error\n");
+  }
   return size;
 }
 
@@ -1284,45 +1296,63 @@ LUALIB_API off64_t my_fpos (int hnd) {
 }
 
 
-LUALIB_API void my_read (int hnd, void *data, size_t size) {
-  ssize_t z;
-  if ((z = read(hnd, data, size)) != (ssize_t)size) {
+/* Use a standard export macro or drop it if it is strictly internal */
+LUALIB_API ssize_t my_read (int hnd, void *data, size_t size) {
+  ssize_t z = read(hnd, data, size);
+  if (z < 0) {
     fprintf(stderr, "Agena IO subsystem: read error\n");
+    return -1;
   }
+  if (z != (ssize_t)size) {  /* unexpected partial reads */
+    fprintf(stderr, "Agena IO subsystem: warning, partial read\n");
+  }
+  return z;  /* actual number of bytes read */
 }
 
 
-LUALIB_API size_t sec_read (int hnd, void *data, size_t size) {
-  return (read(hnd, data, size) == (ssize_t)size);
-}
-
-
-LUALIB_API int32_t sec_readl (int hnd, ssize_t *success) {
-  int32_t data;
-  *success = (read(hnd, &data, sizeof(int32_t)) > 0);
-  if (*success == 0) return -1;
-#if BYTE_ORDER != BIG_ENDIAN
-  tools_swapint32_t(&data);
-#endif
-  return data;
-}
-
-
-/* longs are always stored in Big Endian notation */
-
-LUALIB_API int32_t my_readl (int hnd) {
-  int32_t data;
-  my_read(hnd, &data, sizeof(int32_t));
-#if BYTE_ORDER != BIG_ENDIAN
-  tools_swapint32_t(&data);
-#endif
-  return data;
+LUALIB_API int sec_read (int hnd, void *data, size_t size) {
+  return read(hnd, data, size) == (ssize_t)size;
 }
 
 
 LUALIB_API char my_readc (int hnd) {
-  char data;
+  char data = 0;  /* 7.9.6 fix */
   my_read(hnd, &data, sizeof(char));
+  return data;
+}
+
+
+LUALIB_API char sec_readc (int hnd, int *success) {  /* 7.9.6, by Gemini AI */
+  char data = 0;  /* prevent stack garbage leaks completely */
+  /* execute read and verify that exactly 1 byte was fetched */
+  ssize_t bytes_read = read(hnd, &data, sizeof(char));
+  *success = (bytes_read == sizeof(char));
+  if (!*success) return -1;  /* catch clean EOF or fatal system errors instantly */
+  return data;
+}
+
+
+/* longs are assumed to be stored in Big Endian notation; 7.9.6 fix to prevent garbled return
+   if EOF was reached prematurely */
+LUALIB_API int32_t my_readl (int hnd) {  /* 7.9.6, suggested by Gemini AI,
+  prevent garbled return if EOF was reached prematurely */
+  int32_t data;
+  if (my_read(hnd, &data, sizeof(int32_t)) == (ssize_t)sizeof(int32_t)) {
+    return (int32_t)tools_ntohl((uint32_t)data);
+  }
+  return INT32_MIN;
+}
+
+
+LUALIB_API int32_t sec_readl (int hnd, int *success) {  /* 7.9.6 fix by Gemini AI */
+  int32_t data = 0;  /* prevent stack garbage leaks completely */
+  /* require an exact 4-byte match for true success */
+  ssize_t bytes_read = read(hnd, &data, sizeof(int32_t));
+  *success = (bytes_read == sizeof(int32_t));
+  if (!*success) return -1;  /* catch clean EOF, partial read, or fatal errors instantly */
+#if BYTE_ORDER != BIG_ENDIAN
+  tools_swapint32_t(&data);
+#endif
   return data;
 }
 
@@ -1586,22 +1616,30 @@ LUALIB_API void my_move (int hnd, off64_t fpos, off64_t tpos, off64_t size) {  /
 
 LUALIB_API void my_expand (int hnd, int mrc, int cnt, int count, int *error) {
   int32_t dsbegin, dsend, offset, j, index, bufsize, cfpos, commentpos, commentlen, newindex;
-  int i;
+  int i, success;
   char *buffer;
-  cfpos = my_fpos(hnd);           /* save the current file position for later restoration */
+  cfpos = my_fpos(hnd);  /* save the current file position for later restoration */
   my_seek(hnd, BASECOMMENT);
-  commentpos = my_readl(hnd);
+  commentpos = sec_readl(hnd, &success);  /* 7.9.6 hardening */
+  if (!success) {
+    *error = 1;
+    return;
+  }
   commentlen = 0;
   if (commentpos != 0) {
     my_seek(hnd, commentpos);
-    commentlen = my_readl(hnd) + 4L;
+    commentlen = sec_readl(hnd, &success) + 4L;
+    if (!success) {  /* 7.9.6 hardening */
+      *error = 1;
+      return;
+    }
   }
   dsbegin = mrc*4L + BASE_OFFSET;   /* start of current dataset section */
   dsend = my_lof(hnd) - 1;          /* end of current dataset section */
   /* write 0L at end of file count times */
   my_seek(hnd, dsend + 1);
   for (i=0; i < count; i++) {
-    my_writel(hnd, 0L);          /* write zeros */
+    my_writel(hnd, 0L);  /* write zeros */
   }
   offset = count*4L;
   buffer = malloc(offset*sizeof(char));
@@ -1634,7 +1672,11 @@ LUALIB_API void my_expand (int hnd, int mrc, int cnt, int count, int *error) {
   /* update indices */
   for (j=0; j < cnt; j++) {
     my_seek(hnd, j*4L + BASE_OFFSET);
-    index = my_readl(hnd);
+    index = sec_readl(hnd, &success);
+    if (!success) {  /* 7.9.6 hardening */
+      *error = 1;
+      return;
+    }
     my_seek(hnd, j*4L + BASE_OFFSET);
     newindex = (index > commentpos) ? index + offset + commentlen : index + offset;
     my_writel(hnd, newindex);
@@ -20498,19 +20540,14 @@ LUALIB_API uint32_t tools_murmurhash3 (const void *key, uint32_t key_length_in_b
 
 
 /* Converts a 32 bit IEEE float represented as 4 bytes in network byte order to a float in host byte order
-   the 4 bytes are passed as an unsigned 32bit integer.
-   Taken from: https://www.ridgesolutions.ie/index.php/2018/07/27/code-for-ntohf/
-    */
+   the 4 bytes are passed as an unsigned 32bit integer. 7.9.6 cross-platform implementation by Gemini AI */
 LUALIB_API float tools_ntohf (uint32_t net32) {
-  union {
-    float f;
-    uint32_t u;
-  } value;
-  /* swap bytes if necessary and store to value */
-  value.u = tools_ntohl(net32);
-  /* return value as float */
-  return value.f;
+  uint32_t host32 = tools_ntohl(net32);
+  float final_float;
+  memcpy(&final_float, &host32, sizeof(float));
+  return final_float;
 }
+
 
 #if BYTE_ORDER == LITTLE_ENDIAN
 LUALIB_API uint16_t tools_htons (uint16_t net16) {
@@ -20530,19 +20567,31 @@ LUALIB_API uint32_t tools_htonl (uint32_t net32) {
 }
 #endif
 
+LUALIB_API uint32_t tools_htonf (float f) {  /* 7.9.6, created by Gemini AI */
+  uint32_t net32;
+  memcpy(&net32, &f, sizeof(float));
+  return tools_htonl(net32);
+}
+
+
 LUALIB_API uint16_t tools_ntohs (uint16_t net16) {
   return tools_htons(net16);
 }
 
+
 /* Taken from https://codereview.stackexchange.com/questions/149717/implementation-of-c-standard-library-function-ntohl
-   by user Matthieu M. */
-LUALIB_API uint32_t tools_ntohl (uint32_t const net32) {
+   by user Matthieu M. Fixed 7.9.6 to just return the input on Big Endian systems. */
+LUALIB_API uint32_t tools_ntohl (uint32_t net32) {
+#if BYTE_ORDER == BIG_ENDIAN  /* If the host is already Big Endian, no conversion is needed */
+  return net32;
+#else
   uint8_t data[4] = {};
-  memcpy(&data, &net32, sizeof(data));
+  memcpy(data, &net32, sizeof(data));
   return ((uint32_t)data[3] << 0)
        | ((uint32_t)data[2] << 8)
        | ((uint32_t)data[1] << 16)
        | ((uint32_t)data[0] << 24);
+#endif
 }
 
 /* RFC 1071 Internet Checksum

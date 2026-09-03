@@ -10,7 +10,8 @@ STRIP = strip --strip-unneeded
 LIB_DIR = ../lib
 
 # --- Flag Definitions ---
-BASE_FLAGS = -pipe -fgnu89-inline -Wno-attributes -fno-omit-frame-pointer $(SSE_FLAGS)
+# -Wtype-limits prints warnings about futile comparisons
+BASE_FLAGS = -pipe -fgnu89-inline -Wtype-limits -Wno-attributes -fno-omit-frame-pointer $(SSE_FLAGS)
 OFFS = -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast
 
 # Conditional flags configuration based on build type

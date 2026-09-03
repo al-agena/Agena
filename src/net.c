@@ -1371,9 +1371,13 @@ static int net_survey (lua_State *L) {
     offset = 1;
     size = agn_seqsize(L, 1);
     field = agn_malloc(L, size * sizeof(AGN_SOCKET), "net.survey", NULL);
-    for (i = 0; i < size; i++) {
+    for (i=0; i < size; i++) {
       val = (AGN_SOCKET)lua_seqrawgetinumber(L, 1, i + 1);
+#ifndef _WIN32  /* 7.9.6 change */
       if (val == HUGE_VAL || val < 0 || val >= FD_SETSIZE) {
+#else
+      if (val == HUGE_VAL || val >= FD_SETSIZE) {
+#endif
         xfree(field);
         luaL_error(L, "Error in " LUA_QS ": invalid socket handle encountered.", "net.survey");
       }

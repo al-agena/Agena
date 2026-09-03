@@ -1,3 +1,6 @@
+#ifndef agncfg_h
+#define agncfg_h
+
 #ifdef BYTE_ORDER
 #  undef BYTE_ORDER
 #endif
@@ -19,6 +22,7 @@
 #  undef NECESSARY_SIZE_OF_C_LONG
 #endif
 #define NECESSARY_SIZE_OF_C_LONG	8
-#define AGENA_BUILDDATE  "September 06, 2025"
-#define AGENA_BUILDTIME  "18:58 h"
+#define AGENA_BUILDDATE  "September 03, 2026"
+#define AGENA_BUILDTIME  "16:54 h"
 
+#endif
