@@ -1,3 +1,15 @@
+7.9.6 Deimos, September 03, 2026
+
+- `ads.clean` left memory leaks in case of an internal I/O error. This has been fixed.
+
+- All `ads` functions that read ADS files have been protected against corrupted input files. They now immediately trigger an error
+  instead of returning garbage or even leaving memory leaks.
+
+- If an ADS database or list contained 20,000 datasets or more, adding additional datasets with `ads.write` was very slow as it
+  extended the file by ten more sets only. As soon as the maximum capacity has been reached, `ads.write` now will automatically
+  expand the capacity by 13% of the previous record count, speeding up write operations significantly.
+
+
 7.9.5 Deimos, September 02, 2026
 
 - Minor performance tweak for `xbase` package read operations.
