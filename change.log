@@ -1,3 +1,45 @@
+7.9.7 Deimos, September 07, 2026
+
+- All `ads`, `bfield`, `binary` and `com` package functions can now be called OOP-style, `rbtree.iterate` and `rbtree.purge`,
+  too.
+
+- `ads.getall` has been changed: If any option is given, and if it is a sequence, set or table, then the contents of the ADS
+  sequence will be added to it, meaning that if the structure already includes elements, they will be preserved.
+
+- `ads.sizeof` now returns the maximum capacity of a database file as a second result.
+
+- ADS databases can now store numbers. Just pass the new `base=number` option to ads.new and write the numbers with
+  `ads.write`:
+
+  > import ads
+  > ads.new('test.agb', base = number);
+  > fh := ads.open('test.agb');
+  > for i to 25 do
+  >    fh@@write(i, ((i - 1) % 222) + 33)
+  > od;
+  > fh@getall([]):
+  [1, 33, 2, 34, 3, 35, 4, 36, 5, 37, 6, 38, 7, 39, 8, 40, 9, 41, 10, 42, 11, 43,
+  12, 44, 13, 45, 14, 46, 15, 47, 16, 48, 17, 49, 18, 50, 19, 51, 20, 52, 21, 53,
+  22, 54, 23, 55, 24, 56, 25, 57]
+  > fh@@close();
+
+- With string sequences, `ads.write` ignored the third and following arguments. This has been fixed.
+
+- `ads.write` when expanding a database registered the wrong new maximum capacity. This has been fixed. You can now also store
+  strings of any size, they are no longer cut off after the 30th character. The function now also no longer leaves behind 
+  memory leaks with databases and lists which could result in segmentation faults later on.
+
+- `ads.index` returned wrong results with string sequences. This has been fixed.
+
+- `ads.createbase` has been renamed to `ads.new`. An alias has been provided to ensure backward compatibility.
+
+- `ads.close`, `ads.new` and `ads.open` now print debugging information in case of failure.
+
+- When given an invalid number, `char` now includes it in the error message.
+
+- At exit, Agena now cleans up the readline history.
+
+
 7.9.6 Deimos, September 03, 2026
 
 - `ads.clean` left memory leaks in case of an internal I/O error. This has been fixed.
