@@ -1626,7 +1626,6 @@
       <KEYWORD3>ads.closeall</KEYWORD3>
       <KEYWORD3>ads.clean</KEYWORD3>
       <KEYWORD3>ads.comment</KEYWORD3>
-      <KEYWORD3>ads.createbase</KEYWORD3>
       <KEYWORD3>ads.createseq</KEYWORD3>
       <KEYWORD3>ads.createdict</KEYWORD3>
       <KEYWORD3>ads.desc</KEYWORD3>
@@ -1645,6 +1644,7 @@
       <KEYWORD3>ads.invalids</KEYWORD3>
       <KEYWORD3>ads.iterate</KEYWORD3>
       <KEYWORD3>ads.lookup</KEYWORD3>
+      <KEYWORD3>ads.new</KEYWORD3>
       <KEYWORD3>ads.openbase</KEYWORD3>
       <KEYWORD3>ads.opendict</KEYWORD3>
       <KEYWORD3>ads.peekin</KEYWORD3>

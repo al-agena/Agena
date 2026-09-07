@@ -279,9 +279,9 @@ object TPersHolder
           FontID = 7
           Name = 'ads'
           Keywords =
-            'ads,attrib,closebase,closeall,clean,comment,createbase,createseq,createdict,desc,' +
+            'ads,attrib,closebase,closeall,clean,comment,createseq,createdict,desc,' +
             'expand,fastclose,fastopen,fastread,fastseek,filepos,free,getall,getkeys,getvalues,' +
-            'index,indices,invalids,iterate,lookup,openbase,opendict,peekin,' +
+            'index,indices,invalids,iterate,lookup,new,openbase,opendict,peekin,' +
             'rawsearch,readbase,remove,retrieve,search,seqtolist,setdesc,sizeof,sync,writebase'
         end
         item

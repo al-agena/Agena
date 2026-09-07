@@ -74,7 +74,6 @@ ads.clean
 ads.closeall
 ads.closebase
 ads.comment
-ads.createbase
 ads.createdict
 ads.createseq
 ads.desc
@@ -92,6 +91,7 @@ ads.index
 ads.indices
 ads.invalids
 ads.lookup
+ads.new
 ads.openbase
 ads.opendict
 ads.peekin
