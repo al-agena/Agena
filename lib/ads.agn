@@ -2,7 +2,7 @@
 
 package.checkclib('ads');  # has C dynamic link library been found ?
 
-ads.initstring := 'ads v3.2.1 as of March 22, 2023\n';
+ads.initstring := 'ads v3.3.0 as of September 05, 2026\n';
 
 # ads.createdict:
 # Create an ADB file from a text dictionary. In the text file keys and values must be
@@ -65,14 +65,14 @@ end;
 # > fh := ads.fastopen('d:/t.agb');
 # > ads.fastread(fh, 'aleks'):
 
-ads.fastread := proc(fh :: nonnegint, key :: string) is
+ads.fastread := proc(fh :: userdata, key :: string) is
    local infos := ads.baseinfo[fh];
    return ads.fastseek(fh, key, infos[1], infos[2], infos[3], infos[4])
 end;
 
 # ads.fastclose written July 12, 2007
 
-ads.fastclose := proc(fh :: nonnegint) is
+ads.fastclose := proc(fh :: userdata) is
    local result := ads.close(fh);
    if result then
       clear ads.baseinfo[fh]
@@ -125,7 +125,7 @@ ads.auxconvert := proc(chars :: string) is
 end;
 
 
-ads.lookup := proc(fh :: nonnegint, word :: string) is
+ads.lookup := proc(fh :: userdata, word :: string) is
    local key := ads.auxconvert(word);
    local found := ads.read(fh, key);
    if assigned(found) then
@@ -159,7 +159,7 @@ end;
 # Gutþiuda = Gotenvolk
 # þiudinassus = Königreich
 
-ads.search := proc(fh :: nonnegint, word :: string, column) is
+ads.search := proc(fh :: userdata, word :: string, column) is
    local col, key;
    col := if column = null then 2 else column fi;
    key := ads.auxconvert(word);
@@ -187,9 +187,10 @@ end;
 # Backward compatibility to Agena 2.37.6 and earlier                                         #
 ##############################################################################################
 
-ads.openbase  := ads.open;
-ads.closebase := ads.close;
-ads.readbase  := ads.read;
-ads.writebase := ads.write;
-ads.rawsearch := ads.find;
+ads.createbase := ads.new;
+ads.openbase   := ads.open;
+ads.closebase  := ads.close;
+ads.readbase   := ads.read;
+ads.writebase  := ads.write;
+ads.rawsearch  := ads.find;
 
