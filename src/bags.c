@@ -262,20 +262,6 @@ static int mt_filled (lua_State *L) {  /* 2.18.0 */
 }
 
 
-static const struct luaL_Reg bags_bagslib [] = {  /* metamethods for bags */
-  {"attrib",   bags_attrib},
-  {"bagtoset", bags_bagtoset},
-  {"getsize",  bags_getsize},
-  {"include",  bags_include},
-  {"minclude", bags_minclude},
-  {"remove",   bags_remove},
-  {"__size",   bags_getsize},     /* retrieve the number of unique elements */
-  {"__empty",  mt_empty},         /* metamethod for `empty` operator */
-  {"__filled", mt_filled},        /* metamethod for `filled` operator */
-  {NULL, NULL}
-};
-
-
 static const luaL_Reg bagslib[] = {
   {"attrib",   bags_attrib},          /* August 14, 2012 */
   {"bagtoset", bags_bagtoset},        /* July 27, 2012 */
@@ -296,13 +282,20 @@ static void createmeta (lua_State *L) {
   luaL_newmetatable(L, AGENA_BAGSLIBNAME);  /* create metatable */
   lua_pushvalue(L, -1);  /* push metatable */
   lua_setfield(L, -2, "__index");  /* metatable.__index = metatable */
-  luaL_register(L, NULL, bags_bagslib);  /* methods */
+  luaL_register(L, NULL, bagslib);  /* methods */
 }
 
 LUALIB_API int luaopen_bags (lua_State *L) {
   /* metamethods */
   createmeta(L);
   /* register library */
+  lua_pushcfunction(L, bags_getsize);
+  lua_setfield(L, -2, "__size");
+  lua_pushcfunction(L, mt_empty);
+  lua_setfield(L, -2, "__empty");
+  lua_pushcfunction(L, mt_filled);
+  lua_setfield(L, -2, "__filled");
+  lua_pop(L, 1);
   luaL_register(L, AGENA_BAGSLIBNAME, bagslib);
   return 1;
 }

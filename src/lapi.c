@@ -2661,8 +2661,8 @@ LUA_API void agn_char (lua_State *L, int idx) {  /* 4.3.3 */
   if (ttisnumber(base)) {
     char s[1];
     lua_Number nb = nvalue(base);
-    if (nb < 0 || nb > 255) {
-      luaL_error(L, "Error in " LUA_QS ": invalid value.", "char");
+    if (nb < 0 || nb > 255 || tools_isfrac(nb)) {
+      luaL_error(L, "Error in " LUA_QS ": invalid value %lf.", "char", nb);
     } else {
       s[0] = uchar(nb);  /* better sure than sorry, 1.5.0 */
       setsvalue(L, base, luaS_newlstr(L, s, 1));

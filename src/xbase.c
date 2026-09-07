@@ -496,7 +496,7 @@ static int xbase_readdbf (lua_State *L) {  /* fixed 2.2.0 RC 2; extended 2.2.0 R
       lua_pop(L, 2);  /* clear stack */
       xfree(fieldinfo);
       if (fn != NULL) DBFClose(hnd);  /* 2.9.8 */
-      luaL_error(L, "Error in " LUA_QS ": string expected for left-hand side, got %s.", "environ.kernel",
+      luaL_error(L, "Error in " LUA_QS ": string expected for left-hand side, got %s.", "xbase.readdbf",
         lua_typename(L, type));
     }
     setting = lua_tostring(L, -1);
@@ -1303,7 +1303,7 @@ static void *DBFReadAttribute (DBFHandle psDBF, int hEntity, int iField, char ch
       *iofailure = 1;
       return NULL;
     }
-    /* 7.9.5: ensures that exactly psDBF->nRecordLength bytes will be read in, including embedded zeros. 
+    /* 7.9.5: ensures that exactly psDBF->nRecordLength bytes will be read in, including embedded zeros.
        Fallback to the original Shapelib 1.3.0 code. Speedup << 1 %. */
     if (fread(psDBF->pszCurrentRecord, psDBF->nRecordLength, 1, psDBF->fp) != 1) {
       fprintf(stderr, "Error in " LUA_QS ": fread(%d) failed on DBF file.\n",
@@ -3149,46 +3149,6 @@ static int xbase_gc (lua_State *L) {  /* rewritten 2.31.9 */
 }
 
 
-static const struct luaL_Reg xbase_lib [] = {
-  {"attrib", xbase_attrib},
-  {"close", xbase_close},
-  {"eof", xbase_eof},
-  {"fields", xbase_fields},
-  {"fieldtype", xbase_fieldtype},
-  {"filepos", xbase_filepos},
-  {"header", xbase_header},
-  {"ismarked", xbase_ismarked},
-  {"isopen", xbase_isopen},
-  {"isvoid", xbase_isvoid},
-  {"lock",   xbase_lock},
-  {"mark", xbase_mark},
-  {"purge", xbase_purge},
-  {"readdbf", xbase_readdbf},
-  {"readvalue", xbase_readvalue},
-  {"record", xbase_record},
-  {"records", xbase_records},
-  {"sync",   xbase_sync},
-  {"unlock", xbase_unlock},
-  {"write", xbase_write},
-  {"writeboolean", xbase_writeboolean},
-  {"writebyte", xbase_writebyte},
-  {"writecomplex", xbase_writecomplex},
-  {"writedate", xbase_writedate},
-  {"writedecimal", xbase_writedecimal},
-  {"writedouble", xbase_writedouble},
-  {"writefloat", xbase_writefloat},
-  {"writelong", xbase_writelong},
-  {"writenumber", xbase_writenumber},
-  {"writeshort",   xbase_writeshort},
-  {"writestring", xbase_writestring},
-  {"writetime", xbase_writetime},
-  {"writeushort",  xbase_writeushort},
-  {"__tostring", xbase_tostring},
-  {"__gc", xbase_gc},
-  {NULL, NULL}
-};
-
-
 static const luaL_Reg xbase[] = {
   {"attrib",       xbase_attrib},        /* 05.06.2010 */
   {"close",        xbase_close},         /* 05.06.2010 */
@@ -3235,14 +3195,19 @@ static const luaL_Reg xbase[] = {
 */
 
 static void createmeta (lua_State *L) {
-  luaL_newmetatable(L, "xbase");      /* create metatable for file handles */
+  luaL_newmetatable(L, AGENA_XBASELIBNAME);      /* create metatable for file handles */
   lua_pushvalue(L, -1);               /* push metatable */
   lua_setfield(L, -2, "__index");     /* metatable.__index = metatable */
-  luaL_register(L, NULL, xbase_lib);  /* methods */
+  luaL_register(L, NULL, xbase);  /* methods */
 }
 
 LUALIB_API int luaopen_xbase (lua_State *L) {
   createmeta(L);
+  lua_pushcfunction(L, xbase_gc);
+  lua_setfield(L, -2, "__gc");
+  lua_pushcfunction(L, xbase_tostring);
+  lua_setfield(L, -2, "__tostring");
+  lua_pop(L, 1);
   luaL_register(L, AGENA_XBASELIBNAME, xbase);
   lua_newtable(L);
   lua_setfield(L, -2, "openfiles");  /* table for information on all open files */

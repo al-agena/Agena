@@ -6,11 +6,12 @@
 //                          Author: Dr. F.H.Toor                         //
 //                           Dated: 08/07/2003                           //
 //                             Licence: FREE                             //
-//                 modified and extended by Alexander Walz               //
+//                 Modified and extended by Alexander Walz               //
+//                           Initiated May 2007                          //
 /////////////////////////////////////////////////////////////////////////*/
 
-/* initiated May 2007 */
 
+#include <errno.h>
 #include <fcntl.h>   /* for open */
 #include <stdio.h>
 #include <stdlib.h>
@@ -60,8 +61,8 @@ LUALIB_API int (luaopen_ads) (lua_State *L);
 #define DATECREATION             125L            /* start of original date of creation of db */
 #define COMMENT                  129L            /* position of comment */
 #define ADS_OFFSET               256L            /* first position of an entry in the index section */
-#define ADS_EXPANSION_SIZE       10L             /* number of records to be added in write op when db is full */
 
+#define STACKMAX                 LUA_MINSTACK + 10
 
 #define closeandbailout(L,hnd,success,pn) { \
   if (!success) { \
@@ -79,9 +80,164 @@ LUALIB_API int (luaopen_ads) (lua_State *L);
   if (my_seek(hnd, (what)) != 1) { luaL_error(L, "Error in " LUA_QS ": file is corrupted.", pn); } \
 }
 
-static int base_open (lua_State *L) {
+#define checkads(L, idx)  (*((int *)luaL_checkudata((L), (idx), AGENA_ADSLIBNAME)))
+#define isads(L, idx)     ((int *)luaL_isudata((L), (idx), AGENA_ADSLIBNAME))
+
+/* usage: ads.create(filename::string,
+                    max_num_records::long,
+                    max_key_legth::long,
+                    max_value_length::integer,
+                    type::string,
+                    description::string[max 24 chars]) */
+
+static const char *const dbtype[] =
+  { "database", "list", "seq", "string", "number" };
+
+static const int dbtypeno[] =
+  { 0,          1,      2,     2,        3 };
+
+static int get_dbtypeno (const char *name) {
+  int i, count = sizeof(dbtype)/sizeof(dbtype[0]);
+  for (i=0; i < count; i++) {
+    if (strcmp(dbtype[i], name) == 0) return dbtypeno[i];
+  }
+  return -1;
+}
+
+static int ads_new (lua_State *L) {
+  off64_t i, columns, maxrec, maxkeylen;
+  size_t l;
+  int hnd, type, next, nargs, j, en;
+  time_t seconds;
+  char Desc[DESCRIPTION_LEN];
+  const char *desc, *dbtype, *file;
+  nargs = lua_gettop(L);
+  file = agn_checkstring(L, 1);  /* 0.13.4 patch */
+  agn_checkvalidpath(L, file, 0, "ads.new");  /* 7.6.3 */
+  if (nargs > 1 && agn_isnumber(L, 2)) {  /* 2.37.6 */
+    maxrec = luaL_optoff64_t(L, 2, MAXNRECORDS_NUM);
+    if (maxrec < 1)
+      luaL_error(L, "Error in " LUA_QS ": " LUA_QS " must contain at least one record.", "ads.new", file);
+    dbtype = luaL_optstring(L, 3, "database");
+    type = get_dbtypeno(dbtype);
+    if (type == -1)
+      luaL_error(L, "Error in "LUA_QS ": unknown base type `%s` in file " LUA_QS ".", "ads.new", dbtype, file);
+    if (type == 0) {
+      columns = luaL_optoff64_t(L, 4, COLUMNS_NUM);
+      next = 5;
+    } else {
+      columns = 1;
+      next = 4;
+    }
+    maxkeylen = luaL_optoff64_t(L, next, KEYLEN_NUM) + 1;  /* including terminal \0 */
+    if (columns < 1)
+      luaL_error(L, "Error in " LUA_QS ": invalid number of columns in " LUA_QS ".", "ads.new", file);
+    next++;
+    desc = luaL_optlstring(L, next, DESCRIPTION_TEXT, &l);
+    if (l > DESCRIPTION_LEN - 1)
+      luaL_error(L, "Error in " LUA_QS ": description too long, pass up to %d characters.", "ads.new", DESCRIPTION_LEN - 1);
+    strncpy(Desc, desc, l);
+    for (j=l; j < DESCRIPTION_LEN; j++) Desc[j] = '\0';  /* prevent Valgrind exceptions, 2.37.6 */
+  } else {  /* nargs is 1 or option pairs given; 2.37.6 extension */
+    int checkoptions, descgiven;
+    size_t len;
+    /* set defaults */
+    descgiven = 0;
+    type = 0;  /* create database */
+    columns = COLUMNS_NUM;
+    maxrec = MAXNRECORDS_NUM;
+    maxkeylen = KEYLEN_NUM + 1;  /* including terminal \0 */
+    /* description is set after the loop if not given */
+    checkoptions = 5;  /* check n options; CHANGE THIS if you add/delete options */
+    if (nargs > 1 && lua_ispair(L, nargs))  /* 3.15.2 fix */
+      luaL_checkstack(L, 2, "too many arguments");
+    while (checkoptions-- && nargs > 1 && lua_ispair(L, nargs)) {
+      agn_pairgeti(L, nargs, 1);  /* get left value, set to stack index -2 */
+      agn_pairgeti(L, nargs, 2);  /* get right value, set to stack index  -1 */
+      if (agn_isstring(L, -2)) {
+        const char *option = agn_tostring(L, -2);
+        if (tools_streqx(option, "basetype", "base", NULL)) {
+          const char *str = lua_tolstring(L, -1, &len);
+          if (!str)
+            luaL_error(L, "Error in " LUA_QS ": " LUA_QS " option requires a string, got %s.", "ads.new",
+              "basetype", luaL_typename(L, -1));
+          type = get_dbtypeno(str);
+          if (type == -1)
+            luaL_error(L,
+              "Error in " LUA_QS ": " LUA_QS " option must be \'database\', \'list\', \'string\' or \'number\', got " LUA_QS ".",
+              "ads.new", "basetype", str);
+        } else if (tools_streqx(option, "desc", "description", NULL)) {
+          const char *str = lua_tolstring(L, -1, &len);
+          if (!str)
+            luaL_error(L, "Error in " LUA_QS ": " LUA_QS " option requires a string, got %s.", "ads.new",
+              "description", luaL_typename(L, -1));
+          if (len > DESCRIPTION_LEN - 1)
+            luaL_error(L, "Error in " LUA_QS ": description is too long, pass up to %d characters.", "ads.new", DESCRIPTION_LEN - 1);
+          strncpy(Desc, str, len);
+          for (j=len; j < DESCRIPTION_LEN; j++) Desc[j] = '\0';  /* prevent Valgrind exceptions, 2.37.6 */
+          descgiven = 1;
+        } else if (tools_streqx(option, "records", "recs", NULL)) {
+          if (!agn_isnumber(L, -1) || !tools_isposint(agn_tonumber(L, -1)))
+            luaL_error(L, "Error in " LUA_QS ": " LUA_QS " option requires a positive integer.", "ads.new", "records");
+          maxrec = agn_tonumber(L, -1);
+        } else if (tools_streqx(option, "columns", "cols", NULL)) {
+          if (!agn_isnumber(L, -1) || !tools_isposint(agn_tonumber(L, -1)))
+            luaL_error(L, "Error in " LUA_QS ": " LUA_QS " option requires a positive integer.", "ads.new", "columns");
+          columns = (off64_t)((type == 0) ? agn_tonumber(L, -1) : 1L);
+        } else if (tools_streqx(option, "keylen", "keylength", NULL)) {
+          if (!agn_isnumber(L, -1) || !tools_isposint(agn_tonumber(L, -1)))
+            luaL_error(L, "Error in " LUA_QS ": " LUA_QS " option requires a positive integer.", "ads.new", "keylength");
+          maxkeylen = (off64_t)agn_tonumber(L, -1) + 1L;  /* including terminal \0 */
+        } else {
+          agn_poptoptwo(L);
+          luaL_error(L, "Error in " LUA_QS ": unknown option " LUA_QS ".", "ads.new", option);
+        }
+      }
+      /* do not call lua_settop as it would corrupt the argument stack since we have already pushed values */
+      nargs--;
+      agn_poptoptwo(L);
+    }
+    /* set defaults if option not explicitly given */
+    if (type > 0) columns = 1;  /* list, string sequence or number sequence ? -> always one column only */
+    if (!descgiven) {
+      strncpy(Desc, DESCRIPTION_TEXT, DESCRIPTION_LEN - 1);
+      Desc[DESCRIPTION_LEN - 1] = '\0';
+    }
+  }
+  seconds = time(NULL);
+  set_errno(0);  /* reset, better be sure than sorry, as Windows 2000 seems susceptible to uncleared errno's */
+  hnd = my_create(file);
+  en = errno;
+  if (hnd == -1) {  /* 2.37.6 fix */
+    luaL_error(L, "Error in " LUA_QS ": could not create file " LUA_QS ":\n%s.", "ads.new", file, my_ioerror(en));  /* 7.9.7 extension */
+  }
+  my_write(hnd, STAMP_TEXT, STAMP_LEN);      /* stamp */
+  my_writel(hnd, VERSION_NUM);               /* database version (4 bytes) */
+  my_write(hnd, Desc, DESCRIPTION_LEN);      /* description */
+  my_writel(hnd, maxrec);                    /* maximum number of entries allowed in base */
+  my_writel(hnd, 0L);                        /* 0L, number of actual entries */
+  my_writel(hnd, maxkeylen);                 /* maximum length of keys */
+  my_writel(hnd, columns);                   /* number of columns */
+  my_writec(hnd, type);                      /* sequence (2), list (1) or database (0) */
+  my_writel(hnd, 0L);                        /* date of update */
+  my_writel(hnd, (off64_t)seconds);          /* date of creation */
+  my_writel(hnd, 0L);                        /* position of comment */
+  my_writec(hnd, 1);                         /* endianness */
+  for (i=0; i < 122; i++)
+    my_writec(hnd, 0);                       /* reserved space: 17 fields, each 4 bytes long */
+  if (type < 2)
+    for (i=0; i < maxrec; i++) {
+      my_writel(hnd, 0L);                    /* write zeros for key positions in index section */
+    }
+  my_close(hnd);
+  return 0;
+}
+
+/* ---------------- utilities taken from liolib.c ---------------------------- */
+
+static int ads_open (lua_State *L) {
   off64_t ver;
-  int hnd, readwrite, i, success;
+  int hnd, readwrite, i, success, *udata, en;
   const char *stamp, *file;
   stamp = STAMP_TEXT;
   file = luaL_checkstring(L, 1);
@@ -93,9 +249,11 @@ static int base_open (lua_State *L) {
       luaL_error(L, "Error in " LUA_QS ": lacking permissions for " LUA_QS ".", "ads.open", file);
     }
   }
+  set_errno(0);  /* 7.9.7, reset, better be sure than sorry, as Windows 20002 seems susceptible to uncleared errno's */
   hnd = (readwrite) ? my_open(file) : my_roopen(file);
+  en = errno;
   if (hnd == -1)
-    luaL_error(L, "Error in " LUA_QS ": cannot open file " LUA_QS ".", "ads.open", file);
+    luaL_error(L, "Error in " LUA_QS ": cannot open file " LUA_QS ":\n%s.", "ads.open", file, my_ioerror(en));
   /* 1.6.7 fix */
   sec_seek(L, hnd, STAMP, "ads.open");
   for (i=0; i < STAMP_LEN; i++) {
@@ -122,180 +280,58 @@ static int base_open (lua_State *L) {
     lua_rawset(L, -3);
   }
   agn_poptop(L);  /* delete "openfiles" */
-  lua_pushinteger(L, hnd);
+  /* lua_pushinteger(L, hnd); */
+  udata = (int *)lua_newuserdata(L, sizeof(int));
+  *udata = hnd;
+  luaL_getmetatable(L, AGENA_ADSLIBNAME);
+  lua_setmetatable(L, -2);
   return 1;
 }
 
 
-/* usage: ads.create(filename::string,
-                    max_num_records::long,
-                    max_key_legth::long,
-                    max_value_length::integer,
-                    type::string,
-                    description::string[max 24 chars]) */
-static int base_createbase (lua_State *L) {
-  off64_t i, columns, maxrec, maxkeylen;
-  size_t l;
-  int hnd, type, next, nargs, j;
-  time_t seconds;
-  char Desc[DESCRIPTION_LEN];
-  const char *desc, *list, *file;
-  nargs = lua_gettop(L);
-  file = agn_checkstring(L, 1);  /* 0.13.4 patch */
-  agn_checkvalidpath(L, file, 0, "ads.createbase");  /* 7.6.3 */
-  if (nargs > 1 && agn_isnumber(L, 2)) {  /* 2.37.6 */
-    maxrec = luaL_optoff64_t(L, 2, MAXNRECORDS_NUM);
-    if (maxrec < 1)
-      luaL_error(L, "Error in " LUA_QS ": " LUA_QS " must contain at least one record.", "ads.createbase", file);
-    list = luaL_optstring(L, 3, "database");
-    if (strcmp(list, "database") != 0 && strcmp(list, "list") != 0 && strcmp(list, "seq") != 0) {
-      luaL_error(L, "Error in "LUA_QS ": unknown base type `%s` in file " LUA_QS ".", "ads.createbase", list, file);
+static int aux_close (lua_State *L, int idx) {  /* 7.9.7 */
+  int en, result = 1, hnd = checkads(L, idx);
+  if (hnd == -1) return 0;  /* prevent segfaults later on */
+  set_errno(0);  /* reset, better be sure than sorry, as Windows 2000 seems susceptible to uncleared errno's */
+  if (!my_close(hnd) == 0) {
+    en = errno;  /* 7.9.7 */
+    luaL_error(L, "Error in " LUA_QS ": could not close file #%d:%s.", "ads.new", hnd, my_ioerror(en));  /* 7.9.7 extension */
+    result = 0;
+  } else {  /* delete file from global ads.openfiles table */
+    int *udata = (int *)lua_touserdata(L, idx);
+    if (udata != NULL) {
+      *udata = -1; /* This stops mt_gc from running a double-close later */
     }
-    if (strcmp(list, "database") == 0) {
-      columns = luaL_optoff64_t(L, 4, COLUMNS_NUM);
-      next = 5;
-      type = 0;
-    } else {
-      columns = 1;
-      next = 4;
-      type = (strcmp(list, "list") == 0) ? 1 : 2;
+    if (agnL_gettablefield(L, "ads", "openfiles", "ads.close", 1) == LUA_TTABLE) {
+      /* 0.20.2 & 1.6.4, avoid segmentation faults if openfiles does not exist */
+      lua_pushinteger(L, hnd);
+      lua_pushnil(L);
+      lua_rawset(L, -3);
     }
-    maxkeylen = luaL_optoff64_t(L, next, KEYLEN_NUM) + 1;  /* including terminal \0 */
-    if (columns < 1)
-      luaL_error(L, "Error in " LUA_QS ": invalid number of columns in " LUA_QS ".", "ads.createbase", file);
-    next++;
-    desc = luaL_optlstring(L, next, DESCRIPTION_TEXT, &l);
-    if (l > DESCRIPTION_LEN - 1)
-      luaL_error(L, "Error in " LUA_QS ": description too long, pass up to %d characters.", "ads.createbase", DESCRIPTION_LEN - 1);
-    strncpy(Desc, desc, l);
-    for (j=l; j < DESCRIPTION_LEN; j++) Desc[j] = '\0';  /* prevent Valgrind exceptions, 2.37.6 */
-  } else {  /* nargs is 1 or option pairs given; 2.37.6 extension */
-    int checkoptions, descgiven;
-    size_t len;
-    /* set defaults */
-    descgiven = 0;
-    type = 0;  /* create database */
-    columns = COLUMNS_NUM;
-    maxrec = MAXNRECORDS_NUM;
-    maxkeylen = KEYLEN_NUM + 1;  /* including terminal \0 */
-    /* description is set after the loop if not given */
-    checkoptions = 5;  /* check n options; CHANGE THIS if you add/delete options */
-    if (nargs > 1 && lua_ispair(L, nargs))  /* 3.15.2 fix */
-      luaL_checkstack(L, 2, "too many arguments");
-    while (checkoptions-- && nargs > 1 && lua_ispair(L, nargs)) {
-      agn_pairgeti(L, nargs, 1);  /* get left value, set to stack index -2 */
-      agn_pairgeti(L, nargs, 2);  /* get right value, set to stack index  -1 */
-      if (agn_isstring(L, -2)) {
-        const char *option = agn_tostring(L, -2);
-        if (tools_streqx(option, "basetype", "base", NULL)) {
-          const char *str = lua_tolstring(L, -1, &len);
-          if (!str)
-            luaL_error(L, "Error in " LUA_QS ": " LUA_QS " option requires a string, got %s.", "ads.createbase", "basetype", luaL_typename(L, -1));
-          if (!tools_streqx(str, "database", "list", "seq", NULL))
-            luaL_error(L, "Error in " LUA_QS ": " LUA_QS " option must be \'database\', \'list\' or \'seq\', got " LUA_QS ".", "ads.createbase", "basetype", str);
-          type = tools_streq(str, "database") ? 0 : (tools_streq(str, "list") ? 1 : 2);
-        } else if (tools_streqx(option, "desc", "description", NULL)) {
-          const char *str = lua_tolstring(L, -1, &len);
-          if (!str)
-            luaL_error(L, "Error in " LUA_QS ": " LUA_QS " option requires a string, got %s.", "ads.createbase", "description", luaL_typename(L, -1));
-          if (len > DESCRIPTION_LEN - 1)
-            luaL_error(L, "Error in " LUA_QS ": description is too long, pass up to %d characters.", "ads.createbase", DESCRIPTION_LEN - 1);
-          strncpy(Desc, str, len);
-          for (j=len; j < DESCRIPTION_LEN; j++) Desc[j] = '\0';  /* prevent Valgrind exceptions, 2.37.6 */
-          descgiven = 1;
-        } else if (tools_streqx(option, "records", "recs", NULL)) {
-          if (!agn_isnumber(L, -1) || !tools_isposint(agn_tonumber(L, -1)))
-            luaL_error(L, "Error in " LUA_QS ": " LUA_QS " option requires a positive integer.", "ads.createbase", "records");
-          maxrec = agn_tonumber(L, -1);
-        } else if (tools_streqx(option, "columns", "cols", NULL)) {
-          if (!agn_isnumber(L, -1) || !tools_isposint(agn_tonumber(L, -1)))
-            luaL_error(L, "Error in " LUA_QS ": " LUA_QS " option requires a positive integer.", "ads.createbase", "columns");
-          columns = (off64_t)((type == 0) ? agn_tonumber(L, -1) : 1L);
-        } else if (tools_streqx(option, "keylen", "keylength", NULL)) {
-          if (!agn_isnumber(L, -1) || !tools_isposint(agn_tonumber(L, -1)))
-            luaL_error(L, "Error in " LUA_QS ": " LUA_QS " option requires a positive integer.", "ads.createbase", "keylength");
-          maxkeylen = (off64_t)agn_tonumber(L, -1) + 1L;  /* including terminal \0 */
-        } else {
-          agn_poptoptwo(L);
-          luaL_error(L, "Error in " LUA_QS ": unknown option " LUA_QS ".", "ads.createbase", option);
-        }
-      }
-      /* do not call lua_settop as it would corrupt the argument stack since we have already pushed values */
-      nargs--;
-      agn_poptoptwo(L);
-    }
-    /* set defaults if option not explicitly given */
-    if (type > 0) columns = 1;  /* list or sequence ? -> always one column only */
-    if (!descgiven) {
-      strncpy(Desc, DESCRIPTION_TEXT, DESCRIPTION_LEN - 1);
-      Desc[DESCRIPTION_LEN - 1] = '\0';
-    }
+    agn_poptop(L);  /* delete "openfiles" */
   }
-  seconds = time(NULL);
-  hnd = my_create(file);
-  if (hnd == -1)  /* 2.37.6 fix */
-    luaL_error(L, "Error in " LUA_QS ": could not create file.", "ads.createbase");
-  my_write(hnd, STAMP_TEXT, STAMP_LEN);      /* stamp */
-  my_writel(hnd, VERSION_NUM);               /* database version (4 bytes) */
-  my_write(hnd, Desc, DESCRIPTION_LEN);      /* description */
-  my_writel(hnd, maxrec);                    /* maximum number of entries allowed in base */
-  my_writel(hnd, 0L);                        /* 0L, number of actual entries */
-  my_writel(hnd, maxkeylen);                 /* maximum length of keys */
-  my_writel(hnd, columns);                   /* number of columns */
-  my_writec(hnd, type);                      /* sequence (2), list (1) or database (0) */
-  my_writel(hnd, 0L);                        /* date of update */
-  my_writel(hnd, (off64_t)seconds);          /* date of creation */
-  my_writel(hnd, 0L);                        /* position of comment */
-  my_writec(hnd, 1);                         /* endianness */
-  for (i=0; i < 122; i++)
-    my_writec(hnd, 0);                       /* reserved space: 17 fields, each 4 bytes long */
-  if (type < 2)
-    for (i=0; i < maxrec; i++) {
-      my_writel(hnd, 0L);                    /* write zeros for key positions in index section */
-    }
-  my_close(hnd);
-  return 0;
+  return result;
 }
 
-
-static int base_close (lua_State *L) {
-  int nargs, hnd, i, result;
+static int ads_close (lua_State *L) {
+  int nargs, i, result;
   result = 1;
   nargs = lua_gettop(L);
-  luaL_checkstack(L, nargs, "too many arguments for " LUA_QS "ads.close");
   for (i=1; i <= nargs; i++) {
-    hnd = agnL_checkinteger(L, i);
-    if (hnd < 3) {  /* avoid standard streams to be closed */
-      result = 0;
-      continue;
-    }
-    if (!my_close(hnd) == 0)
-      result = 0;
-    else {
-      /* delete file from global ads.openfiles table */
-      if (agnL_gettablefield(L, "ads", "openfiles", "ads.close", 1) == LUA_TTABLE) {
-        /* 0.20.2 & 1.6.4, avoid segmentation faults if openfiles does not exist */
-        lua_pushinteger(L, hnd);
-        lua_pushnil(L);
-        lua_rawset(L, -3);
-      }
-      agn_poptop(L);  /* delete "openfiles" */
-    }
+    if (aux_close(L, i) == 0) result = 0;
   }
   lua_pushboolean(L, result);
   return 1;
 }
 
 
-#define STACKMAX   LUA_MINSTACK + 10
-
-static int base_read (lua_State *L) {
+static int ads_read (lua_State *L) {
   off64_t mid, low, high, pos, rcln, keylen, columns;
   size_t bufsize;
   int res, try, i, hnd, success;
-  char listflag;
+  char dbtype;
   const char *key;
-  hnd = agnL_checkinteger(L, 1);
+  hnd = checkads(L, 1);
   key = luaL_checkstring(L, 2);
   low = 0;
   bufsize = agn_getbuffersize(L);
@@ -315,43 +351,92 @@ static int base_read (lua_State *L) {
   char tkey[keylen];
   columns = sec_readl(hnd, &success);
   closeandbailout(L, hnd, success, "ads.read");  /* 7.9.6 security fix */
-  listflag = sec_readc(hnd, &success);
+  dbtype = sec_readc(hnd, &success);
   closeandbailout(L, hnd, success, "ads.read");  /* 7.9.6 security fix */
-  if (listflag == 2) {  /* read sequence; this is the fastest way known; storing the length for each item
-    and reading it during file traversal - thus avoiding checking each char for \0 - is around 30 % slower */
-    int i, j, k, oldj;
-    char buffer[bufsize];  /* 2.34.9 adaption */
-    char data[keylen];
-    sec_seek(L, hnd, ADS_OFFSET, "ads.read");
+  sec_seek(L, hnd, ADS_OFFSET, "ads.read");
+  if (dbtype == 2) {  /* read sequence; this is the fastest way known; storing the length for each item
+    and reading it during file traversal - thus avoiding checking each char for \0 - is around 30 % slower;
+    code rewritten by Gemini AI 7.9.7 to process strings > bufsize */
+    int i;
+    char buffer[bufsize];
+    int key_idx = 0;            /* Tracks how many chars of the 'key' match consecutively */
+    int is_mismatch = 0;        /* Flags if the current file item already mismatched the key */
     while (1) {
-      res = read(hnd, buffer, bufsize);  /* 2.34.9 adaption */
-      if (res == -1) {  /* 1.6.11 */
-        my_close(hnd);  /* 2.11.0 RC2 */
+      res = read(hnd, buffer, bufsize);
+      if (res == -1) {
+        my_seek(hnd, 0L);
         luaL_error(L, "Error in " LUA_QS ": could not read base.", "ads.read");
       }
-      i = res - 1;  /* get number of characters read, adjust to index counting mode (indices start from 0 */
-      /* now set pointer to end of the last item that is stored completely in current chunk */
-      while (buffer[i] != '\0') i--;
-      j = oldj = 0;
-      while (j < i) {  /* from the beginning of the chunk read in item by item */
-        k = 0;
-        while (buffer[j] != '\0') {  /* assign item to data; memcpy is much slower  */
-          data[k] = buffer[j];
-          j++; k++;
+      if (res == 0) break;      /* End of file reached */
+      for (i = 0; i < res; i++) {
+        if (buffer[i] == '\0') {
+          /* We hit the end of a file item.
+             It's a full match ONLY if we matched every char up to the key's own null terminator. */
+          if (!is_mismatch && key[key_idx] == '\0') {
+            lua_pushtrue(L);
+            return 1;
+          }
+          /* Reset tracking states for the next item in the file */
+          key_idx = 0;
+          is_mismatch = 0;
+        } else {
+          /* If we haven't already failed this item, validate the current character */
+          if (!is_mismatch) {
+            /* If the key ended early, or characters don't match, flag a mismatch */
+            if (key[key_idx] == '\0' || buffer[i] != key[key_idx]) {
+              is_mismatch = 1;
+            } else {
+              key_idx++; /* Character matches, move to the next one */
+            }
+          }
         }
-        data[k] = '\0';
-        if (tools_streq(data, key)) {  /* compare item with key searched, 5.5.9 tweak */
-          lua_pushtrue(L);
-          return 1;
-        }
-        j++;  /* skip '\0' */
       }
-      if (res != bufsize) break;  /* EOF reached, 2.34.9 adaption */
-      lseek(hnd, i - bufsize + 1, SEEK_CUR);  /* 2.34.9 adaption */
-    }  /* if end of buffer is reached, read in new chunk and parse it to the first \0 */
-    lua_pushfalse(L);
+      if (res != bufsize) break; /* Clean EOF check without needing lseek rollbacks */
+    }
+    /* Check the very last item if the file didn't end with a '\0' */
+    if (!is_mismatch && key[key_idx] == '\0' && key_idx > 0) {
+      lua_pushtrue(L);
+      return 1;
+    }
+    lua_pushfalse(L);  /* Item not found */
+    return 1;
+  } else if (dbtype == 3) {  /* generated by Gemini AI */
+    int j, res;
+    double x, val = (double)luaL_checknumber(L, 2);
+    const int dblsize = sizeof(double); /* Strictly 8 bytes */
+    /* A small sliding window to collect bytes across buffer chunks */
+    char window[dblsize], buffer[bufsize];
+    int windowlen = 0;
+    /* Detect system endianness at compile time (Optimization) */
+    while (1) {
+      res = read(hnd, buffer, bufsize);
+      if (res == -1) {
+        my_close(hnd);
+        luaL_error(L, "Error in " LUA_QS ": could not read base.", "ads.read");
+      }
+      if (res == 0) break; /* eof */
+      j = 0;
+      while (j < res) {
+        window[windowlen++] = buffer[j++];  /* stream bytes into our 8-byte parsing window */
+        if (windowlen == dblsize) {
+          memcpy(&x, window, dblsize);
+#if BYTE_ORDER == BIG_ENDIAN
+          x = tools_tobigendian(x);
+#endif
+          if (x == val) {
+            lua_pushtrue(L);
+            return 1;
+          }
+          /* Reset window length for the next sequential double. */
+          windowlen = 0;
+        }
+      }
+      if (res != bufsize) break;  /* Safe break for arbitrary buffer lengths */
+    }
+    lua_pushfalse(L);  /* Value not found */
     return 1;
   }
+  /* read base or list */
   while (low <= high) {
     mid = tools_midpoint(low, high);  /* 2.38.2 patch */
     sec_seek(L, hnd, mid*4L + ADS_OFFSET, "ads.read");  /* move to index section */
@@ -365,7 +450,7 @@ static int base_read (lua_State *L) {
     }
     res = strcmp(key, tkey);  /* is this the key we are searching for ? */
     if (res == 0) {
-      if (listflag) {
+      if (dbtype) {
         lua_pushtrue(L);
         return 1; }
       else {
@@ -393,7 +478,7 @@ static int base_read (lua_State *L) {
     else  /* ... or in lower half */
       high = mid - 1;
   }
-  if (listflag)
+  if (dbtype)
     lua_pushfalse(L);
   else
     lua_pushnil(L);
@@ -401,32 +486,48 @@ static int base_read (lua_State *L) {
 }
 
 
-static int base_fastseek (lua_State *L) {
-  off64_t mid, low, high, rcln, keylen, pos;
-  int res, hnd, try, success;
-  char listflag;
+static int ads_fastseek (lua_State *L) {
+  off64_t mid, low, high, rcln, keylen, pos, eof;
+  int res, hnd, try, success, nargs;
+  char dbtype;
   const char *key;
-  hnd = agnL_checkinteger(L, 1);
+  nargs = lua_gettop(L);
+  hnd = checkads(L, 1);
   key = luaL_checkstring(L, 2);
   luaL_checktype(L, 3, LUA_TTABLE);     /* a table containing all valid indices, see ads.indices */
   low = 0L;
   high = agnL_checkinteger(L, 4) - 1L;  /* actual number of records, must be > 0 */
-  keylen = agnL_checkinteger(L, 5);     /* standard length of the key */
-  listflag = agnL_checkinteger(L, 6);   /* 0 for database, 1 for list, 2 for sequence */
-  char tkey[keylen];
-  if (listflag > 1) {  /* got sequence */
-    luaL_error(L, "Error in " LUA_QS ": function is not applicable to sequences.", "ads.fastseek");
-  }
-  try = my_seek(hnd, 0L);  /* 2.11.0 RC2 */
+  try = my_seek(hnd, KEYLENGTH);
   if (try == -1) {  /* file is not open ? */
     luaL_error(L, "Error in " LUA_QS ": file #%d is not open.", "ads.fastseek", hnd);
   }
+  if (nargs < 5) {  /* get (standard) length of the key */
+    keylen = sec_readl(hnd, &success);
+    closeandbailout(L, hnd, success, "ads.fastseek");
+  } else {
+    keylen = agn_checkposint(L, 5);
+  }
+  if (nargs < 6) {  /* get base type */
+    sec_seek(L, hnd, TYPE, "ads.fastseek");
+    dbtype = sec_readc(hnd, &success);
+    closeandbailout(L, hnd, success, "ads.fastseek");
+  } else {
+    dbtype = agn_checkposint(L, 6);
+  }
+  if (dbtype > 1) {  /* got string or number sequence */
+    my_seek(hnd, 0L);
+    luaL_error(L, "Error in " LUA_QS ": number and string sequences are not supported.", "ads.fastseek");
+  }
+  eof = sec_lof(hnd, &success);
+  closeandbailout(L, hnd, success, "ads.fastseek");
+  sec_seek(L, hnd, ADS_OFFSET, "ads.fastseek");
+  char tkey[keylen];
   while (low <= high) {
     mid = tools_midpoint(low, high);  /* 2.38.2 patch */
     pos = (off64_t)agn_getinumber(L, 3, mid);
-    if (pos == 0) {  /* 2.37.7 */
+    if (pos < ADS_OFFSET || pos >= eof) {  /* 7.9.7 */
       my_seek(hnd, 0L);  /* 2.37.7 */
-      luaL_error(L, "Error in " LUA_QS ": invalid entry in table.", "ads.fastseek");
+      luaL_error(L, "Error in " LUA_QS ": invalid entry in index table.", "ads.fastseek");
     }
     sec_seek(L, hnd, pos, "ads.fastseek");  /* 2nd arg: get value from table at idx 3 at given index mid */
     int32_t temp = sec_readl(hnd, &success);
@@ -436,7 +537,7 @@ static int base_fastseek (lua_State *L) {
     }
     res = strcmp(key, tkey);
     if (res == 0) {
-      if (!listflag) {
+      if (!dbtype) {
         rcln = sec_readl(hnd, &success);
         closeandbailout(L, hnd, success, "ads.fastseek");  /* 7.9.6 security fix */
         char data[rcln];
@@ -453,7 +554,7 @@ static int base_fastseek (lua_State *L) {
     else
       high = mid - 1;
   }
-  if (listflag)
+  if (dbtype)
     lua_pushfalse(L);
   else
     lua_pushnil(L);
@@ -462,13 +563,13 @@ static int base_fastseek (lua_State *L) {
 
 
 /* searches for the given key (a string) and returns the index as a number */
-static int base_index (lua_State *L) {
+static int ads_index (lua_State *L) {
   off64_t mid, low, high, pos, keylen;
   int res, try, hnd, success;
   size_t bufsize;
-  char listflag;
+  char dbtype;
   const char *key;
-  hnd = agnL_checkinteger(L, 1);
+  hnd = checkads(L, 1);
   key = luaL_checkstring(L, 2);
   low = 0;
   bufsize = agn_getbuffersize(L);
@@ -487,12 +588,16 @@ static int base_index (lua_State *L) {
   closeandbailout(L, hnd, success, "ads.index");  /* 7.9.6 security fix */
   char tkey[keylen];
   sec_seek(L, hnd, TYPE, "ads.index");
-  listflag = sec_readc(hnd, &success);
+  dbtype = sec_readc(hnd, &success);
   closeandbailout(L, hnd, success, "ads.index");  /* 7.9.6 security fix */
-  if (listflag == 2) {  /* read sequence */
+  if (dbtype == 3) {  /* read string sequence */
+    luaL_error(L, "Error in " LUA_QS ": number sequences are not supported.", "ads.index");
+  }
+  if (dbtype == 2) {  /* read string sequence */
     int i, j, k;
     char buffer[bufsize];  /* 2.34.9 adaption */
     char data[keylen];
+    off64_t start = ADS_OFFSET;
     sec_seek(L, hnd, ADS_OFFSET, "ads.index");
     while (1) {
       res = read(hnd, buffer, bufsize);  /* 2.34.9 adaption */
@@ -511,12 +616,13 @@ static int base_index (lua_State *L) {
         }
         data[k] = '\0';
         if (strcmp(data, key) == 0) {
-          lua_pushnumber(L, j - k);
+          lua_pushnumber(L, start + (j - k));  /* 7.9.7 fix */
           return 1;
         }
         j++;  /* skip '\0' */
       }
       if (res != bufsize) break;  /* EOF reached, 2.34.9 adaption */
+      start += (i + 1);
       lseek(hnd, i - bufsize + 1, SEEK_CUR);  /* 2.34.9 adaption */
     }
     lua_pushfalse(L);
@@ -543,7 +649,7 @@ static int base_index (lua_State *L) {
     else
       high = mid - 1;
   }
-  if (listflag)
+  if (dbtype)
     lua_pushfalse(L);
   else
     lua_pushnil(L);
@@ -551,41 +657,103 @@ static int base_index (lua_State *L) {
 }
 
 
-int seqiterator (lua_State *L) {  /* 2.9.5 */
-  int hnd, keylen;
-  ssize_t result, i;
-  char *buffer;
-  hnd = lua_tonumber(L, lua_upvalueindex(1));
-  keylen = lua_tonumber(L, lua_upvalueindex(2));
-  buffer = (char *)agn_malloc(L, (keylen + 1)*sizeof(char), "ads.iterate", NULL);
-  result = read(hnd, buffer, keylen + 1);
-  if (result == -1) {
-    xfree(buffer);
-    luaL_error(L, "Error in " LUA_QS ": error while reading sequence.", "ads.iterate");
-  }
-  if (result == 0)
-    lua_pushnil(L);
-  else {
-    i = 0;
-    while (buffer[i]) i++;
-    lua_pushlstring(L, buffer, i);
-    if (lseek(hnd, -result + i + 1, SEEK_CUR) == -1) { /* put pointer to next value to be read */
+static int stringseqiterator (lua_State *L) {
+  int i, hnd  = lua_tointeger(L, lua_upvalueindex(1));
+  long pos = (long)lua_tointeger(L, lua_upvalueindex(2));
+  /* Seek to the exact position where we left off last time */
+  my_seek(hnd, pos);
+  int capacity = agn_getbuffersize(L);;
+  char *buffer = (char *)agn_malloc(L, (capacity + 1) * sizeof(char), "ads.iterate", NULL);
+  int bufbytes = 0;
+  int string_len = -1;
+  int found_null = 0;
+  while (1) {
+    int space_left = capacity - bufbytes;
+    int result = read(hnd, buffer + bufbytes, space_left);
+    if (result == -1) {
       xfree(buffer);
-      my_seek(hnd, 0L);  /* 2.37.7 */
-      luaL_error(L, "Error in " LUA_QS ": could not change file position.", "ads.iterate");
+      my_seek(hnd, 0L);
+      luaL_error(L, "Error in ads iterator: error while reading sequence.");
+    }
+    if (result == 0) {
+      if (bufbytes > 0) {
+        /* EOF hit but there are bytes remaining without a trailing '\0' */
+        buffer[bufbytes] = '\0';
+        string_len = bufbytes;
+        found_null = 1;
+      }
+      break; /* EOF reached */
+    }
+    bufbytes += result;
+    /* Scan the newly read bytes for a null-terminator */
+    for (i=bufbytes - result; i < bufbytes; i++) {
+      if (buffer[i] == '\0') {
+        string_len = i;
+        found_null = 1;
+        break;
+      }
+    }
+    if (found_null) break;  /* we found our string! */
+    /* If the buffer is full and we still haven't found a '\0', grow it */
+    if (bufbytes == capacity) {
+      capacity *= 2;
+      char *new_buffer = (char *)agn_malloc(L, (capacity + 1) * sizeof(char), "ads.iterate", NULL);
+      memcpy(new_buffer, buffer, bufbytes);
+      xfree(buffer);
+      buffer = new_buffer;
     }
   }
+  /* Handle return value and upvalue tracking */
+  if (found_null && string_len >= 0) {
+    /* 1. Push the found string to Lua */
+    lua_pushlstring(L, buffer, string_len);
+    /* 2. Calculate the next position (past the '\0') and update the upvalue */
+    long next_pos = pos + string_len + 1;
+    lua_pushinteger(L, next_pos);
+    lua_replace(L, lua_upvalueindex(2));
+    /* 3. Clean up the buffer immediately */
+    xfree(buffer);
+    return 1;
+  }
+  /* No more strings found (EOF reached) */
   xfree(buffer);
+  lua_pushnil(L);
+  return 1;  /* Returns nil, cleanly terminating the Lua loop */
+}
+
+static int numberseqiterator (lua_State *L) {
+  int hnd  = lua_tointeger(L, lua_upvalueindex(1));
+  long pos = (long)lua_tointeger(L, lua_upvalueindex(2));
+  my_seek(hnd, pos);
+  double val;
+  /* Read exactly 8 bytes directly into our stack variable */
+  int result = read(hnd, &val, sizeof(double));
+  if (result == -1) {
+    my_seek(hnd, 0L);
+    luaL_error(L, "Error in ads iterator: error while reading double sequence.");
+  }
+  /* If we successfully read a full 8-byte double */
+  if (result == sizeof(double)) {
+#if BYTE_ORDER == BIG_ENDIAN
+    val = tools_tobigendian(val);
+#endif
+    lua_pushnumber(L, (lua_Number)val);
+    long next_pos = pos + sizeof(double);
+    lua_pushinteger(L, next_pos);
+    lua_replace(L, lua_upvalueindex(2));
+    return 1;
+  }
+  lua_pushnil(L);  /* EOF reached (either 0 bytes read, or a partial trailing fragment < 8 bytes) */
   return 1;
 }
 
-static int base_iterate (lua_State *L) {
+static int ads_iterate (lua_State *L) {
   off64_t mid, low, high, pos, rcln, cnt, keylen, columns;
   size_t l;
-  char listflag;
+  char dbtype;
   const char *key1;
   int res, try, i, hnd, success;
-  hnd = agnL_checkinteger(L, 1);
+  hnd = checkads(L, 1);
   key1 = luaL_optlstring(L, 2, "", &l);
   char key[l + 1];
   strcpy(key, key1);  /* 2.9.5 fix, copies terminating \0, as well */
@@ -607,17 +775,24 @@ static int base_iterate (lua_State *L) {
   char tkey[keylen];
   columns = sec_readl(hnd, &success);
   closeandbailout(L, hnd, success, "ads.iterate");  /* 7.9.6 security fix */
-  listflag = sec_readc(hnd, &success);
+  dbtype = sec_readc(hnd, &success);
   closeandbailout(L, hnd, success, "ads.iterate");  /* 7.9.6 security fix */
-  if (listflag > 1) {  /* sequence ? */
+  if (dbtype == 2) {  /* sequence ? */
     sec_seek(L, hnd, ADS_OFFSET, "ads.iterate");  /* set file pointer to beginning of record section */
     luaL_checkstack(L, 2, "not enough stack space");  /* 3.18.4 fix */
-    lua_pushinteger(L, hnd);  /* push file handle */
-    lua_pushinteger(L, keylen);  /* push key length */
-    lua_pushcclosure(L, &seqiterator, 2);
+    lua_pushinteger(L, hnd);  /* push integer file handle */
+    lua_pushinteger(L, ADS_OFFSET);
+    lua_pushcclosure(L, &stringseqiterator, 2);
+    return 1;
+  } else if (dbtype == 3) {
+    sec_seek(L, hnd, ADS_OFFSET, "ads.iterate");  /* set file pointer to beginning of record section */
+    luaL_checkstack(L, 2, "not enough stack space");
+    lua_pushinteger(L, hnd);  /* push integer file handle */
+    lua_pushinteger(L, ADS_OFFSET);
+    lua_pushcclosure(L, &numberseqiterator, 2);
     return 1;
   }
-  luaL_checkstack(L, listflag ? 1 : 3, "not enough stack space");
+  luaL_checkstack(L, dbtype ? 1 : 3, "not enough stack space");
   if (l == 0) {  /* '' has been passed to get first record */
     sec_seek(L, hnd, ADS_OFFSET, "ads.iterate");
     pos = sec_readl(hnd, &success);
@@ -629,7 +804,7 @@ static int base_iterate (lua_State *L) {
       aux_fileerr(L, hnd, "ads.iterate");  /* 7.9.6 security fix */
     }
     lua_pushstring(L, tkey);
-    if (listflag) return 1;
+    if (dbtype) return 1;
     lua_createtable(L, columns, 0);
     for (i=1; i < columns; i++) {
       rcln = sec_readl(hnd, &success);
@@ -670,7 +845,7 @@ static int base_iterate (lua_State *L) {
       if (!sec_read(hnd, tkey, temp)) {
         aux_fileerr(L, hnd, "ads.iterate");  /* 7.9.6 security fix */
       }
-      if (listflag) {
+      if (dbtype) {
         lua_pushstring(L, tkey);
         return 1;
       }
@@ -698,24 +873,16 @@ static int base_iterate (lua_State *L) {
 }
 
 
-static int base_write (lua_State *L) {
+static int ads_write (lua_State *L) {
   off64_t mid, low, high, pos, cnt, mrc, keylen, columns, cpos;
   size_t l, k, clen;
   int res, flag, i, hnd, rewritecomment, error, nargs, success;
-  const char *key1;
-  char listflag, *comment;
+  char dbtype, *comment;
   comment = NULL;
   nargs = lua_gettop(L);  /* 2.37.6 fix to prevent IO errors */
-  hnd = agnL_checkinteger(L, 1);
+  hnd = checkads(L, 1);
   if (my_seek(hnd, 0L) == -1) {  /* file is not open ? */
     luaL_error(L, "Error in " LUA_QS ": file #%d is not open.", "ads.write", hnd);
-  }
-  key1 = luaL_checklstring(L, 2, &l);
-  for (i=3; i <= nargs; i++) {  /* 2.37.6 fix, we do not check `columns` due to problems of off64_t's in loops in MinGW.
-    We will apply the check here for otherwise we would have to roll back the changes, including restoring the old index section */
-    if (!lua_stringconvertible(L, i))
-      luaL_error(L, "Error in " LUA_QS " with argument #%d: expected a string or a value convertible to a string, got %s.",
-        "ads.write", i, luaL_typename(L, i));
   }
   low = rewritecomment = 0;
   sec_seek(L, hnd, MAXNRECORDS, "ads.write");
@@ -728,13 +895,12 @@ static int base_write (lua_State *L) {
   closeandbailout(L, hnd, success, "ads.write");  /* 7.9.6 security fix */
   columns = sec_readl(hnd, &success);
   closeandbailout(L, hnd, success, "ads.write");  /* 7.9.6 security fix */
-  listflag = sec_readc(hnd, &success);
+  dbtype = sec_readc(hnd, &success);
   closeandbailout(L, hnd, success, "ads.write");  /* 7.9.6 security fix */
   sec_seek(L, hnd, COMMENT, "ads.write");
   cpos = sec_readl(hnd, &success);
   closeandbailout(L, hnd, success, "ads.write");  /* 7.9.6 security fix */
-  clen = 0;
-  if (cpos != 0) {  /* save comment; 2.11.0 RC2 fix */
+  if (dbtype < 2 && cpos != 0) {  /* save comment; 2.11.0 RC2 fix */
     sec_seek(L, hnd, cpos, "ads.write");
     clen = sec_readl(hnd, &success);
     closeandbailout(L, hnd, success, "ads.write");  /* 7.9.6 security fix */
@@ -748,108 +914,143 @@ static int base_write (lua_State *L) {
     }
     rewritecomment = 1;
   }
-  char key[l + 1];
-  strcpy(key, key1);  /* copies terminating \0, as well */
-  char tkey[keylen];
-  if (listflag == 2) {  /* sequence */
-    off64_t temp = sec_lof(hnd, &success);
-    closeandbailout(L, hnd, success, "ads.write");
-    sec_seek(L, hnd, temp, "ads.write");  /* write to end */
-    if (l + 1 >= keylen) {      /* word plus \0 longer than maxkeylen ? */
-      key[keylen - 1] = 0;      /* strings count from 0 */
-      l = keylen - 1;           /* adjust length (i.e. cut string) */
-    }
-    my_write(hnd, key, l + 1);  /* l + 1: write string plus \0 */
-    cnt++;
-  } else {  /* base or list */
-    flag = 0;
-    if (mrc - cnt == 0) {  /* 0.32.0, no free place ? -> expand by ~13 % */
-      my_expand(hnd, mrc, cnt, agn_newsize(NULL, mrc), &error);  /* 7.9.6 change */
-      if (error) {  /* 2.11.0 RC2 fix */
-        xfree(comment);  /* 5.5.8 fix */
-        my_seek(hnd, 0L);  /* 2.37.6 fix */
-        luaL_error(L, "Error in " LUA_QS ": memory allocation failed.", "ads.write");
+  switch (dbtype) {
+    case 2: {  /* string sequence, write to end */
+      off64_t eof = sec_lof(hnd, &success);
+      closeandbailout(L, hnd, success, "ads.write");
+      sec_seek(L, hnd, eof, "ads.write");
+      for (i=2; i <= nargs; i++) {
+        const char *key = luaL_checklstring(L, i, &l);
+        if (strlen(key) < l) {
+          my_seek(hnd, 0L);
+          luaL_error(L, "Error in " LUA_QS ": argument #%d has embedded zero.", "ads.write", i);
+        }
+        my_write(hnd, (char*)key, l + 1);  /* includes terinating \0 */
+        cnt++;
       }
-      mrc += ADS_EXPANSION_SIZE;
+      break;
     }
-    /* The index section contains the file positions of the keys of the actual data sets in the record section of the file.
-       The references in the index section are sorted with respect to the actual keys to allow seek operations with O(log2). */
-    mid = 0;  /* to avoid compiler warnings */
-    while (low <= high) {
-      mid = tools_midpoint(low, high);  /* 2.38.2 patch */
-      sec_seek(L, hnd, mid*4L + ADS_OFFSET, "ads.write");  /* seek index */
-      pos = sec_readl(hnd, &success);                /* read index */
+    case 3: {  /* number sequence, write exactly 8 raw bytes to end */
+      off64_t eof = sec_lof(hnd, &success);
+      closeandbailout(L, hnd, success, "ads.write");
+      sec_seek(L, hnd, eof, "ads.write");
+      for (i=2; i <= nargs; i++) {
+        double val = (double)luaL_checknumber(L, i);
+#if BYTE_ORDER == BIG_ENDIAN
+        val = tools_tolittleendian(val);
+#endif
+        my_write(hnd, &val, sizeof(double));
+        cnt++;
+      }
+      break;
+    }
+    default: {  /* base or list */
+      const char *key1 = luaL_checklstring(L, 2, &l);
+      for (i=3; i <= nargs; i++) {  /* 2.37.6 fix, we do not check `columns` due to problems of off64_t's in loops in MinGW.
+        We will apply the check here for otherwise we would have to roll back the changes, including restoring the old index section */
+        if (!lua_stringconvertible(L, i))
+          luaL_error(L, "Error in " LUA_QS " with argument #%d: expected a string or a value convertible to a string, got %s.",
+            "ads.write", i, luaL_typename(L, i));
+      }
+      char key[l + 1];
+      strcpy(key, key1);  /* copies terminating \0, as well */
+      char tkey[keylen];
+      flag = 0;
+      if (mrc - cnt == 0) {  /* 0.32.0, no free place ? -> expand by ~13 % */
+        int newsize = agn_newsize(NULL, mrc);
+        my_expand(hnd, mrc, cnt, newsize - mrc, &error);  /* 7.9.6/7 change */
+        if (error) {  /* 2.11.0 RC2 fix */
+          xfree(comment);  /* 5.5.8 fix */
+          my_seek(hnd, 0L);  /* 2.37.6 fix */
+          luaL_error(L, "Error in " LUA_QS ": memory allocation failed.", "ads.write");
+        }
+        /* mrc += ADS_EXPANSION_SIZE; */
+        mrc = newsize;  /* 7.9.7 fix */
+      }
+      /* The index section contains the file positions of the keys of the actual data sets in the record section of the file.
+         The references in the index section are sorted with respect to the actual keys to allow seek operations with O(log2). */
+      mid = 0;  /* to avoid compiler warnings */
+      while (low <= high) {
+        mid = tools_midpoint(low, high);  /* 2.38.2 patch */
+        sec_seek(L, hnd, mid*4L + ADS_OFFSET, "ads.write");  /* seek index */
+        pos = sec_readl(hnd, &success);                /* read index */
+        if (!success) {
+          xfree(comment);
+          closeandbailout(L, hnd, success, "ads.write");  /* 7.9.6 security fix */
+        }
+        sec_seek(L, hnd, pos, "ads.write");  /* set cursor to key position in record area */
+        int32_t temp = sec_readl(hnd, &success);
+        if (!success) {
+          xfree(comment);
+          closeandbailout(L, hnd, success, "ads.write");  /* 7.9.6 security fix */
+        }
+        if (!sec_read(hnd, tkey, temp)) {  /* read key */
+          xfree(comment);
+          aux_fileerr(L, hnd, "ads.write");
+        }
+        res = strcmp(key, tkey);            /* compare found key with search key */
+        if (res == 0) {
+          cnt--;                            /* decrement number of actual entries */
+          flag = 1;
+          break;
+        }
+        if (res > 0)
+          low = mid + 1;
+        else
+          high = mid - 1;
+      }
+      off64_t temp = sec_lof(hnd, &success);
       if (!success) {
         xfree(comment);
-        closeandbailout(L, hnd, success, "ads.write");  /* 7.9.6 security fix */
       }
-      sec_seek(L, hnd, pos, "ads.write");  /* set cursor to key position in record area */
-      int32_t temp = sec_readl(hnd, &success);
-      if (!success) {
+      closeandbailout(L, hnd, success, "ads.write");
+      pos = (cpos == 0) ? temp : cpos;
+      if (flag && dbtype) {  /* list and key already stored ? -> do nothing */
+        my_seek(hnd, 0L);
         xfree(comment);
-        closeandbailout(L, hnd, success, "ads.write");  /* 7.9.6 security fix */
+        lua_pushtrue(L);
+        return 1;
       }
-      if (!sec_read(hnd, tkey, temp)) {  /* read key */
-        xfree(comment);
-        aux_fileerr(L, hnd, "ads.write");
+      if (flag) {  /* does key already exist ? */
+        /* prepare storing its new position at existing index position */
+        sec_seek(L, hnd, mid*4L + ADS_OFFSET, "ads.write");
+      } else {
+        if (low < cnt)  /* if new key */
+          my_move(hnd, low*4L + ADS_OFFSET, low*4L + ADS_OFFSET + 4L, cnt*4L + ADS_OFFSET);  /* move keys upwards */
+        sec_seek(L, hnd, low*4L + ADS_OFFSET, "ads.write");
       }
-      res = strcmp(key, tkey);            /* compare found key with search key */
-      if (res == 0) {
-        cnt--;                            /* decrement number of actual entries */
-        flag = 1;
-        break;
+      my_writel(hnd, pos);  /* insert new index position */
+      sec_seek(L, hnd, pos, "ads.write");  /* write key (and value) to end of file */
+      if (l + 1 >= keylen) {  /* word plus \0 longer than maxkeylen ? */
+        key[keylen - 1] = 0;
+        l = keylen - 1;       /* adjust length (i.e. cut string) */
       }
-      if (res > 0)
-        low = mid + 1;
-      else
-        high = mid - 1;
-    }
-    off64_t temp = sec_lof(hnd, &success);
-    closeandbailout(L, hnd, success, "ads.write");
-    pos = (cpos == 0) ? temp : cpos;
-    if (flag && listflag) {  /* list and key already stored ? -> do nothing */
-      my_seek(hnd, 0L);
-      lua_pushtrue(L);
-      return 1;
-    }
-    if (flag) {  /* does key already exist ? */
-      /* prepare storing its new position at existing index position */
-      sec_seek(L, hnd, mid*4L + ADS_OFFSET, "ads.write");
-    } else {
-      if (low < cnt)  /* if new key */
-        my_move(hnd, low*4L + ADS_OFFSET, low*4L + ADS_OFFSET + 4L, cnt*4L + ADS_OFFSET);  /* move keys upwards */
-      sec_seek(L, hnd, low*4L + ADS_OFFSET, "ads.write");
-    }
-    my_writel(hnd, pos);  /* insert new index position */
-    sec_seek(L, hnd, pos, "ads.write");  /* write key (and value) to end of file */
-    if (l + 1 >= keylen) {  /* word plus \0 longer than maxkeylen ? */
-      key[keylen - 1] = 0;
-      l = keylen - 1;       /* adjust length (i.e. cut string) */
-    }
-    my_writel(hnd, l + 1);
-    my_write(hnd, key, l + 1);
-    pos += 4 + l + 1;
-    if (!listflag) {
-      /* write values */
-      for (i=2; i <= columns; i++) {
-        k = 0;
-        const char *value = (i > nargs) ? NULL : lua_tolstring(L, i + 1, &k);  /* protect against converting non-existing arguments; 2.37.6 change */
-        char data[k + 1];
-        if (!value) value = "";  /* 2.37.6 */
-        if (k > 0) strncpy(data, value, k);  /* 2.37.6 change */
-        data[k] = '\0';
-        my_writel(hnd, k + 1);
-        my_write(hnd, data, k + 1);
-        pos += 4 + k + 1;
+      my_writel(hnd, l + 1);
+      my_write(hnd, key, l + 1);
+      pos += 4 + l + 1;
+      if (!dbtype) {
+        /* write values */
+        for (i=2; i <= columns; i++) {
+          k = 0;
+          /* protect against converting non-existing arguments; 2.37.6 change */
+          const char *value = (i + 1 > nargs) ? NULL : lua_tolstring(L, i + 1, &k);  /* 7.9.7 fix */
+          char data[k + 1];
+          if (!value) value = "";  /* 2.37.6 */
+          if (k > 0) strncpy(data, value, k);  /* 2.37.6 change */
+          data[k] = '\0';
+          my_writel(hnd, k + 1);
+          my_write(hnd, data, k + 1);
+          pos += 4 + k + 1;
+        }
       }
+      if (rewritecomment) {  /* re-write comment to eof, comments are supported in bases and lists only */
+        my_writel(hnd, clen);
+        my_write(hnd, comment, clen);
+        sec_seek(L, hnd, COMMENT, "ads.write");
+        my_writel(hnd, pos);
+      }
+      cnt++;
     }
-    if (rewritecomment) {  /* re-write comment to eof */
-      my_writel(hnd, clen);
-      my_write(hnd, comment, clen);
-      sec_seek(L, hnd, COMMENT, "ads.write");
-      my_writel(hnd, pos);
-    }
-    cnt++;
   }
   /* set number of entries */
   sec_seek(L, hnd, ACTNRECORDS, "ads.write");
@@ -861,11 +1062,11 @@ static int base_write (lua_State *L) {
 }
 
 
-static int base_expand (lua_State *L) {
+static int ads_expand (lua_State *L) {
   off64_t mrc, cnt;
   int hnd, count, error, success;
-  char listflag;
-  hnd = agnL_checkinteger(L, 1);
+  char dbtype;
+  hnd = checkads(L, 1);
   if (my_seek(hnd, 0L) == -1) {  /* file is not open ? */
     luaL_error(L, "Error in " LUA_QS ": file #%d is not open.", "ads.expand", hnd);
   }
@@ -876,11 +1077,11 @@ static int base_expand (lua_State *L) {
   cnt = sec_readl(hnd, &success);
   closeandbailout(L, hnd, success, "ads.expand");  /* 7.9.6 security fix */
   sec_seek(L, hnd, TYPE, "ads.expand");
-  listflag = sec_readc(hnd, &success);
+  dbtype = sec_readc(hnd, &success);
   closeandbailout(L, hnd, success, "ads.expand");  /* 7.9.6 security fix */
-  if (listflag > 1) {
+  if (dbtype > 1) {
     my_seek(hnd, 0L);  /* 2.11.0 RC2 */
-    luaL_error(L, "Error in " LUA_QS ": function not applicable to sequences.", "ads.expand");
+    luaL_error(L, "Error in " LUA_QS ": number and string sequences are not supported.", "ads.expand");
   }
   /* call expansion procedure;
      mrc: maximum number of records currently allowed,
@@ -897,12 +1098,12 @@ static int base_expand (lua_State *L) {
 }
 
 
-static int base_remove (lua_State *L) {
+static int ads_remove (lua_State *L) {
   off64_t mid, low, high, pos, cnt, keylen;
   int res, result, hnd, success;
-  char listflag;
+  char dbtype;
   const char *key = luaL_checkstring(L, 2);
-  hnd = agnL_checkinteger(L, 1);
+  hnd = checkads(L, 1);
   result = low = 0;
   if (my_seek(hnd, 0L) == -1) {  /* file is not open ? */
     luaL_error(L, "Error in " LUA_QS ": file #%d is not open.", "ads.remove", hnd);
@@ -914,11 +1115,11 @@ static int base_remove (lua_State *L) {
   keylen = sec_readl(hnd, &success);
   closeandbailout(L, hnd, success, "ads.remove");  /* 7.9.6 security fix */
   sec_seek(L, hnd, TYPE, "ads.remove");
-  listflag = sec_readc(hnd, &success);
+  dbtype = sec_readc(hnd, &success);
   closeandbailout(L, hnd, success, "ads.remove");  /* 7.9.6 security fix */
-  if (listflag > 1) {
+  if (dbtype > 1) {
     my_seek(hnd, 0L);  /* 2.11.0 RC2 */
-    luaL_error(L, "Error in " LUA_QS ": function not applicable to sequences.", "ads.remove");
+    luaL_error(L, "Error in " LUA_QS ": number and string sequences are not supported.", "ads.remove");
   }
   char tkey[keylen];
   while (low <= high) {
@@ -966,13 +1167,13 @@ static void setstringfield (lua_State *L, const char *key, const char *value) {
 }
 
 
-static int base_attrib (lua_State *L) {
+static int ads_attrib (lua_State *L) {
   off64_t columns, cnt, mrc, ver, keylen, cpos;
   time_t creationdate;
   char list, desc[DESCRIPTION_LEN], stamp[STAMP_LEN], datestring[72];  /* `2007/01/01-01:01:01` = 19 chars, changed 2.16.1 to 72 bytes due to GCC warning */
   struct tm *stm;  /* FIXME with agnt64.h */
   int hnd, success;
-  hnd = agnL_checkinteger(L, 1);
+  hnd = checkads(L, 1);
   if (my_seek(hnd, 0L) == -1) {  /* file is not open ? */
     luaL_error(L, "Error in " LUA_QS ": file #%d is not open.", "ads.attrib", hnd);
   }
@@ -1026,10 +1227,10 @@ static int base_attrib (lua_State *L) {
 
 
 /* return the number of free entries */
-static int base_free (lua_State *L) {
+static int ads_free (lua_State *L) {
   off64_t cnt, mrc;
   int hnd, success;
-  hnd = agnL_checkinteger(L, 1);
+  hnd = checkads(L, 1);
   if (my_seek(hnd, 0L) == -1) {  /* file is not open ? */
     luaL_error(L, "Error in " LUA_QS ": file #%d is not open.", "ads.free", hnd);
   }
@@ -1044,89 +1245,149 @@ static int base_free (lua_State *L) {
 }
 
 
-/* base_getall: get all valid keys and entries of a database, list or sequence and return them in a new set.
+/* ads_getall: get all valid keys and entries of a database, list or sequence and return them in a new set.
    Argument: file handle (integer).
 
    Moving the cursor to the beginning of the dataset section and then sequentially reading all key-value pairs
    does not work properly since deleted sets are also returned. */
-static int base_getall (lua_State *L) {
-  off64_t i;
-  char listflag;
-  int hnd, n, option, success;  /* 1.12.9 */
+static int ads_getall (lua_State *L) {
+  char dbtype;
+  int hnd, n, nargs, success;  /* 1.12.9 */
   size_t bufsize = agn_getbuffersize(L);
-  hnd = agnL_checkinteger(L, 1);
-  option = lua_gettop(L) > 1;
+  hnd = checkads(L, 1);
+  nargs = lua_gettop(L);
   if (my_seek(hnd, COLUMNS) == -1) {  /* file is not open ? */
     luaL_error(L, "Error in " LUA_QS ": file #%d is not open.", "ads.getall", hnd);
   }
   sec_readl(hnd, &success);  /* skip long, 1.12.9 */
   closeandbailout(L, hnd, success, "ads.getall");  /* 7.9.6 security fix */
-  listflag = sec_readc(hnd, &success);
+  dbtype = sec_readc(hnd, &success);
   closeandbailout(L, hnd, success, "ads.getall");  /* 7.9.6 security fix */
   sec_seek(L, hnd, ACTNRECORDS, "ads.getall");
   n = (int)sec_readl(hnd, &success);
   closeandbailout(L, hnd, success, "ads.getall");  /* 7.9.6 security fix */
-  if (listflag > 1) {  /* sequence ? */
-    int j, k, result, c;
-    char *buffer, *data;
-    c = 0;
-    buffer = (char *)agn_malloc(L, (bufsize + 1)*sizeof(char), "ads.getall", NULL);  /* 2.34.9 adaption */
-    sec_seek(L, hnd, KEYLENGTH, "ads.getall");
-    int keylen = sec_readl(hnd, &success);
-    if (!success) {
-      xfree(buffer);
-      closeandbailout(L, hnd, success, "ads.getall");  /* 7.9.6 security fix */
-    }
-    sec_seek(L, hnd, ADS_OFFSET, "ads.getall");
-    data = (char *)agn_malloc(L, (keylen + 1)*sizeof(char), "ads.getall", buffer, NULL);  /* 1.9.1 */
-    if (option)
-      agn_createseq(L, n);
-    else
-      agn_createset(L, n);
-    do {
-      result = read(hnd, buffer, bufsize);  /* 2.34.9 adaption */
-      if (result == -1) {  /* 1.6.11 */
-        xfreeall(buffer, data);  /* 2.9.8 */
-        luaL_error(L, "Error in " LUA_QS ": error while reading sequence.", "ads.getall");
-      }
-      i = result - 1;
-      while (buffer[i]) i--;  /* set buffer pointer back to last full entry read; short for (buffer[i] != '\0') */
-      j = 0;
-      while (j < i) {  /* process all entries completely read */
-        k = 0;
-        while (buffer[j]) {  /* short for (buffer[j] != '\0') */
-          data[k] = buffer[j];
-          j++; k++;
-        }
-        data[k] = '\0';  /* Agena 1.6.0 Valgrind */
-        /* set values to set */
-        if (option) {
-          lua_seqrawsetistring(L, -1, ++c, data);
-        } else
-          lua_srawsetlstring(L, -1, data, k);
-        j++;  /* skip '\0' */
-      }
-      if (lseek(hnd, i - bufsize + 1, SEEK_CUR) == -1) {  /* set will pointer to first word not fully read, 2.34.9 adaption */
-        xfreeall(buffer, data);  /* 2.9.8 */
-        luaL_error(L, "Error in " LUA_QS ": error moving file pointer.", "ads.getall");
-      }
-    } while (result == bufsize);  /* EOF not reached ?  2.34.9 adaption */
-    xfreeall(buffer, data);  /* 2.9.8 */
-  } else {
+  if (dbtype < 2) {
     luaL_error(L, "Error in " LUA_QS ": cannot process lists or bases.", "ads.getall");
     my_seek(hnd, 0L);
     return 0;
+  }
+  if (nargs == 1) {
+    lua_settop(L, 2);
+    agn_createset(L, n);
+    lua_replace(L, 2);
+  } else if (!lua_isseq(L, 2) && !lua_istable(L, 2) && !lua_isset(L, 2)) {
+    lua_settop(L, 2);
+    agn_createseq(L, n);
+    lua_replace(L, 2);
+  }
+  if (dbtype == 3) {  /* read number sequence, generated by Gemini AI, 7.9.7 */
+    int j, res;
+    double x;
+    const int dblsize = sizeof(double);  /* strictly 8 bytes */
+    char window[dblsize], buffer[bufsize];
+    int windowlen = 0;
+    /* Seek past the database header to the start of the data payload */
+    sec_seek(L, hnd, ADS_OFFSET, "ads.getall");
+    while (1) {
+      res = read(hnd, buffer, bufsize);
+      if (res == -1) {
+        my_seek(hnd, 0L);
+        luaL_error(L, "Error in " LUA_QS ": could not read base.", "ads.getall");
+      }
+      if (res == 0) break; /* eof */
+      j = 0;
+      while (j < res) {
+        window[windowlen++] = buffer[j++];
+        if (windowlen == dblsize) {
+          memcpy(&x, window, dblsize);
+#if BYTE_ORDER == BIG_ENDIAN
+          x = tools_tobigendian(x);
+#endif
+          lua_pushnumber(L, x);
+          agn_structinsert(L, 2, -1);
+          agn_poptop(L);
+          windowlen = 0;
+        }
+      }
+      if (res != bufsize) break;
+    }
+  } else {  /* dbtype == 2, string sequence ? 7.9.7, created by Gemini AI */
+    int j, result;
+    char *buffer = NULL;
+    int capacity = bufsize;
+    int bufbytes = 0;
+    buffer = (char *)agn_malloc(L, (capacity + 1) * sizeof(char), "ads.getall", NULL);
+    sec_seek(L, hnd, ADS_OFFSET, "ads.getall");
+    while (1) {
+      int space_left = capacity - bufbytes;
+      result = read(hnd, buffer + bufbytes, space_left);
+      if (result == -1) {
+        xfree(buffer);
+        my_seek(hnd, 0L);
+        luaL_error(L, "Error in " LUA_QS ": error while reading sequence.", "ads.getall");
+      }
+      if (result == 0 && bufbytes == 0) break;
+      bufbytes += result;
+      int i = bufbytes - 1;
+      while (i >= 0 && buffer[i] != '\0') i--;
+      if (i < 0) {
+        if (result == space_left) {
+          capacity *= 2;
+          char *new_buffer = (char *)agn_malloc(L, (capacity + 1) * sizeof(char), "ads.getall", NULL);
+          memcpy(new_buffer, buffer, bufbytes);
+          xfree(buffer);
+          buffer = new_buffer;
+          continue;
+        } else {
+          buffer[bufbytes] = '\0';
+          i = bufbytes;
+        }
+      }
+      j = 0;
+      while (j <= i) {
+        int start = j;
+        while (buffer[j] != '\0') j++;
+        int string_len = j - start;
+        lua_pushlstring(L, &buffer[start], string_len);
+        agn_structinsert(L, 2, -1);
+        agn_poptop(L);
+        j++;
+      }
+      int leftover_bytes = bufbytes - (i + 1);
+      if (leftover_bytes > 0) {
+        memmove(buffer, buffer + (i + 1), leftover_bytes);
+        bufbytes = leftover_bytes;
+      } else {
+        bufbytes = 0;
+      }
+      /* Exit immediately if file is drained and buffer is empty, preventing the shrinking logic
+         below from touching an empty pool. */
+      if (result < space_left && bufbytes == 0) break;
+      /* Safe Shrinking Logic */
+      if (capacity > bufsize && capacity > 65536) {
+        if (leftover_bytes < bufsize) {
+          capacity = bufsize;
+          char *shrunk_buffer = (char *)agn_malloc(L, (capacity + 1) * sizeof(char), "ads.getall", NULL);
+          if (leftover_bytes > 0) {
+            memcpy(shrunk_buffer, buffer, leftover_bytes);
+          }
+          xfree(buffer);
+          buffer = shrunk_buffer;
+        }
+      }
+    }
+    xfree(buffer);
   }
   my_seek(hnd, 0L);
   return 1;
 }
 
 
-static int base_getkeys (lua_State *L) {
+static int ads_getkeys (lua_State *L) {
   off64_t cnt, keylen, i, j, columns;
-  char listflag;
+  char dbtype;
   int hnd, success;
-  hnd = agnL_checkinteger(L, 1);
+  hnd = checkads(L, 1);
   if (my_seek(hnd, ACTNRECORDS) == -1) {  /* file is not open ? */
     luaL_error(L, "Error in " LUA_QS ": file #%d is not open.", "ads.getkeys", hnd);
   }
@@ -1141,11 +1402,11 @@ static int base_getkeys (lua_State *L) {
   char tkey[keylen];
   columns = sec_readl(hnd, &success);
   closeandbailout(L, hnd, success, "ads.getkeys");  /* 7.9.6 security fix */
-  listflag = sec_readc(hnd, &success);
+  dbtype = sec_readc(hnd, &success);
   closeandbailout(L, hnd, success, "ads.getkeys");  /* 7.9.6 security fix */
-  if (listflag > 1) {
+  if (dbtype > 1) {
     my_seek(hnd, 0L);  /* 2.11.0 RC2 */
-    luaL_error(L, "Error in " LUA_QS ": function not applicable to sequences.", "ads.getkeys");
+    luaL_error(L, "Error in " LUA_QS ": number and string sequences are not supported.", "ads.getkeys");
   }
   sec_seek(L, hnd, ADS_OFFSET, "ads.getkeys");
   off64_t pos[cnt];
@@ -1156,7 +1417,7 @@ static int base_getkeys (lua_State *L) {
   }
   /* read keys from record section */
   lua_newtable(L);
-  for (i = 0; i < cnt; i++) {
+  for (i=0; i < cnt; i++) {
     sec_seek(L, hnd, pos[i], "ads.getkeys");
     int32_t temp = sec_readl(hnd, &success);
     closeandbailout(L, hnd, success, "ads.getkeys");  /* 7.9.6 security fix */
@@ -1164,7 +1425,7 @@ static int base_getkeys (lua_State *L) {
       aux_fileerr(L, hnd, "ads.getkeys");
     }
     lua_rawsetistring(L, -1, i + 1, tkey);
-    if (!listflag) {
+    if (!dbtype) {
       for (j=1; j < columns; j++) {
         int32_t temp = sec_readl(hnd, &success);
         closeandbailout(L, hnd, success, "ads.getkeys");  /* 7.9.6 security fix */
@@ -1177,12 +1438,12 @@ static int base_getkeys (lua_State *L) {
 }
 
 
-/* base_values: get all values from a table; May 12, 2007; changed July 20, 2007 */
-static int base_getvalues (lua_State *L) {
+/* ads_values: get all values from a table; May 12, 2007; changed July 20, 2007 */
+static int ads_getvalues (lua_State *L) {
   off64_t cnt, rcln, i, columns;
   int hnd, j, colnum, success;
-  char listflag;
-  hnd = agnL_checkinteger(L, 1);
+  char dbtype;
+  hnd = checkads(L, 1);
   if (my_seek(hnd, ACTNRECORDS) == -1) {  /* file is not open ? */
     luaL_error(L,  "Error in " LUA_QS ": file #%d is not open.", "ads.getvalues", hnd);
   }
@@ -1196,9 +1457,9 @@ static int base_getvalues (lua_State *L) {
   sec_seek(L, hnd, COLUMNS, "ads.getvalues");
   columns = sec_readl(hnd, &success);
   closeandbailout(L, hnd, success, "ads.getvalues");  /* 7.9.6 security fix */
-  listflag = sec_readc(hnd, &success);
+  dbtype = sec_readc(hnd, &success);
   closeandbailout(L, hnd, success, "ads.getvalues");  /* 7.9.6 security fix */
-  if (listflag != 0) {
+  if (dbtype != 0) {
     lua_pushnil(L);
     return 1;
   }
@@ -1238,14 +1499,14 @@ static int base_getvalues (lua_State *L) {
 }
 
 
-/* base_find: search a given column for a substring; July 21, 2007 */
-static int base_find (lua_State *L) {
+/* ads_find: search a given column for a substring; July 21, 2007 */
+static int ads_find (lua_State *L) {
   off64_t cnt, rcln, i, j, columns, keylen;
   int hnd, colnum, success;
   size_t l;
-  char listflag, *lookup;
+  char dbtype, *lookup;
   const char *pattern;
-  hnd = agnL_checkinteger(L, 1);
+  hnd = checkads(L, 1);
   pattern = agn_checklstring(L, 2, &l);  /* 2.11.0 RC2 change */
   colnum = agnL_optnonnegint(L, 3, 2);   /* 2.37.7 */
   if (my_seek(hnd, ACTNRECORDS) == -1) {  /* file is not open ? */
@@ -1262,9 +1523,9 @@ static int base_find (lua_State *L) {
   sec_seek(L, hnd, COLUMNS, "ads.find");
   columns = sec_readl(hnd, &success);
   closeandbailout(L, hnd, success, "ads.find");  /* 7.9.6 security fix */
-  listflag = sec_readc(hnd, &success);
+  dbtype = sec_readc(hnd, &success);
   closeandbailout(L, hnd, success, "ads.find");  /* 7.9.6 security fix */
-  if (listflag != 0) {
+  if (dbtype != 0) {
     my_seek(hnd, 0L);  /* 2.37.7 */
     lua_pushnil(L);
     return 1;
@@ -1276,7 +1537,7 @@ static int base_find (lua_State *L) {
   sec_seek(L, hnd, ADS_OFFSET, "ads.find");
   /* read entire index section */
   off64_t pos[cnt];
-  for (i = 0; i < cnt; i++) {
+  for (i=0; i < cnt; i++) {
     pos[i] = sec_readl(hnd, &success);
     closeandbailout(L, hnd, success, "ads.find");  /* 7.9.6 security fix */
   }
@@ -1354,12 +1615,12 @@ static int base_find (lua_State *L) {
 }
 
 
-/* base_indices: return the file positions of all datasets as a table; May 12, 2007 */
-static int base_indices (lua_State *L) {
+/* ads_indices: return the file positions of all datasets as a table; May 12, 2007 */
+static int ads_indices (lua_State *L) {
   off64_t i, cnt;
   int hnd, success;
-  char listflag;
-  hnd = agnL_checkinteger(L, 1);
+  char dbtype;
+  hnd = checkads(L, 1);
   if (my_seek(hnd, ACTNRECORDS) == -1) {  /* file is not open ? */
     luaL_error(L, "Error in " LUA_QS ": file #%d is not open.", "ads.indices", hnd);
   }
@@ -1371,11 +1632,11 @@ static int base_indices (lua_State *L) {
     return 1;
   }
   sec_seek(L, hnd, TYPE, "ads.indices");
-  listflag = sec_readc(hnd, &success);
+  dbtype = sec_readc(hnd, &success);
   closeandbailout(L, hnd, success, "ads.indices");  /* 7.9.6 security fix */
-  if (listflag > 1) {
+  if (dbtype > 1) {
     my_seek(hnd, 0L);
-    luaL_error(L, "Error in " LUA_QS ": function not applicable to sequences.", "ads.indices");
+    luaL_error(L, "Error in " LUA_QS ": number and string sequences are not supported.", "ads.indices");
   }
   sec_seek(L, hnd, ADS_OFFSET, "ads.indices");  /* set file handler to beginning of index section */
   lua_newtable(L);
@@ -1389,8 +1650,8 @@ static int base_indices (lua_State *L) {
 }
 
 
-/* puts a set with all valid and invalid indices on top of the stack */
-int base_auxgetallindices (lua_State *L, int hnd, int mrc, int listflag, const char *pn) {
+/* puts a set with all valid and invalid indices on top of the stack, works with bases only. */
+static int ads_auxgetallindices (lua_State *L, int hnd, int mrc, int dbtype, const char *pn) {
   off64_t dsbegin, dsend, cnt, i, k, c, z, cpos, columns;
   int flag, success;
   size_t lenkey, lenval;
@@ -1432,7 +1693,7 @@ int base_auxgetallindices (lua_State *L, int hnd, int mrc, int listflag, const c
     /* set cursor to next entry */
     z += lenkey;
     sec_seek(L, hnd, z, pn);
-    if (!listflag && z - lenkey != cpos) {
+    if (!dbtype && z - lenkey != cpos) {
       lenval = 0;
       for (k=2; k <= columns; k++) {
         lenval = sec_readl(hnd, &success) + 4L;
@@ -1449,13 +1710,13 @@ int base_auxgetallindices (lua_State *L, int hnd, int mrc, int listflag, const c
 }
 
 
-/* base_retrieve: get key and value from a database (file handler, 1st arg) at the given file
+/* ads_retrieve: get key and value from a database (file handler, 1st arg) at the given file
    position (integer, 2nd arg). Returns are the respective key and its value. */
-static int base_retrieve (lua_State *L) {
+static int ads_retrieve (lua_State *L) {
   off64_t high, pos, rcln, keylen, columns, mrc;
   int i, hnd, success;
-  char listflag;
-  hnd = agnL_checkinteger(L, 1);
+  char dbtype;
+  hnd = checkads(L, 1);
   pos = agnL_checkinteger(L, 2);
   if (pos < ADS_OFFSET) {  /* otherwise there will be a crash with certain non-index file positions */
     luaL_error(L, "Error in " LUA_QS ": invalid position given for file with handle #%d.", "ads.retrieve", hnd);
@@ -1478,13 +1739,13 @@ static int base_retrieve (lua_State *L) {
   char tkey[keylen];
   columns = sec_readl(hnd, &success);
   closeandbailout(L, hnd, success, "ads.retrieve");  /* 7.9.6 security fix */
-  listflag = sec_readc(hnd, &success);
+  dbtype = sec_readc(hnd, &success);
   closeandbailout(L, hnd, success, "ads.retrieve");  /* 7.9.6 security fix */
-  if (listflag > 1) {
+  if (dbtype > 1) {
     my_seek(hnd, 0L);  /* 2.11.0 RC2 */
-    luaL_error(L, "Error in " LUA_QS ": function not applicable to sequences.", "ads.retrieve");
+    luaL_error(L, "Error in " LUA_QS ": number and string sequences are not supported.", "ads.retrieve");
   }
-  base_auxgetallindices(L, hnd, mrc, listflag, "ads.retrieve");  /* get all valid and invalid indices as a set */
+  ads_auxgetallindices(L, hnd, mrc, dbtype, "ads.retrieve");  /* get all valid and invalid indices as a set */
   lua_pushnumber(L, pos);
   lua_srawget(L, -2);
   if (lua_isfalse(L, -1)) {  /* 5.0.1 fix */
@@ -1501,7 +1762,7 @@ static int base_retrieve (lua_State *L) {
   lua_newtable(L);
   lua_pushstring(L, tkey);
   lua_rawseti(L, -2, 1);
-  if (!listflag) {
+  if (!dbtype) {
     for (i=1; i < columns; i++) {
       rcln = sec_readl(hnd, &success);
       closeandbailout(L, hnd, success, "ads.retrieve");  /* 7.9.6 security fix */
@@ -1519,11 +1780,11 @@ static int base_retrieve (lua_State *L) {
 
 
 /* base.peek: get length and entry at given position */
-static int base_peekin (lua_State *L) {
+static int ads_peekin (lua_State *L) {
   off64_t mrc, pos, keylen, len;
   int hnd, success;
-  char listflag;
-  hnd = agnL_checkinteger(L, 1);
+  char dbtype;
+  hnd = checkads(L, 1);
   pos = luaL_checkoff64_t(L, 2);
   if (my_seek(hnd, MAXNRECORDS) == -1) {  /* file is not open ? */
     luaL_error(L,  "Error in " LUA_QS ": file #%d is not open.", "ads.peekin", hnd);
@@ -1542,14 +1803,14 @@ static int base_peekin (lua_State *L) {
   closeandbailout(L, hnd, success, "ads.peekin");  /* 7.9.6 security fix */
   char tkey[keylen];
   sec_seek(L, hnd, TYPE, "ads.peekin");
-  listflag = sec_readc(hnd, &success);
+  dbtype = sec_readc(hnd, &success);
   closeandbailout(L, hnd, success, "ads.peekin");  /* 7.9.6 security fix */
-  if (listflag > 1) {
+  if (dbtype > 1) {
     my_seek(hnd, 0L);  /* 2.11.0 RC2 */
-    luaL_error(L, "Error in " LUA_QS ": function not applicable to sequences.", "ads.peekin");
+    luaL_error(L, "Error in " LUA_QS ": number and string sequences are not supported.", "ads.peekin");
   }
   /* check whether pos is a valid index position */
-  base_auxgetallindices(L, hnd, mrc, listflag, "ads.peekin");  /* get all valid and invalid indices as a set */
+  ads_auxgetallindices(L, hnd, mrc, dbtype, "ads.peekin");  /* get all valid and invalid indices as a set */
   lua_pushnumber(L, pos);
   lua_srawget(L, -2);
   if (lua_isfalse(L, -1)) {  /* 5.0.1 fix */
@@ -1571,30 +1832,36 @@ static int base_peekin (lua_State *L) {
 }
 
 
-/* base_size: number of valid entries; July 06, 2007 */
-static int base_sizeof (lua_State *L) {
+/* ads_size: number of valid entries; July 06, 2007 */
+static int ads_sizeof (lua_State *L) {
   int hnd, success;
   off64_t pos;
-  hnd = agnL_checkinteger(L, 1);
+  int32_t cnt, mrc;
+  hnd = checkads(L, 1);
   pos = my_seek(hnd, ACTNRECORDS);
-  if (pos == -1) {  /* file is not open ? */
+  if (pos == -1) { /* file is not open ? */
     luaL_error(L, "Error in " LUA_QS ": file #%d is not open.", "ads.sizeof", hnd);
   }
-  int32_t temp = sec_readl(hnd, &success);
-  closeandbailout(L, hnd, success, "ads.read");  /* 7.9.6 security fix */
-  lua_pushnumber(L, temp);
+  cnt = sec_readl(hnd, &success);
+  closeandbailout(L, hnd, success, "ads.sizeof");  /* 7.9.6/7 security fix */
+  luaL_checkstack(L, 2, "not enough stack space");
+  lua_pushnumber(L, cnt);
+  my_seek(hnd, MAXNRECORDS);  /* 7.9.7 */
+  mrc = sec_readl(hnd, &success);
+  closeandbailout(L, hnd, success, "ads.sizeof");
+  lua_pushnumber(L, mrc);
   my_seek(hnd, 0L);
-  return 1;
+  return 2;
 }
 
 
 /* set description field in database; May 12, 2007; extended July 21, 2007 */
-static int base_desc (lua_State *L) {
+static int ads_desc (lua_State *L) {
   int hnd;
   size_t l;
   const char *desc;
   char Desc[DESCRIPTION_LEN];
-  hnd = agnL_checkinteger(L, 1);
+  hnd = checkads(L, 1);
   if (my_seek(hnd, DESCRIPTION) == -1) {  /* file is not open ? */
     luaL_error(L, "Error in " LUA_QS ": file #%d is not open.", "ads.desc", hnd);
   }
@@ -1620,24 +1887,24 @@ static int base_desc (lua_State *L) {
 }
 
 
-static int base_comment (lua_State *L) {
+static int ads_comment (lua_State *L) {
   off64_t pos, cpos, length, clen, cur, cnt, i, ind;
   size_t l, len, bufsize;
   int try, hnd, success;
-  char listflag;  /* 2.34.9 adaption */
+  char dbtype;  /* 2.34.9 adaption */
   const char *comment;
   bufsize = agn_getbuffersize(L);
   char buffer[bufsize];
-  hnd = agnL_checkinteger(L, 1);
+  hnd = checkads(L, 1);
   try = my_seek(hnd, 0L);
   if (try == -1) {  /* file is not open ? */
     luaL_error(L, "Error in " LUA_QS ": file #%d is not open.", "ads.comment", hnd);
   }
-  listflag = sec_readc(hnd, &success);
+  dbtype = sec_readc(hnd, &success);
   closeandbailout(L, hnd, success, "ads.comment");  /* 7.9.6 security fix */
-  if (listflag == 2) {
+  if (dbtype == 2) {
     my_seek(hnd, 0L);  /* 2.11.0 RC2 */
-    luaL_error(L, "Error in " LUA_QS ": function not applicable to sequences.", "ads.comment");
+    luaL_error(L, "Error in " LUA_QS ": number and string sequences are not supported.", "ads.comment");
   }
   sec_seek(L, hnd, COMMENT, "ads.comment");
   cpos = sec_readl(hnd, &success);
@@ -1738,9 +2005,9 @@ static int base_comment (lua_State *L) {
 }
 
 
-/* base_sync: flushes all unwritten content to the database file. */
-static int base_sync (lua_State *L) {
-  int hnd = agnL_checkinteger(L, 1);
+/* ads_sync: flushes all unwritten content to the database file. */
+static int ads_sync (lua_State *L) {
+  int hnd = checkads(L, 1);
   /* file is not open ? -> leave this here since there will be lock errors later with closed files*/
   if (my_seek(hnd, 0L) == -1) {
     luaL_error(L, "Error in " LUA_QS ": file #%d is not open.", "ads.sync", hnd);
@@ -1756,12 +2023,12 @@ static int base_sync (lua_State *L) {
 
 
 /* get all invalid (old) entries in a database, June 25, 2007 */
-static int base_invalids (lua_State *L) {
+static int ads_invalids (lua_State *L) {
   off64_t dsbegin, dsend, mrc, cnt, i, k, c, z, cpos, columns, *indextbl;
   int hnd, flag, success;
   size_t lenkey, lenval;
-  char listflag;
-  hnd = agnL_checkinteger(L, 1);
+  char dbtype;
+  hnd = checkads(L, 1);
   if (my_seek(hnd, 0L) == -1) {  /* file is not open ? */
     luaL_error(L, "Error in " LUA_QS ": file #%d is not open.", "ads.invalids", hnd);
   }
@@ -1773,11 +2040,11 @@ static int base_invalids (lua_State *L) {
   sec_seek(L, hnd, COLUMNS, "ads.invalids");
   columns = sec_readl(hnd, &success);
   closeandbailout(L, hnd, success, "ads.invalids");  /* 7.9.6 security fix */
-  listflag = sec_readc(hnd, &success);
+  dbtype = sec_readc(hnd, &success);
   closeandbailout(L, hnd, success, "ads.invalids");  /* 7.9.6 security fix */
-  if (listflag > 1) {
+  if (dbtype > 1) {
     my_seek(hnd, 0L);  /* 2.11.0 RC2 */
-    luaL_error(L, "Error in " LUA_QS ": function not applicable to sequences.", "ads.invalids");
+    luaL_error(L, "Error in " LUA_QS ": number and string sequences are not supported.", "ads.invalids");
   }
   sec_seek(L, hnd, COMMENT, "ads.invalids");
   cpos = sec_readl(hnd, &success);
@@ -1819,7 +2086,7 @@ static int base_invalids (lua_State *L) {
     /* set cursor to next entry */
     z += lenkey;
     sec_seek(L, hnd, z, "ads.invalids");
-    if (!listflag && z - lenkey != cpos) {
+    if (!dbtype && z - lenkey != cpos) {
       lenval = 0;
       for (k=2; k <= columns; k++) {
         lenval = sec_readl(hnd, &success) + 4L;
@@ -1848,18 +2115,18 @@ static int base_invalids (lua_State *L) {
   } \
 }
 
-static int base_clean (lua_State *L) {
+static int ads_clean (lua_State *L) {
   off64_t dsend, mrc, cnt, i, j, k, z, ind, length, cur, num, cpos, columns, lenvalues;
   int hnd, flag, verbose, top, try, success;
   size_t lenkey, lenval, totlen, bufsize;
-  char listflag;
+  char dbtype;
   double time;
   off64_t tobeshortened;
   bufsize = agn_getbuffersize(L);
   char buffer[bufsize];  /* 2.34.9 adaption */
   /* _vector_init(indices, sizeof(off64_t)); */
   Vector indices, invalid;
-  hnd = agnL_checkinteger(L, 1);
+  hnd = checkads(L, 1);
   verbose = (agnL_optinteger(L, 2, 0));
   if (my_seek(hnd, 0L) == -1) {  /* file is not open ? */
     luaL_error(L, "Error in " LUA_QS ": file #%d is not open.", "ads.clean", hnd);
@@ -1875,11 +2142,11 @@ static int base_clean (lua_State *L) {
   sec_seek(L, hnd, COLUMNS, "ads.clean");
   columns = sec_readl(hnd, &success);
   closeandbailout(L, hnd, success, "ads.clean");  /* 7.9.6 security fix */
-  listflag = sec_readc(hnd, &success);
+  dbtype = sec_readc(hnd, &success);
   closeandbailout(L, hnd, success, "ads.clean");  /* 7.9.6 security fix */
-  if (listflag > 1) {
+  if (dbtype > 1) {
     my_seek(hnd, 0L);
-    luaL_error(L, "Error in " LUA_QS ": function not applicable to sequences.", "ads.clean");
+    luaL_error(L, "Error in " LUA_QS ": number and string sequences are not supported.", "ads.clean");
   }
   sec_seek(L, hnd, COMMENT, "ads.clean");
   cpos = (off64_t)sec_readl(hnd, &success);
@@ -1934,7 +2201,7 @@ static int base_clean (lua_State *L) {
     /* set cursor to next entry */
     z += lenkey;
     sec_seek(L, hnd, z, "ads.clean");
-    if (!listflag && z - lenkey != cpos) {
+    if (!dbtype && z - lenkey != cpos) {
       lenval = 0;
       for (k=2; k <= columns; k++) {
         lenval = sec_readl(hnd, &success) + 4L;
@@ -1977,7 +2244,7 @@ static int base_clean (lua_State *L) {
     cleancloseandbailout(L, hnd, indices, invalid, success);
     sec_seek(L, hnd, ind + lenkey, "ads.clean");  /* set cursor to value */
     lenval = 0;
-    if (!listflag) {
+    if (!dbtype) {
       for (j=2; j <= columns; j++) {         /* determine entire length of second to last column */
         lenvalues = sec_readl(hnd, &success) + 4L;
         cleancloseandbailout(L, hnd, indices, invalid, success);
@@ -2064,10 +2331,10 @@ static int base_clean (lua_State *L) {
 }
 
 
-static int base_filepos (lua_State *L) {
+static int ads_filepos (lua_State *L) {
   int hnd;
   off64_t fpos;
-  hnd = agnL_checkinteger(L, 1);
+  hnd = checkads(L, 1);
   fpos = my_fpos(hnd);
   if (fpos == -1)
     lua_pushfalse(L);
@@ -2077,11 +2344,11 @@ static int base_filepos (lua_State *L) {
 }
 
 
-static int base_lock (lua_State *L) {  /* 0.32.5 */
+static int ads_lock (lua_State *L) {  /* 0.32.5 */
   int hnd;
   size_t nargs;
   off64_t start, size;
-  hnd = agnL_checkinteger(L, 1);
+  hnd = checkads(L, 1);
   nargs = lua_gettop(L);
   luaL_checkstack(L, nargs, "too many arguments");
   if (nargs == 1) {  /* lock entire file (in Windows lock 2^63 bytes only) */
@@ -2101,11 +2368,11 @@ static int base_lock (lua_State *L) {  /* 0.32.5 */
 }
 
 
-static int base_unlock (lua_State *L) {  /* 0.32.5 */
+static int ads_unlock (lua_State *L) {  /* 0.32.5 */
   int hnd;
   size_t nargs;
   off64_t start, size;
-  hnd = agnL_checkinteger(L, 1);
+  hnd = checkads(L, 1);
   nargs = lua_gettop(L);
   luaL_checkstack(L, nargs, "too many arguments");
   if (nargs == 1) {  /* lock entire file */
@@ -2125,35 +2392,40 @@ static int base_unlock (lua_State *L) {  /* 0.32.5 */
 }
 
 
+static int mt_gc (lua_State *L) {
+  aux_close(L, 1);
+  return 0;
+}
+
 static const luaL_Reg ads[] = {
-  {"attrib", base_attrib},                /* May 06, 2007 */
-  {"clean", base_clean},                  /* July 06, 2007 */
-  {"close", base_close},                  /* May 05, 2007 */
-  {"comment", base_comment},              /* July 11, 2007 */
-  {"createbase", base_createbase},        /* May 05, 2007 */
-  {"desc", base_desc},                    /* May 12, 2007 */
-  {"expand", base_expand},                /* June 25, 2007 */
-  {"fastseek", base_fastseek},            /* July 12, 2007 */
-  {"filepos", base_filepos},              /* June 28, 2007 */
-  {"free", base_free},                    /* July 06, 2007 */
-  {"getall", base_getall},                /* April 08, 2008; tweaked December 24, 2008 */
-  {"getkeys", base_getkeys},              /* May 06, 2007 */
-  {"getvalues", base_getvalues},          /* May 12, 2007 */
-  {"index", base_index},                  /* July 12, 2007 */
-  {"indices", base_indices},              /* May 12, 2007 */
-  {"invalids", base_invalids},            /* June 25, 2007 */
-  {"iterate", base_iterate},              /* May 06, 2007 */
-  {"lock", base_lock},                    /* June 12, 2010 */
-  {"open", base_open},                    /* May 05, 2007 */
-  {"peekin", base_peekin},                /* July 12, 2007 */
-  {"find", base_find},                    /* July 21, 2007 */
-  {"read", base_read},                    /* May 06, 2007 */
-  {"remove", base_remove},                /* May 06, 2007 */
-  {"retrieve", base_retrieve},            /* May 06, 2007 */
-  {"sizeof", base_sizeof},                /* May 06, 2007 */
-  {"sync", base_sync},                    /* May 12, 2007 */
-  {"unlock", base_unlock},                /* June 12, 2010 */
-  {"write", base_write},                  /* May 06, 2007 */
+  {"attrib", ads_attrib},                /* May 06, 2007 */
+  {"clean", ads_clean},                  /* July 06, 2007 */
+  {"close", ads_close},                  /* May 05, 2007 */
+  {"comment", ads_comment},              /* July 11, 2007 */
+  {"desc", ads_desc},                    /* May 12, 2007 */
+  {"expand", ads_expand},                /* June 25, 2007 */
+  {"fastseek", ads_fastseek},            /* July 12, 2007 */
+  {"filepos", ads_filepos},              /* June 28, 2007 */
+  {"free", ads_free},                    /* July 06, 2007 */
+  {"getall", ads_getall},                /* April 08, 2008; tweaked December 24, 2008 */
+  {"getkeys", ads_getkeys},              /* May 06, 2007 */
+  {"getvalues", ads_getvalues},          /* May 12, 2007 */
+  {"index", ads_index},                  /* July 12, 2007 */
+  {"indices", ads_indices},              /* May 12, 2007 */
+  {"invalids", ads_invalids},            /* June 25, 2007 */
+  {"iterate", ads_iterate},              /* May 06, 2007 */
+  {"lock", ads_lock},                    /* June 12, 2010 */
+  {"new", ads_new},                      /* May 05, 2007 */
+  {"open", ads_open},                    /* May 05, 2007 */
+  {"peekin", ads_peekin},                /* July 12, 2007 */
+  {"find", ads_find},                    /* July 21, 2007 */
+  {"read", ads_read},                    /* May 06, 2007 */
+  {"remove", ads_remove},                /* May 06, 2007 */
+  {"retrieve", ads_retrieve},            /* May 06, 2007 */
+  {"sizeof", ads_sizeof},                /* May 06, 2007 */
+  {"sync", ads_sync},                    /* May 12, 2007 */
+  {"unlock", ads_unlock},                /* June 12, 2010 */
+  {"write", ads_write},                  /* May 06, 2007 */
   {NULL, NULL}
 };
 
@@ -2161,10 +2433,22 @@ static const luaL_Reg ads[] = {
 /*
 ** Open base library
 */
+
 LUALIB_API int luaopen_ads (lua_State *L) {
+  /* Metatable for OOP file handle objects */
+  luaL_newmetatable(L, AGENA_ADSLIBNAME);
+  /* Set metatable.__index = metatable */
+  lua_pushvalue(L, -1);
+  lua_setfield(L, -2, "__index");
+  /* Register the functions directly into the metatable as OOP methods */
+  luaL_register(L, NULL, ads);
+  /* Register the special garbage collection destructor into the metatable */
+  lua_pushcfunction(L, mt_gc);
+  lua_setfield(L, -2, "__gc");
+  /* Create the procedural global package table (e.g., global 'ads') */
   luaL_register(L, AGENA_ADSLIBNAME, ads);
+  /* Create 'openfiles' tracking table */
   lua_newtable(L);
-  lua_setfield(L, -2, "openfiles");  /* table ads.openfiles for information on all open files */
+  lua_setfield(L, -2, "openfiles");  /* ads.openfiles table */
   return 1;
 }
-

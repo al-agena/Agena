@@ -577,7 +577,6 @@ static void set_info (lua_State *L) {
   lua_settable (L, -3);
 }
 
-
 int luaopen_xml (lua_State *L) {
   luaL_newmetatable(L, ParserType);
   lua_pushliteral(L, "__index");

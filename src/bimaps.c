@@ -152,20 +152,8 @@ static int bimaps_entries (lua_State *L) {
 }
 
 
-static const struct luaL_Reg bimaps_bimapslib [] = {  /* metamethods for bimaps */
-  /* the Agena `size` implementation is 37 % faster */
-  {"getsize",  bimaps_getsize},   /* January 07, 2025 */
-  {"rawget",   bimaps_rawget},    /* January 07, 2025 */
-  {"indices",  bimaps_indices},   /* January 07, 2025 */
-  {"entries",  bimaps_entries},   /* January 07, 2025 */
-  {"__empty",  mt_empty},         /* metamethod for `empty` operator */
-  {"__filled", mt_filled},        /* metamethod for `filled` operator */
-  {"__in",     mt_in},            /* metamethod for `in` operator */
-  {"__notin",  mt_notin},         /* metamethod for `notin` operator */
-  {NULL, NULL}
-};
 
-static const luaL_Reg bimapslib[] = {
+static const luaL_Reg bimaps[] = {
   {"getsize",  bimaps_getsize},   /* January 07, 2025 */
   {"rawget",   bimaps_rawget},    /* January 07, 2025 */
   {"indices",  bimaps_indices},   /* January 07, 2025 */
@@ -177,12 +165,25 @@ static const luaL_Reg bimapslib[] = {
 /*
 ** Open bimaps library
 */
+
+static void createmeta (lua_State *L) {
+  luaL_newmetatable(L, AGENA_BIMAPSLIBNAME);  /* [stack: metatable] */
+  luaL_register(L, NULL, bimaps);             /* [stack: metatable] */
+  lua_pushcfunction(L, mt_empty);
+  lua_setfield(L, -2, "__empty");
+  lua_pushcfunction(L, mt_filled);
+  lua_setfield(L, -2, "__filled");
+  lua_pushcfunction(L, mt_in);
+  lua_setfield(L, -2, "__in");
+  lua_pushcfunction(L, mt_notin);
+  lua_setfield(L, -2, "__notin");
+}
+
 LUALIB_API int luaopen_bimaps (lua_State *L) {
   /* metamethods */
-  luaL_newmetatable(L, AGENA_BIMAPSLIBNAME);  /* create metatable */
-  luaL_register(L, NULL, bimaps_bimapslib);  /* methods */
+  createmeta(L);
   /* register library */
-  luaL_register(L, AGENA_BIMAPSLIBNAME, bimapslib);
+  luaL_register(L, AGENA_BIMAPSLIBNAME, bimaps);
   return 1;
 }
 

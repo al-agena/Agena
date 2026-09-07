@@ -187,18 +187,6 @@ static int mt_zero (lua_State *L) {
 
 /* ---------------------------------------------------------------------------------------------------------------*/
 
-static const struct luaL_Reg bfield_fieldlib [] = {  /* metamethods for field `n' */
-  /* there is no need to include the supported methods here as mt_index will take care of this itself. */
-  {"__index",      mt_index},           /* n[p], with p the index, counting from 1 plus OOP method calling */
-  {"__writeindex", bfield_setbitto},    /* n[p] := value, with p the index, counting from 1 */
-  {"__tostring",   mt_tostring},        /* for output at the console, e.g. print(n) */
-  {"__size",       mt_getsize},         /* metamethod for `size` operator */
-  {"__zero",       mt_zero},            /* metamethod for `zero` operator */
-  {"__gc",         mt_gc},              /* please do not forget garbage collection */
-  {NULL, NULL}
-};
-
-
 static const luaL_Reg bfieldlib[] = {
   {"clearbit",     bfield_clearbit},
   {"flipbit",      bfield_flipbit},
@@ -221,11 +209,24 @@ static void createmeta (lua_State *L) {
   luaL_newmetatable(L, AGENA_BFIELDLIBNAME);  /* create metatable for file handles */
   lua_pushvalue(L, -1);  /* push metatable */
   lua_setfield(L, -2, "__index");  /* metatable.__index = metatable */
-  luaL_register(L, NULL, bfield_fieldlib);  /* methods */
+  luaL_register(L, NULL, bfieldlib);  /* methods */
 }
 
 LUALIB_API int luaopen_bfield (lua_State *L) {
   createmeta(L);
+  lua_pushcfunction(L, mt_index);
+  lua_setfield(L, -2, "__index");
+  lua_pushcfunction(L, bfield_setbitto);
+  lua_setfield(L, -2, "__writeindex");
+  lua_pushcfunction(L, mt_tostring);
+  lua_setfield(L, -2, "__tostring");
+  lua_pushcfunction(L, mt_getsize);
+  lua_setfield(L, -2, "__size");
+  lua_pushcfunction(L, mt_zero);
+  lua_setfield(L, -2, "__zero");
+  lua_pushcfunction(L, mt_gc);
+  lua_setfield(L, -2, "__gc");
+  lua_pop(L, 1);
   /* register library */
   luaL_register(L, AGENA_BFIELDLIBNAME, bfieldlib);
   return 1;

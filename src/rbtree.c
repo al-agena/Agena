@@ -689,9 +689,11 @@ static const struct luaL_Reg rb_treelib [] = {  /* metamethods for rbtrees `n' *
   {"entries",      rbtree_entries},
   {"find",         rbtree_find},
   {"include",      rbtree_include},
+  {"iterate",      rbtree_iterate},
   {"max",          rbtree_max},
   {"min",          rbtree_min},
   {"minmax",       rbtree_minmax},
+  {"purge",        rbtree_purge},
   {"remove",       rbtree_remove},
   {"__in",         mt_in},          /* `in` operator for rbtrees */
   {"__notin",      mt_notin},       /* `notin` operator for rbtrees */

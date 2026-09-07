@@ -68,7 +68,7 @@ od
 #include "charbuf.h"
 #include "luasys.h"
 
-#define AGENA_LIBVERSION	"com 0.0.1 for Agena as of April 14, 2020\n"
+#define AGENA_LIBVERSION	"com 0.0.2 for Agena as of September 05, 2026\n"
 
 #if !(defined(__DJGPP__) || defined(__OS2__) || defined(LUA_ANSI))
 #define AGENA_COMLIBNAME "com"
@@ -683,23 +683,17 @@ static int mt_tostring (lua_State *L) {  /* at the console, the port is formatte
 }
 
 
-static const struct luaL_Reg com_comlib [] = {  /* metamethods for com `n' */
-  {"__gc",         com_close},          /* please do not forget garbage collection */
-  {"__tostring",   mt_tostring},        /* for output at the console, e.g. print(n) */
-  {NULL, NULL}
-};
-
 static const luaL_Reg comlib[] = {
 #ifdef _WIN32
-  {"attrib",       com_attrib},  /* renamed 2.26.2 */
+  {"attrib",     com_attrib},  /* renamed 2.26.2 */
 #endif
   {"close",		   com_close},
   {"control",	   com_control},
   {"init",		   com_init},
   {"open",		   com_open},
-  {"purge",	       com_purge},
+  {"purge",	     com_purge},
   {"queues",	   com_queues},
-  {"read",         com_read},
+  {"read",       com_read},
   {"timeout",	   com_timeout},
   {"wait",		   com_wait},
   {"write",		   com_write},
@@ -710,10 +704,22 @@ static const luaL_Reg comlib[] = {
 /*
 ** Open com library
 */
+
+static void createmeta (lua_State *L) {
+  luaL_newmetatable(L, AGENA_COMLIBNAME);  /* create metatable for file handles */
+  lua_pushvalue(L, -1);  /* push metatable */
+  lua_setfield(L, -2, "__index");  /* metatable.__index = metatable */
+  luaL_register(L, NULL, comlib);  /* methods */
+}
+
 LUALIB_API int luaopen_com (lua_State *L) {
   /* metamethods */
-  luaL_newmetatable(L, "com");
-  luaL_register(L, NULL, com_comlib);
+  createmeta(L);
+  lua_pushcfunction(L, com_close);
+  lua_setfield(L, -2, "__gc");
+  lua_pushcfunction(L, mt_tostring);
+  lua_setfield(L, -2, "__tostring");
+  lua_pop(L, 1);
   /* register library */
   luaL_register(L, AGENA_COMLIBNAME, comlib);
   lua_newtable(L);

@@ -363,7 +363,6 @@ static const struct luaL_Reg sema_lib [] = {  /* metamethods for sema userdata `
   {"limit", sema_limit},          /* added on October 15, 2024 */
   {"open", sema_open},            /* added on September 13, 2018 */
   {"reset", sema_reset},          /* added on September 20, 2018 */
-  {"set", sema_set},              /* added on March 10, 2019 */
   {"shrink", sema_shrink},        /* added on September 21, 2018 */
   {"state", sema_state},          /* added on September 13, 2018 */
   {"__index", sema_get},          /* n[p], with p the index, counting from 1 */
@@ -383,7 +382,6 @@ static const luaL_Reg semalib[] = {
   {"new", sema_new},              /* added on March 01, 2019 */
   {"open", sema_open},            /* added on September 13, 2018 */
   {"reset", sema_reset},          /* added on September 20, 2018 */
-  {"set", sema_set},              /* added on March 10, 2019 */
   {"shrink", sema_shrink},        /* added on September 21, 2018 */
   {"state", sema_state},          /* added on September 13, 2018 */
   {NULL, NULL}

@@ -1883,51 +1883,12 @@ static int fpos_gc (lua_State *L) {
   return 0;
 }
 
+
 static const struct luaL_Reg fpos_mt [] = {
   {"__gc",             fpos_gc},
   {"__tostring",       fpos_tostring},
   {NULL, NULL}
 };
-
-
-static const luaL_Reg biniolib[] = {
-  {"clearerror",       binio_clearerror},
-  {"close",            binio_close},
-  {"eof",              binio_eof},
-  {"ferror",           binio_ferror},
-  {"fgetpos",          binio_fgetpos},  /* Ocotber 05, 2025 */
-  {"filepos",          binio_filepos},
-  {"fsetpos",          binio_fsetpos},  /* Ocotber 05, 2025 */
-  {"isfdesc",          binio_isfdesc},
-  {"length",           binio_length},
-  {"lock",             binio_lock},
-  {"readbytes",        binio_readbytes},
-  {"readchar",         binio_readchar},
-  {"readindex",        binio_readindex},
-  {"readlong",         binio_readlong},
-  {"readlongdouble",   binio_readlongdouble},
-  {"readnumber",       binio_readnumber},
-  {"readshortstring",  binio_readshortstring},
-  {"readstring",       binio_readstring},
-  {"rewind",           binio_rewind},
-  {"seek",             binio_seek},
-  {"sync",             binio_sync},
-  {"toend",            binio_toend},
-  {"truncate",         binio_truncate},
-  {"unlock",           binio_unlock},
-  {"writebytes",       binio_writebytes},
-  {"writechar",        binio_writechar},
-  {"writeindex",       binio_writeindex},
-  {"writelong",        binio_writelong},
-  {"writelongdouble",  binio_writelongdouble},
-  {"writenumber",      binio_writenumber},
-  {"writeshortstring", binio_writeshortstring},
-  {"writestring",      binio_writestring},
-  {"__gc",             binio_gc},
-  {"__tostring",       binio_tostring},
-  {NULL, NULL}
-};
-
 
 static const luaL_Reg binio[] = {
   {"clearerror",       binio_clearerror},
@@ -1977,7 +1938,7 @@ static void createmeta (lua_State *L) {
   luaL_newmetatable(L, AGN_FILEHANDLE);  /* create metatable for file handles */
   lua_pushvalue(L, -1);  /* push metatable */
   lua_setfield(L, -2, "__index");  /* metatable.__index = metatable */
-  luaL_register(L, NULL, biniolib);  /* file methods */
+  luaL_register(L, NULL, binio);  /* file methods */
 }
 
 /*
@@ -1986,6 +1947,10 @@ static void createmeta (lua_State *L) {
 LUALIB_API int luaopen_binio (lua_State *L) {
   createmeta(L);
   luaL_register(L, AGENA_BINIOLIBNAME, binio);
+  lua_pushcfunction(L, binio_gc);
+  lua_setfield(L, -2, "__gc");
+  lua_pushcfunction(L, binio_tostring);
+  lua_setfield(L, -2, "__tostring");
   lua_newtable(L);
   lua_setfield(L, -2, "openfiles");  /* table for information on all open files */
   luaL_newmetatable(L, FPOS_T_UD);

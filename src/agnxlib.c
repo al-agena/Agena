@@ -43,6 +43,11 @@
 #include "lstrlib.h"  /* for SPECIALS, match() */
 #include "numarray.h"
 
+#if defined(LUA_USE_READLINE)
+#include <readline/readline.h>
+#include <readline/history.h>
+#endif
+
 #define FREELIST_REF  0  /* free list of references */
 
 /* convert a stack index to positive */
@@ -1647,11 +1652,21 @@ LUALIB_API void agnL_onexit (lua_State *L, int restart) {  /* 2.7.0, 2.37.0 */
     /* do nothing */
   else
     lua_call(L, 0, 0);
+#if defined(LUA_USE_READLINE) && !defined(__APPLE__)
+  rl_set_prompt("");
+#endif
   if (!restart && L) {
+#if defined(LUA_USE_READLINE)
+    if (rl_line_buffer) {
+      free(rl_line_buffer);
+      rl_line_buffer = NULL;
+    }
+#endif
     lua_gc(L, LUA_GCCOLLECT, 0);  /* added 6.1.3, patched 7.6.6 for srglue/sragena. */
     if (L->C) lua_close(L->C);  /* 2.37.0, close the cache stack at final exit, not at restart.
       7.6.6 patch to prevent Valgrind warnings and segfaults with srglue/sragena. */
   }
+  
   lua_unlock(L);
 }
 

@@ -4,7 +4,7 @@
 * Luiz Henrique de Figueiredo <lhf@tecgraf.puc-rio.br>
 * 06 Mar 2009 07:59:10
 * This code is hereby placed in the public domain.
-* Includes a small change to successfully compile (getLine instead of getline) and 
+* Includes a small change to successfully compile (getLine instead of getline) and
 * a few adaptions so it can be imported into an Agena session.
 */
 
@@ -171,14 +171,14 @@ static int do_setconstant (lua_State *L) {  /** setconstant(f,i,v) */
 }
 
 static const luaL_reg R[] = {
-	{"getconstant",    do_getconstant},
-	{"getfunction",    do_getfunction},
-	{"getheader",      do_getheader},
-	{"getinstruction", do_getinstruction},
-	{"getlocal",       do_getlocal},
-	{"getupvalue",     do_getupvalue},
-	{"setconstant",    do_setconstant},
-	{NULL,	NULL}
+  {"getconstant",    do_getconstant},
+  {"getfunction",    do_getfunction},
+  {"getheader",      do_getheader},
+  {"getinstruction", do_getinstruction},
+  {"getlocal",       do_getlocal},
+  {"getupvalue",     do_getupvalue},
+  {"setconstant",    do_setconstant},
+  {NULL,	NULL}
 };
 
 LUALIB_API int luaopen_abci (lua_State *L) {
