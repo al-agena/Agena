@@ -443,15 +443,6 @@ static void aux_prefillarray (lua_State *L, int n, int nargs, const char *procna
   n = accu; \
 }
 
-/* Pushes a numarray of type `what' with nops elements, all set to zero, onto the stack. */
-NumArray *numarray_createarray (lua_State *L, natype what, int64_t nops, const char *procname) {
-  NumarrayHeader;
-  (void)n; (void)nargs;
-  filldims(nops, dims, ndims, accu, procname);
-  return createarray(L, what, nops, ndims, dims, procname);
-}
-
-
 static int numarray_uchar (lua_State *L) {
   NumarrayHeader;
   nargs = lua_gettop(L);

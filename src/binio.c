@@ -59,7 +59,7 @@ static int binio_open (lua_State *L) {
     if (access(file, (readwrite) ? R_OK|W_OK : R_OK) == -1)
       luaL_error(L, "Error in " LUA_QS ": missing permissions for " LUA_QS ".", "binio.open", file);
   }
-  set_errno(0);  /* 2.39.5 reset, better be sure than sorry, as Windows 2000 seems susceptible to uncleared errno's */
+  set_errno(0);  /* 2.39.5 reset, better be sure than sorry, as Windows 20002 seems susceptible to uncleared errno's */
   *hnd = (readwrite) ? my_fopen(file, append) : my_froopen(file);
   en = errno;  /* 1.12.2 */
   if (*hnd == NULL) {  /* file does not yet exist ? */
