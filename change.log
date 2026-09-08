@@ -1,3 +1,12 @@
+7.9.8 Deimos, September 08, 2026
+
+- With number and string sequences, `ads.write` has become 2.7 times faster.
+
+- Tweaked `ads.read` a bit.
+
+- Error messages of `ads.close` and `ads.open` printed the wrong function name. This has been fixed.
+
+
 7.9.7 Deimos, September 07, 2026
 
 - All `ads`, `bfield`, `binary` and `com` package functions can now be called OOP-style, `rbtree.iterate` and `rbtree.purge`,
@@ -17,7 +26,7 @@
   > for i to 25 do
   >    fh@@write(i, ((i - 1) % 222) + 33)
   > od;
-  > fh@getall([]):
+  > fh@@getall([]):
   [1, 33, 2, 34, 3, 35, 4, 36, 5, 37, 6, 38, 7, 39, 8, 40, 9, 41, 10, 42, 11, 43,
   12, 44, 13, 45, 14, 46, 15, 47, 16, 48, 17, 49, 18, 50, 19, 51, 20, 52, 21, 53,
   22, 54, 23, 55, 24, 56, 25, 57]
@@ -26,7 +35,7 @@
 - With string sequences, `ads.write` ignored the third and following arguments. This has been fixed.
 
 - `ads.write` when expanding a database registered the wrong new maximum capacity. This has been fixed. You can now also store
-  strings of any size, they are no longer cut off after the 30th character. The function now also no longer leaves behind 
+  strings of any size, they are no longer cut off after the 30th character. The function now also no longer leaves behind
   memory leaks with databases and lists which could result in segmentation faults later on.
 
 - `ads.index` returned wrong results with string sequences. This has been fixed.
