@@ -9,7 +9,7 @@ Unicode True
 !ifndef VERSION
   !define VER_MAJOR '7'
   !define VER_MINOR '9'
-  !define VER_REVISION '8'
+  !define VER_REVISION '9'
   !define NICKNAME "Deimos"
   !define VERSION '${VER_MAJOR}.${VER_MINOR}.${VER_REVISION}'
 !endif
