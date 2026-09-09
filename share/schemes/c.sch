@@ -95,7 +95,7 @@ object TPersHolder
             'fpclassify,fputs,fread,free,frexp,fscanf,fseek,fstat,ftell,ftello,ftello64,ftruncate,fwrite,getc,getch,getcwd,goto,huge,hypot,' +
             'if,ilogb,inline,interrupt,isalpha,isalnum,iscntrl,isdigit,isinf,islower,isnan,isspace,ispunct,isupper,isunordered,isxdigit,kbhit,' +
             'ldexp,listen,localeconv,log,log1p,log2,log10,lseek,lseek64,malloc,memcmp,memcpy,memset,modf,near,open,opendir,pascal,pclose,popen,pow,' +
-            'printf,read,readdir,realloc,realpath,register,return,round,setvbuf,signbit,sin,sinh,sizeof,socket,sprintf,sqrt,sqrtl,stat,strcat,strchr,' +
+            'printf,read,readdir,realloc,realpath,register,return,round,setvbuf,signbit,sin,sinh,sizeof,socket,sprintf,sqrt,sqrtl,stat,strcat,strchr,strcmp,' +
             'strcoll,strcpy,strcspn,strdup,strerror,strftime,strlen,strncat,strncmp,strncpy,strpbrk,strrchr,strspn,strstr,strtok,strtoul,strtoull,' +
             'switch,sysctlbyname,tan,tanh,time,tolower,toupper,uchar,ungetc,unlikely,unmount,unmount2,volatile,while,write'
         end
