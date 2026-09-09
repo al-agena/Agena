@@ -1619,7 +1619,7 @@ LUALIB_API void my_expand (int hnd, int mrc, int cnt, int count, int *error) {
   int i, success;
   char *buffer;
   cfpos = my_fpos(hnd);  /* save the current file position for later restoration */
-  my_seek(hnd, BASECOMMENT);
+  my_seek(hnd, BASECOMMENT);  /* proceed to comment information in the header */
   commentpos = sec_readl(hnd, &success);  /* 7.9.6 hardening */
   if (!success) {
     *error = 1;
@@ -1685,7 +1685,7 @@ LUALIB_API void my_expand (int hnd, int mrc, int cnt, int count, int *error) {
   for (j=0; j < count; j++) {
     my_writel(hnd, 0L);
   }
-  /* update maximum number of entries field */
+  /* update maximum number of entries field (capacity) */
   my_seek(hnd, MAXNRECORDS);
   my_writel(hnd, mrc + count);
   /* update position of comment if present */
