@@ -1,6 +1,33 @@
+7.9.10 Deimos, September 10, 2026
+
+- In ADS files, embedded comments added with `ads.comment` have often been problematic, even sometimes causing segmentation faults,
+  especially with ADS files that have been extended or reduced in size. To keep the package safe and maintainable, `ads.comment` 
+  and any associated logic in other functions have been removed, also speeding up `ads.write` a bit. If an old AGB file is being 
+  changed, any comment will be deleted to maintain compatibility. You can still use `ads.desc` to safely store a short description 
+  of 75 characters.
+
+- With lists, `ads.retrieve` no longer returns a string in a table, but just returns the single string.
+
+- `ads.attrib` reads out the following parameters directly from the file handle userdata and not the file header
+  and returns them with the new `handle` field:
+
+  'maxsize': maximum record capacity,
+  'size': current number of records,
+  'keylength': key length,
+  'columns': number of columns,
+  'type': base type,
+  'lof': length of the ADS file in bytes.
+
+- With databases, `ads.write` now always requires at least three arguments.
+
+- `environ.setfenv` can now attach a table to a userdata object as its environment. This is equivalent to calling
+  `debug.setfenv`.
+
+
 7.9.9 Deimos, September 09, 2026
 
-- With databases and lists, both `ads.write` and `ads.read` have become around 8 % faster.
+- With databases and lists, both `ads.write` and `ads.read` have become around 8 % faster. Other functions have also been
+  tweaked a bit by avoiding file system read operations as much as possible.
 
 
 7.9.8 Deimos, September 08, 2026
