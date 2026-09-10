@@ -2,7 +2,7 @@
 
 package.checkclib('ads');  # has C dynamic link library been found ?
 
-ads.initstring := 'ads v3.3.0 as of September 05, 2026\n';
+ads.initstring := 'ads v4.0.0 as of September 10, 2026\n';
 
 # ads.createdict:
 # Create an ADB file from a text dictionary. In the text file keys and values must be
@@ -45,17 +45,10 @@ end;
 
 ads.fastopen := proc(fn :: string) is
    local fh := ads.open(fn, 'readonly');
-   local inds := ads.indices(fh);
-   local high := ads.sizeof(fh);
-   local keylen := ads.attrib(fh)['keylength'];
-   local listflag := ads.attrib(fh)['type'];
-   if listflag > 1 then
+   if ads.attrib(fh)['type'] > 1 then
       error('Error in `ads.fastopen`: function not applicable to sequences.')
    fi;
-   if ads.baseinfo = null then
-      create table ads.baseinfo
-   fi;
-   ads.baseinfo[fh] := [inds, high, keylen, listflag];
+   environ.setfenv(fh, ads.indices(fh));
    return fh
 end;
 
@@ -66,17 +59,13 @@ end;
 # > ads.fastread(fh, 'aleks'):
 
 ads.fastread := proc(fh :: userdata, key :: string) is
-   local infos := ads.baseinfo[fh];
-   return ads.fastseek(fh, key, infos[1], infos[2], infos[3], infos[4])
+   return ads.fastseek(fh, key)
 end;
 
 # ads.fastclose written July 12, 2007
 
 ads.fastclose := proc(fh :: userdata) is
    local result := ads.close(fh);
-   if result then
-      clear ads.baseinfo[fh]
-   fi;
    return result
 end;
 
