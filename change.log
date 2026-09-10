@@ -1,3 +1,17 @@
+7.9.11 Deimos, September 11, 2026
+
+- `environ.getfenv` can now return the environment of userdata objects. 
+
+- Slight internal change to `environ.setfenv` for userdata so that this function and `environ.getfenv` can work in tandem with
+  this type of input.
+
+- `utils.udata` no longer by default returns a userdata value with an attached environment table. If you need one, call the function
+  explicitly with a table as its second argument. The function has also been hardened against stack corruption.
+
+- `utils.udata` and `avl.getstore` could return a value that when called as a function crashed Agena. The bug could also affect
+  `numarray`, `lifo`, `fifo` and `trie` userdata. This has been fixed.
+
+
 7.9.10 Deimos, September 10, 2026
 
 - In ADS files, embedded comments added with `ads.comment` have often been problematic, even sometimes causing segmentation faults,
