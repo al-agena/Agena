@@ -19,14 +19,6 @@
 #undef __GNUC_PREREQ
 #endif
 
-
-/*#if defined __GNUC__ && defined __GNUC_MINOR__
-# define __GNUC_PREREQ(maj, min) \
-  ((__GNUC__ << 16) + __GNUC_MINOR__ >= ((maj) << 16) + (min))
-#else
-# define __GNUC_PREREQ(maj, min) 0
-#endif */
-
 #if defined __GNUC__ && defined __GNUC_MINOR__
 # define __GNUC_PREREQ(maj, min) \
   (((__GNUC__) << 16) + (__GNUC_MINOR__) >= (((maj) << 16) + (min)))
@@ -34,11 +26,12 @@
 # define __GNUC_PREREQ(maj, min) 0
 #endif
 
+
 #ifndef agena_h
 #define agena_h
 
 #define AGENA_VERSION     "agena 7.9"
-#define AGENA_EDITION     "7.9.10"
+#define AGENA_EDITION     "7.9.11"
 #define AGENA_MOTTO       "deimos"
 #define AGENA_NAME        "agena"
 #define AGENA_LOGO        ">>"

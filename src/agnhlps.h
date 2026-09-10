@@ -334,7 +334,6 @@ LUALIB_API void    my_writec (int hnd, char data);
 LUALIB_API int     my_lock (int hnd, off64_t start, off64_t size);
 LUALIB_API int     my_unlock (int hnd, off64_t start, off64_t size);
 LUALIB_API void    my_move (int hnd, off64_t fpos, off64_t tpos, off64_t size);
-LUALIB_API void    my_expand (int hnd, int mrc, int cnt, int count, int *error);
 LUALIB_API off64_t my_fpos (int hnd);
 LUALIB_API const char *my_ioerror (int en);
 

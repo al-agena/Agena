@@ -47,6 +47,10 @@ static void getfunc (lua_State *L, int opt) {  /* Lua 5.1.2 patch */
 
 
 static int environ_getfenv (lua_State *L) {  /* moved from Lua's baselib to the environ package */
+  if (lua_isuserdata(L, 1)) {  /* 7.9.11 extension */
+    lua_getfenv(L, 1);
+    return 1;
+  }
   getfunc(L, 1);  /* Lua 5.1.2 patch */
   if (lua_iscfunction(L, -1))  /* is a C function? */
     lua_pushvalue(L, LUA_GLOBALSINDEX);  /* return the thread's global env. */
@@ -58,21 +62,21 @@ static int environ_getfenv (lua_State *L) {  /* moved from Lua's baselib to the 
 
 static int environ_setfenv (lua_State *L) {
   luaL_checktype(L, 2, LUA_TTABLE);
-  if (!lua_isfunction(L, 1)) {  /* 7.9.10 extension */
+  if (lua_isuserdata(L, 1)) {  /* 7.9.10/11 extension */
     lua_settop(L, 2);
     if (lua_setfenv(L, 1) == 0) { goto err; }
     return 0;  /* return nothing */
-  } else {
-    getfunc(L, 1);  /* Lua 5.1.2 patch */
-    lua_pushvalue(L, 2);
-    if (agn_isnumber(L, 1) && agn_tonumber(L, 1) == 0) {
-      /* change environment of current thread */
-      lua_pushthread(L);
-      lua_insert(L, -2);
-      lua_setfenv(L, -2);
-      return 0;
-    } else if (lua_iscfunction(L, -2) || lua_setfenv(L, -2) == 0) { goto err; }
   }
+  getfunc(L, 1);  /* Lua 5.1.2 patch */
+  lua_pushvalue(L, 2);
+  if (agn_isnumber(L, 1) && agn_tonumber(L, 1) == 0) {
+    /* change environment of current thread */
+    lua_pushthread(L);
+    lua_insert(L, -2);
+    lua_setfenv(L, -2);
+    return 0;
+  } else
+    if (lua_iscfunction(L, -2) || lua_setfenv(L, -2) == 0) { goto err; }
   return 1;
 err:
   luaL_error(L, LUA_QL("environ.setfenv") " cannot change environment of given object.");

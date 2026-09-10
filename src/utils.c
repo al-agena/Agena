@@ -1637,21 +1637,25 @@ static int utils_udata (lua_State *L) {
     size_t l;
     const char *name = lua_tolstring(L, 1, &l);
     int t = lua_type(L, 2);
+    luaL_checkstack(L, 2, "not enough stack space");
     u = (Userdata *)lua_newuserdata(L, sizeof(Userdata));
+    u->registry = LUA_NOREF;  /* marker, do not access the registry later on */
     agn_setutypestring(L, -1, name);
     lua_setmetatabletoobject(L, -1, "udata", 0);
-    switch (t) {  /* 5.5.15 */
-      case LUA_TNIL: case LUA_TTABLE: case LUA_TSET: case LUA_TSEQ: case LUA_TREG: case LUA_TPAIR: case LUA_TUSERDATA:
-        lua_pushvalue(L, 2);  /* use it as accompanying data container */
+    switch (t) {  /* 5.5.15/7.9.11 rewrite */
+      case LUA_TTABLE: {  /* can only set tables to userdata environment */
+        lua_pushvalue(L, 2);
+        lua_setfenv(L, -2);
         break;
-      default:  /* any other data or none at all (just one argument given): ... */
-        lua_createtable(L, 0, 0);  /* ... create accompanying table. */
-    }
-    if (lua_istable(L, -1)) {  /* can only set tables to userdata environment */
-      lua_setfenv(L, -2);
-      u->registry = LUA_NOREF;
-    } else {
-      u->registry = luaL_ref(L, LUA_REGISTRYINDEX);  /* ... and put it into the registry */
+      }
+      case LUA_TSET: case LUA_TSEQ: case LUA_TREG: case LUA_TPAIR: case LUA_TUSERDATA: {
+        lua_pushvalue(L, 2);  /* use it as accompanying data container */
+        u->registry = luaL_ref(L, LUA_REGISTRYINDEX);  /* ... and put it into the registry */
+        break;
+      }
+      default: {
+        /* any other data or none at all (just one argument given): do nothing */
+      }
     }
     char *temp = tools_strdup(name);
     if (!temp) luaL_error(L, "Error in " LUA_QS ": memory allocation failed.", "utils.udata");

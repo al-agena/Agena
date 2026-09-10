@@ -335,6 +335,10 @@ LUALIB_API int agnL_calludata (lua_State *L, int nargs, int regidx, const char *
   } else {
     lua_rawgeti(L, LUA_REGISTRYINDEX, regidx);  /* push registry structure onto the stack */
   }
+  if (lua_type(L, -1) < LUA_TFUNCTION) {
+    lua_pop(L, 1);
+    return 0;  /* 7.9.11 fix to prevent segfaults: return nothing */
+  }
   switch (nargs) {
     case 1:
       break;
@@ -1666,7 +1670,7 @@ LUALIB_API void agnL_onexit (lua_State *L, int restart) {  /* 2.7.0, 2.37.0 */
     if (L->C) lua_close(L->C);  /* 2.37.0, close the cache stack at final exit, not at restart.
       7.6.6 patch to prevent Valgrind warnings and segfaults with srglue/sragena. */
   }
-  
+
   lua_unlock(L);
 }
 

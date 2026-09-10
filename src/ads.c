@@ -899,15 +899,14 @@ static int ads_iterate (lua_State *L) {
   return 1;
 }
 
-#define BASE_OFFSET ADS_OFFSET
-#define BASECOMMENT COMMENT
+
 LUALIB_API void aux_expand (int hnd, int mrc, int cnt, int count, int *error) {
   int32_t dsbegin, dsend, offset, j, index, bufsize, cfpos, newindex;
   int i, success;
   char *buffer;
   cfpos = my_fpos(hnd);  /* Save the current file position for later restoration */
   /* 2. Define our data boundaries */
-  dsbegin = mrc * 4L + BASE_OFFSET;  /* Start of the data section (right after old index block) */
+  dsbegin = mrc * 4L + ADS_OFFSET;  /* Start of the data section (right after old index block) */
   dsend = my_lof(hnd) - 1; /* Actual logical end of file data */
   offset = count * 4L; /* The distance everything must shift forward */
   /* 3. Allocate a safe block-based I/O buffer (e.g., 64KB chunks for speed) */
@@ -941,16 +940,16 @@ LUALIB_API void aux_expand (int hnd, int mrc, int cnt, int count, int *error) {
   }
   /* 6. Uniformly update all existing indices (+offset) */
   for (j = 0; j < cnt; j++) {
-    my_seek(hnd, j * 4L + BASE_OFFSET);
+    my_seek(hnd, j * 4L + ADS_OFFSET);
     index = sec_readl(hnd, &success);
     if (!success) { *error = 1; return; }
     /* Every index points to data that was shifted, so shift every valid pointer */
     newindex = index + offset;
-    my_seek(hnd, j * 4L + BASE_OFFSET);
+    my_seek(hnd, j * 4L + ADS_OFFSET);
     my_writel(hnd, newindex);
   }
   /* 7. Initialize the appended new index slots to 0 */
-  my_seek(hnd, cnt * 4L + BASE_OFFSET);
+  my_seek(hnd, cnt * 4L + ADS_OFFSET);
   for (j = 0; j < count; j++) {
     my_writel(hnd, 0L);
   }
@@ -968,7 +967,11 @@ static void aux_deletelegacycomment (lua_State *L, int hnd, const char *pn) {
   closeandbailout(L, hnd, success, pn);  /* 7.9.6 security fix */
   if (cpos != 0) {  /* with legacy AGB files, remove comment section once and for all */
     tools_fsync(hnd);
-    ftruncate(hnd, cpos);
+    if (ftruncate(hnd, cpos) == -1) {
+      /* unlock file */
+      my_seek(hnd, 0L);
+      luaL_error(L, "Error while truncating file at position %lld\n", cpos);
+    }
     sec_seek(L, hnd, COMMENT, "ads.write");
     my_writel(hnd, 0L);
   }
@@ -1046,7 +1049,7 @@ static int ads_write (lua_State *L) {
       flag = 0;
       if (mrc - cnt == 0UL) {  /* 0.32.0, no free place ? -> expand by ~13 % */
         int newsize = agn_newsize(NULL, mrc);
-        /* my_expand() does not change cnt (as it does not add new records), but it updates mrc in the file header */
+        /* aux_expand() does not change cnt (as it does not add new records), but it updates mrc in the file header */
         aux_expand(hnd, mrc, cnt, newsize - mrc, &error);  /* 7.9.6/7 change */
         if (error) {  /* 2.11.0 RC2 fix */
           xfree(comment);  /* 5.5.8 fix */
@@ -1171,7 +1174,7 @@ static int ads_expand (lua_State *L) {
      cnt: current number of actual records,
      count: number of records to be added;
      my_expand() updates the mrc counter in the file header */
-  my_expand(hnd, mrc, cnt, count, &error);
+  aux_expand(hnd, mrc, cnt, count, &error);
   my_seek(hnd, 0L);
   if (error) {
     luaL_error(L, "Error in " LUA_QS ": memory allocation failed.", "ads.expand");
