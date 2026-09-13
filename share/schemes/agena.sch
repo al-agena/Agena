@@ -82,7 +82,7 @@ object TPersHolder
           Keywords =
             'abs,addup,antilog10,antilog2,arccos,arcsec,arcsin,arctan,assigned,atendof,bea,cbrt,char,cis,cos,cosh,cosxx,cube,empty,entier,even,exp,' +
             'filled,finite,flip,float,foreach,imag,in,infinite,instr,int,integral,intersect,invgamma,invsqrt,left,ln,lngamma,ltrim,minus,mulup,' +
-            'nan,numeric,odd,qmdev,qsumup,real,recip,right,rtrim,sethigh,setlow,sign,signum,sin,sinc,sinh,size,split,sqrt,square,squareadd,sumup,surd,' +
+            'nan,numeric,odd,over,qmdev,qsumup,real,recip,right,rtrim,sethigh,setlow,sign,signum,sin,sinc,sinh,size,split,sqrt,square,squareadd,sumup,surd,' +
             'tan,tanh,type,typeof,unassigned,union,unity'
         end
         item
@@ -279,7 +279,7 @@ object TPersHolder
           FontID = 7
           Name = 'ads'
           Keywords =
-            'ads,attrib,closebase,closeall,clean,comment,createseq,createdict,desc,' +
+            'ads,attrib,closebase,closeall,clean,createseq,createdict,desc,' +
             'expand,fastclose,fastopen,fastread,fastseek,filepos,free,getall,getkeys,getvalues,' +
             'index,indices,invalids,iterate,lookup,new,openbase,opendict,peekin,' +
             'rawsearch,readbase,remove,retrieve,search,seqtolist,setdesc,sizeof,sync,writebase'

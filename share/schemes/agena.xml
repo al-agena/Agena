@@ -286,6 +286,7 @@
       <KEYWORD1>muladd</KEYWORD1>
       <KEYWORD1>mulup</KEYWORD1>
       <KEYWORD1>or</KEYWORD1>
+      <KEYWORD1>over</KEYWORD1>
       <KEYWORD1>pop</KEYWORD1>
       <KEYWORD1>qmdev</KEYWORD1>
       <KEYWORD1>qsumup</KEYWORD1>
@@ -1625,7 +1626,6 @@
       <KEYWORD3>ads.closebase</KEYWORD3>
       <KEYWORD3>ads.closeall</KEYWORD3>
       <KEYWORD3>ads.clean</KEYWORD3>
-      <KEYWORD3>ads.comment</KEYWORD3>
       <KEYWORD3>ads.createseq</KEYWORD3>
       <KEYWORD3>ads.createdict</KEYWORD3>
       <KEYWORD3>ads.desc</KEYWORD3>

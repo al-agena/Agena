@@ -73,7 +73,6 @@ ads.attrib
 ads.clean
 ads.closeall
 ads.closebase
-ads.comment
 ads.createdict
 ads.createseq
 ads.desc
@@ -1322,6 +1321,7 @@ os.wait
 os.whereis
 os.winver
 os.xgetbv
+over
 pack
 package.checkclib
 package.getcfuncs
