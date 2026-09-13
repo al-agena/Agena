@@ -1,7 +1,7 @@
 7.10.0 Enceladus, September 13, 2026
 
-- The new `!` prefix operator computes the factorial and is twice as fast as the `fact` function. The functionality could not
-  be implemented as a postfix n! would create grammatical collisions. Examples:
+- The new `!` prefix operator computes the factorial and is twice as fast as the `fact` function. The functionality could not be 
+  implemented as a postfix operator because `n!` would create grammatical collisions.. Examples:
 
   > n := 4;
   > !4, !n:
@@ -27,7 +27,7 @@
 
 - `fractals.mandel` and `fractals.mandelbrot` which compute Mandelbrot sets have become around 25 to 33 % faster by introducing
   Cardioid/Bulb Checking.
-  
+
 - This release has been successfully Dr. Memory-tested on Windows and Valgrind-tested on x86 and x64 Linux.
 
 
