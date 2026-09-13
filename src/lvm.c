@@ -66,6 +66,7 @@
   } \
 }
 
+
 LUAI_FUNC void agenaV_setmetatable (lua_State *L, TValue *obj, Table *mt, int cfunc) {  /* 2.29.1 */
   switch (ttype(obj)) {
     case LUA_TTABLE: {
@@ -7719,6 +7720,30 @@ static void restoretry (lua_State *L, int seterr, int ra) {  /* 2.1 RC 2, writte
   releasetry(L);
 }
 
+/* 7.10.0 */
+static double vm_bincoeff (int n, int k) {
+  double r;
+  int rc = 0;
+  if (n >= 0 && (k < 0 || k > n)) return 0.0;  /* speed-up ! */
+  if (n < 0) {  /* to prevent slow recursion, we will not call tools_bincoeff with negative n,
+    but just call tools_binomial */
+    /* To prevent overflows, we use the following recursions, see: https://mathworld.wolfram.com/BinomialCoefficient.html 3.7.3 */
+    if (k >= 0)
+      return sun_pow(-1, k, 1)*tools_binomial(-n + k - 1, k);
+    else if (k <= n)
+      return sun_pow(-1, n - k, 1)*tools_binomial(-k - 1, n - k);
+    else
+      return 0.0;
+  } else {
+    int64_t result = tools_bincoeff(n, k, &rc);
+    if (rc) { goto err; }
+    return (double)result;
+  }
+err:
+  r = sun_exp(sun_lgamma(n + 1) - sun_lgamma(k + 1) - sun_lgamma(n - k + 1));
+  return sun_round(r);
+}
+
 
 void luaV_execute (lua_State *L, int nexeccalls) {
   LClosure *cl;
@@ -7750,6 +7775,26 @@ void luaV_execute (lua_State *L, int nexeccalls) {
     lua_assert(L->top == L->ci->top || luaG_checkopenop(i)); \
     goto *dispatch_table[GET_OPCODE(i)]; \
   }
+  /* WARNING: don't use or set variable names like i, etc., defined above in the code for the operators.
+     Shadowing - even if explicitly declared - will not work with the DISPATCH feature in GCC !!!
+     Gemini AI writes on `Why Variable Shadowing is a Virtual Machine Nightmare`:
+     Normally, if you shadow a variable in C, it's harmless. For example, if you write:
+       int x = 10;
+       if (condition) {
+         int x = 5; // Local x overrides outer x safely
+       }
+     The compiler treats them as two completely separate boxes.
+     But your virtual machine loop (luaV_execute) relies heavily on Pre-processor Macros (DISPATCH(), RA(),
+     RB(), RC()). Macros are not real C code. They are just text-replacements that get blind-pasted into
+     your functions right before compilation.
+     Because your DISPATCH() macro text physically used the word i, the moment you declared lua_Integer i;
+     inside your case block, you accidentally changed the meaning of the macro text itself!
+     Instead of updating the critical VM instruction tracker, the macro started writing garbage data into
+     your local loop loop counter. The compiler didn't throw an error or a warning because, as far as C
+     was concerned, writing an integer to a local integer variable is perfectly legal code.
+
+     Compile with Shadow Warnings Enabled: You can force GCC to warn you about this automatically with the
+     -Wshadow to *CFLAGS */
  reentry:
   lua_assert(isLua(L->ci));
   pc = L->savedpc;
@@ -9336,6 +9381,17 @@ void luaV_execute (lua_State *L, int nexeccalls) {
         );
         DISPATCH();
       }
+      case OPR_FACT: {  /* 7.10.0 factorial function !n */
+        TValue *rb = RKB(i);
+        if (ttisnumber(rb)) {
+          lua_Number x = nvalue(rb);
+          setnvalue(ra, tools_isint(x) ? cephes_factorial(x) : tools_gammal(x + 1));  
+        } else {
+          Protect(luaG_runerror(L, "Error in " LUA_QS ": number expected, got %s.",
+            "!", luaT_typenames[(int)ttype(rb)]));
+        }
+        DISPATCH();
+      }
       case OPR_CELL: {  /* 2.9.4 */
         TValue *rb = RKB(i);
         if (ttisnumber(rb)) {  /* retrieve value at given register */
@@ -10063,6 +10119,15 @@ void luaV_execute (lua_State *L, int nexeccalls) {
           luaG_runerror(L, "Error in " LUA_QS ": both operands must be numbers, got %s, %s.", "symmod",
             luaT_typenames[(int)ttype(rb)], luaT_typenames[(int)ttype(rc)]);  /* 3.7.8 improvement */
         setnvalue(ra, fmod(nvalue(rb), nvalue(rc)));
+        DISPATCH();
+      }
+      case OPR_OVER: {  /* added 7.10.0 */
+        if (!(ttisnumber(rb) && ttisnumber(rc)))
+          luaG_runerror(L, "Error in " LUA_QS ": both operands must be numbers, got %s, %s.", "over",
+            luaT_typenames[(int)ttype(rb)], luaT_typenames[(int)ttype(rc)]);
+        /* All attempts to use double arithmetic for integral arguments failed, so let's call tools_binomial which
+           has proven to be reliable. The speed increase 20 %. 7.10.0 */
+        setnvalue(ra, vm_bincoeff(nvalue(rb), nvalue(rc)));
         DISPATCH();
       }
       case OPR_ROLL: {  /* added 2.13.0, formerly `rot` baselib function, ten percent faster */

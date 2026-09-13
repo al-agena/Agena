@@ -400,16 +400,26 @@ static int str_tochars (lua_State *L) {
 
 
 static int str_tobytes (lua_State *L) {
-  int tobigendian;
+  int tobigendian, nargs, idx;
   size_t i, l, uint32;
   const char *str;
+  nargs = lua_gettop(L);
   str = luaL_checklstring(L, 1, &l);
   uint32 = (lua_type(L, 2) == LUA_TBOOLEAN) ? lua_toboolean(L, 2) : luaL_optint(L, 2, 0);
   tobigendian = agnL_optboolean(L, 3, 0);
+  idx = (nargs > 3) && (lua_isseq(L, 4) || lua_istable(L, 4)) ? 4 : -1;  /* 7.10.0 */
   if (!uint32) {  /* single unsigned bytes, the default */
-    agn_createseq(L, l);
-    for (i=0; i < l; i++) {
-      agn_seqsetinumber(L, -1, i + 1, cast_num(uchar(str[i])));
+    if (idx < 0) {
+      agn_createseq(L, l);
+      for (i=0; i < l; i++) {
+        agn_seqsetinumber(L, -1, i + 1, cast_num(uchar(str[i])));
+      }
+    } else {  /* 7.10.0 extension */
+      for (i=0; i < l; i++) {
+        lua_pushnumber(L, cast_num(uchar(str[i])));
+        agn_structinsert(L, idx, -1);
+        agn_poptop(L);
+      }
     }
   } else {  /* 2.17.2 extension: return 4-byte unsigned integers instead of individual ASCII values */
     size_t chunks;
@@ -417,12 +427,21 @@ static int str_tobytes (lua_State *L) {
     if (!a)
       luaL_error(L, "Error in " LUA_QS ": cannot convert.", "strings.tobytes");
     /* if size l excluding terminal \0 is a multiple of AGN_BLOCKSIZE, drop last entry in array */
-    agn_createseq(L, chunks);
-    for (i=0; i < chunks; i++) {
-      agn_seqsetinumber(L, -1, i + 1, a[i]);
+    if (idx < 0) {
+      agn_createseq(L, chunks);
+      for (i=0; i < chunks; i++) {
+        agn_seqsetinumber(L, -1, i + 1, a[i]);
+      }
+    } else {  /* 7.10.0 extension */
+      for (i=0; i < chunks; i++) {
+        lua_pushnumber(L, a[i]);
+        agn_structinsert(L, idx, -1);
+        agn_poptop(L);
+      }
     }
     xfree(a);
   }
+  if (idx > 0) lua_settop(L, 4);  /* return structure if given as 4th argument */
   return 1;
 }
 

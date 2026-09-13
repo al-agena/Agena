@@ -2138,6 +2138,7 @@ static UnOpr getunopr (int op) {
     case TK_NOT: return OPR_NOT;
     case '-': return OPR_MINUS;
     case '+': return OPR_PLUS;              /* added 2.8.4; August 12, 2015 */
+    case TK_EXCLMARK: return OPR_FACT;      /* added 7.10.0; September 13, 2026 */
     case TK_SIZE: return OPR_LEN;           /* added 0.6.0 */
     case TK_ABS: return OPR_ABS;            /* added 0.7.1; Nov 18, 2007 */
     case TK_ASSIGNED: return OPR_ASSIGNED;  /* added 0.6.0 */
@@ -2233,7 +2234,7 @@ static BinOpr getbinopr (int op) {
     case TK_INTERSECT: return OPR_TINTERSECT;  /* added 0.6.0 */
     case TK_IPOW: return OPR_IPOW;             /* added 0.9.2 */
     case ':': return OPR_PAIR;                 /* added 0.11.1 */
-    case TK_COMPLEX: return OPR_COMPLEX;       /* added 3.10.5 */
+    case TK_EXCLMARK: return OPR_COMPLEX;      /* added 3.10.5 */
     case TK_CARTESIAN: return OPR_CARTESIAN;   /* added 3.10.5 */
     case TK_DCOLON: return OPR_TOFTYPE;        /* added 1.3.0, Jan 01, 2011 */
     case TK_NOTOFTYPE: return OPR_TNOTOFTYPE;  /* added 1.3.0, Jan 01, 2011 */
@@ -2265,6 +2266,7 @@ static BinOpr getbinopr (int op) {
     case TK_ACOMPARE: return OPR_ACOMPARE;     /* added 2.11.0 RC1 */
     case TK_ABSDIFF: return OPR_ABSDIFF;       /* added 2.9.8 */
     case TK_SYMMOD: return OPR_SYMMOD;         /* added 2.10.0 */
+    case TK_OVER: return OPR_OVER;             /* added 7.10.0 */
     case TK_ROLL: return OPR_ROLL;             /* added 2.13.0 */
     case TK_I32ADD: return OPR_I32ADD;         /* added 2.15.0 */
     case TK_I32SUB: return OPR_I32SUB;         /* added 2.15.0 */
@@ -2296,14 +2298,15 @@ static const struct {
    {2, 2}, {1, 1},                  /* logical and / or, in this order */
    {4, 4}, {4, 4}, {4, 4},          /* in, subset, xsubset; added 0.7.1 & 0.5.4, 0.9.1 */
    {4, 4}, {4, 4}, {4, 4},          /* union, minus, intersect operators; added 0.6.0 */
-   {6, 6}, {5, 4}, {8, 8}, {8, 8},  /* split, pair constr, complex ! and cartesian constr !! */
+   {6, 6}, {5, 4}, {8, 8}, {8, 8},  /* split, pair constr, complex !, cartesian constr !! */
    {3, 3}, {3, 3}, {3, 3}, {1, 1},  /* `==` , `~=`, `~<>`, xor */
    {4, 4}, {7, 7}, {6, 6}, {6, 6},  /* atendof, band, bor, bxor */
    {7, 7}, {7, 7}, {3, 3}, {3, 3},  /* <<, >>, ::, :- */
    {7, 7}, {7, 7}, {7, 7}, {7, 7}, {7, 7},  /* *%, /%, +% , -%, %% */
    {5, 4}, {5, 4}, {5, 4}, {5, 4},  /* @, $, $$, $$$ */
    {2, 2}, {1, 1}, {1, 1},          /* logical nand, nor, xnor */
-   {7, 7}, {7, 7}, {3, 3}, {3, 3}, {4, 4}, {7, 7}, {7, 7},  /* <<<, >>>, |, ~|, |-, symmod, roll */
+   {7, 7}, {7, 7}, {3, 3}, {3, 3}, {4, 4},  /* <<<, >>>, |, ~|, |- */
+   {7, 7}, {8, 8}, {7, 7},          /* symmod, over, roll */
    {6, 6}, {6, 6}, {7, 7}, {7, 7}, {7, 7}, {4, 4},   /* `&+`, `&-`, `&*`, `&/`, squareadd, notin */
    {6, 6}, {6, 6}, {7, 7}, {7, 7}, {7, 7}, {7, 7}    /* inc, dec, mul, div, intdiv, mod */
 };
@@ -2605,16 +2608,11 @@ static void funcargexpr (LexState *ls, expdesc *v, int isunaryop) {
 }
 
 
-/* }==================================================================== */
-
-
-
 /*
 ** {======================================================================
 ** Rules for Statements
 ** =======================================================================
 */
-
 
 static int block_follow (int token, int isop) {
   if (isop && token == TK_RET) return 1;

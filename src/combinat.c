@@ -534,20 +534,41 @@ static int combinat_numbcomb (lua_State *L) {
    else
       return exp(lngamma(x + 1) - lngamma(x - y + 1))
    fi
-end; */
+   end;
 
+   The implementation
+
+   sun_exp(sun_lgamma(x + 1) - sun_lgamma(x - y + 1))
+
+   yields inaccurate results with larger arguments, try
+
+   combinat.numbperm(30, 15) = 202843204931727360000
+
+   so do multiplication. 7.10.0 fix´proposed by Gemini AI. */
 static int combinat_numbperm (lua_State *L) {
-  lua_Number x, y;
+  lua_Number x, y, result;
+  lua_Integer i;
   int type = lua_type(L, 1);
-  luaL_typecheck(L, type == LUA_TNUMBER || type == LUA_TSET, 1, "number of set expected", type);
-  x = (lua_isset(L, 1)) ? agn_ssize(L, 1) : agn_tonumber(L, 1);
-  y = agn_checknumber(L, 2);
-  if (tools_isfrac(x) || tools_isfrac(y) || x < 0 || y < 0)
-    lua_pushundefined(L);
-  else if (x < y)
+  luaL_typecheck(L, type == LUA_TNUMBER || type == LUA_TSET, 1, "number or set expected", type);
+  x = (lua_isset(L, 1)) ? (double)agn_ssize(L, 1) : (double)agn_tonumber(L, 1);
+  if (x < 0 || tools_isfrac(x)) {
+    luaL_error(L, "Wrong argument #1: expected a non-negative integer or a set.");
+    return 0;
+  }
+  y = (lua_Number)agn_checknonnegint(L, 2);
+  if (x < y) {
     lua_pushnumber(L, 0);
-  else
-    lua_pushnumber(L, sun_exp(sun_lgamma(x + 1) - sun_lgamma(x - y + 1)));
+    return 1;
+  }
+  if (y == 0) {
+    lua_pushnumber(L, 1);
+    return 1;
+  }
+  result = 1.0;
+  for (i=0; i < (lua_Integer)y; i++) {
+    result *= (x - (lua_Number)i);
+  }
+  lua_pushnumber(L, (lua_Number)result);
   return 1;
 }
 

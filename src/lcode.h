@@ -81,6 +81,7 @@ typedef enum BinOpr {
   OPR_ACOMPARE,    /* added 2.10.5 */
   OPR_ABSDIFF,     /* added 2.9.8 */
   OPR_SYMMOD,      /* added 2.10.0 */
+  OPR_OVER,        /* added 7.10.0 */
   OPR_ROLL,        /* added 2.13.0 */
   OPR_I32ADD,      /* added 2.15.0 */
   OPR_I32SUB,      /* added 2.15.0 */
@@ -119,8 +120,8 @@ typedef enum UnOpr {
   OPR_QMDEV, OPR_PEPS, OPR_MEPS, OPR_CELL, OPR_PROCNAME,              /* 74 */
   OPR_SQUARE, OPR_CUBE, OPR_ZERO, OPR_NONZERO,                        /* 78 */
   OPR_PRE, OPR_POST, OPR_NEGATE, OPR_STORE, OPR_INVSQRT,              /* 83 */
-  OPR_PP, OPR_MM, OPR_MULADD, OPR_MULUP, OPR_UNITY,                   /* 89 */
-  OPR_FOREACH, OPR_NOUNOPR                                            /* 91 */
+  OPR_PP, OPR_MM, OPR_MULADD, OPR_MULUP, OPR_UNITY, OPR_FACT,         /* 90 */
+  OPR_FOREACH, OPR_NOUNOPR                                            /* 92 */
 } UnOpr;
 
 

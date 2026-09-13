@@ -7,9 +7,7 @@
 #define lopcodes_c
 #define LUA_CORE
 
-
 #include "lopcodes.h"
-
 
 /* ORDER OP */
 /* A maximum of 64 opcodes are allowed on 32-bit machines */

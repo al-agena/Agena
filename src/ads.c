@@ -1251,6 +1251,9 @@ static void setstringfield (lua_State *L, const char *key, const char *value) {
 }
 
 
+#define SPACES10 "          "
+#define SPACES74 SPACES10 SPACES10 SPACES10 SPACES10 SPACES10 SPACES10 SPACES10 "    "
+
 static int ads_attrib (lua_State *L) {
   off64_t columns, cnt, mrc, ver, keylen, cpos;
   time_t creationdate;
@@ -1270,6 +1273,7 @@ static int ads_attrib (lua_State *L) {
   if (!sec_read(hnd, desc, DESCRIPTION_LEN)) {
     aux_fileerr(L, hnd, "ads.attrib");
   }
+  desc[DESCRIPTION_LEN - 1] = '\0';  /* 7.9.12 fix */
   mrc = sec_readl(hnd, &success);
   closeandbailout(L, hnd, success, "ads.attrib");  /* 7.9.6 security fix */
   cnt = sec_readl(hnd, &success);
@@ -1287,13 +1291,13 @@ static int ads_attrib (lua_State *L) {
   cpos = sec_readl(hnd, &success);
   closeandbailout(L, hnd, success, "ads.attrib");  /* 7.9.6 security fix */
   lua_newtable(L);
+  setintegerfield(L, "inthandle", hnd);  /* 7.9.12 */
   setstringfield(L, "stamp", stamp);
   setintegerfield(L, "version", ver);
   setintegerfield(L, "maxsize", mrc);
   setintegerfield(L, "size", cnt);
   setintegerfield(L, "keylength", keylen);
   setintegerfield(L, "columns", columns);
-  /* setstringfield(L, "desc", desc); */
   setintegerfield(L, "type", dbtype);
   setintegerfield(L, "indexstart", ADS_OFFSET);
   setintegerfield(L, "indexend", mrc*4UL + ADS_OFFSET-1);
@@ -1305,7 +1309,9 @@ static int ads_attrib (lua_State *L) {
     sprintf(datestring, "%d/%02d/%02d-%02d:%02d:%02d", 0, 0, 0, 0, 0, 0);
   }
   setstringfield(L, "creation", datestring);
-  setstringfield(L, "description", desc);  /* 2.11.0 RC2 */
+  if (strcmp(desc, SPACES74) != 0) {  /* 2.11.0 RC2, changed new 7.9.12 */
+    setstringfield(L, "description", desc);
+  }
   /* return parameters from handle */
   luaL_checkstack(L, 2, "not enough stack space");
   lua_pushstring(L, "handle");

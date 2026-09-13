@@ -781,7 +781,7 @@ static int is_register_used (Instruction i, int reg) {
         case OPR_SINH: case OPR_COSH: case OPR_TANH: case OPR_BNOT: case OPR_RECIP: case OPR_COSXX:
         case OPR_BEA: case OPR_FLIP: case OPR_CONJUGATE: case OPR_ANTILOG2: case OPR_ANTILOG10:
         case OPR_SIGNUM: case OPR_SINC: case OPR_CIS: case OPR_PEPS: case OPR_MEPS: case OPR_CELL:
-        case OPR_SQUARE: case OPR_CUBE: case OPR_INVSQRT: case OPR_UNITY:
+        case OPR_SQUARE: case OPR_CUBE: case OPR_INVSQRT: case OPR_UNITY: case OPR_FACT:
         case OPR_ASSIGNED: case OPR_TSUMUP: case OPR_EVEN: case OPR_ODD:
         case OPR_FINITE: case OPR_INFINITE: case OPR_IMAG: case OPR_LEFT: case OPR_BOTTOM:
         case OPR_NAN: case OPR_NEWSEQ: case OPR_NEWREG: case OPR_NEWUSET: case OPR_REAL: case OPR_RIGHT:

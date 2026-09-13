@@ -39,7 +39,7 @@ const char *const luaX_tokens [] = {
     "if", "imag", "import", "in", "inc", "infinite", "insert", "int", "intdiv", "integral",
     "intersect", "into", "invsqrt", "is", "keys", "left", "ln", "lngamma", "local", "log", "minus",
     "mod", "mul", "muladd", "mulup", "nan", "nand", "nargs", "negate", "next", "nonzero", "nor", "not", "nothing", "notin", "null",
-    "od", "odd", "of", "onsuccess", "or", "pop", "post", "pre", "proc", "procname", "pushd", "qmdev", "qsumup",
+    "od", "odd", "of", "onsuccess", "or", "over", "pop", "post", "pre", "proc", "procname", "pushd", "qmdev", "qsumup",
     "real", "recip", "redo", "reg", "relaunch", "reminisce", "restart", "return", "right", "roll", "rotate",
     "scope", "seq", "sign", "signum", "sin", "sinc", "sinh", "size", "skip", "split", "sqrt", "square", "squareadd",
     "store", "subset", "sumup", "switchd", "symmod", "tan", "tanh", "then", "to", "top", "true", "try", "type", "typeof",
@@ -748,7 +748,7 @@ static int llex (LexState *ls, SemInfo *seminfo) {
       case '!': {  /* added 3.10.5 */
         next(ls);
         if (ls->current == '!') { next(ls); return TK_CARTESIAN; }
-        return TK_COMPLEX;
+        return TK_EXCLMARK;
       }
       case '.': {
         save_and_next(ls);

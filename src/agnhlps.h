@@ -688,7 +688,7 @@ LUALIB_API uint32_t tools_nextpow2u32 (uint32_t x);
 LUALIB_API uint64_t tools_nextpow2u64 (uint64_t n);
 LUALIB_API double   tools_prevpower (double x, uint32_t b, int orequalx);
 LUALIB_API double   tools_prevpow2 (uint32_t x);
-LUALIB_API int      tools_approx (double x, double y, double eps);
+LUALIB_API INLINE int tools_approx (double x, double y, double eps);
 #define tools_capprox(xr,xi,yr,yi,eps) (tools_approx(xr, xi, eps) && tools_approx(yr, yi, eps))
 #ifndef __ARMCPU  /* 2.37.1 */
 LUALIB_API int      tools_approxl (long double x, long double y, long double eps);
@@ -717,6 +717,7 @@ LUALIB_API long double tools_powil (long double x, int nn);
 #ifndef __ARMCPU  /* 2.37.1 */
 LUALIB_API long double tools_signl (long double x);
 LUALIB_API long double sun_frexpl (long double x, int *e);
+LUALIB_API INLINE int sun_getexp (double x);
 LUALIB_API long double sun_fmodl (long double x, long double y);
 LUALIB_API long double tools_expl (long double x);
 LUALIB_API long double tools_expm1l (long double x);
@@ -939,6 +940,7 @@ LUALIB_API double   tools_branch (double x, int d);
 LUALIB_API double   tools_matheps (double x);
 LUALIB_API double   tools_cbrteps (double x);
 LUALIB_API double   tools_binomial (double n, double k);
+LUALIB_API int64_t  tools_bincoeff (int n, int k, int *rc);
 LUALIB_API double   tools_expx2 (double x, int sign);
 LUALIB_API double   tools_cexpx2 (double a, double b, double sign, double *im);
 LUALIB_API void     sun_sincos (double x, double *s, double *c);  /* 35 % faster than calling sin and cos individually */

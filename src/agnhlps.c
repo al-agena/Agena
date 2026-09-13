@@ -5317,9 +5317,6 @@ LUALIB_API char *getModuleFileName (void) {
 }
 
 
-/* 2.1.3, compares two numbers using Donald Knuth's approximation method, see approx in lbaselib
-  sun_frexp(fabs(x) > fabs(y) ? x : y, &exp); return fabs(x - y) <= sun_ldexp(eps, exp); is a bit slower;
-  A 32-bit words hx/lx version is slower. */
 LUALIB_API int tools_approx (double x, double y, double eps) {
   if (l_unlikely((x == y) || (tools_isnan(x) && tools_isnan(y)))) {  /* 2.5.15 optimisation */
     return 1;
@@ -6796,36 +6793,160 @@ LUALIB_API long double tools_roundfl (long double x, int d, int t) {
 #endif
 
 
-LUALIB_API double sun_lgamma (double x);  /* forward declaration of logarithmic gamma function */
+/* Code written by Daniel Lemire, Computer Science Professor, Université du Québec (TÉLUQ), Montreal, Canada.
 
-/* Optimized multiplicative approach: O(k) time, O(1) space; n, k may be negative, zero or positive.
+   Taken from:
+   https://github.com/lemire/Code-used-on-Daniel-Lemire-s-blog/blob/master/2020/02/26/binom.c
+
+   Prof. Lemire put the code to the public domain, see:
+   https://github.com/lemire/Code-used-on-Daniel-Lemire-s-blog/tree/master
+
+   7.10.0 */
+
+struct fastdiv_s {
+  int shift;
+  uint64_t inverse;
+};
+
+typedef struct fastdiv_s fastdiv_t;
+
+/* using C11 */
+fastdiv_t dl_precomputed[65] = {
+  {0, 0},
+  {0, 0x1},
+  {1, 0x1},
+  {0, 0xaaaaaaaaaaaaaaab},
+  {2, 0x1},
+  {0, 0xcccccccccccccccd},
+  {1, 0xaaaaaaaaaaaaaaab},
+  {0, 0x6db6db6db6db6db7},
+  {3, 0x1},
+  {0, 0x8e38e38e38e38e39},
+  {1, 0xcccccccccccccccd},
+  {0, 0x2e8ba2e8ba2e8ba3},
+  {2, 0xaaaaaaaaaaaaaaab},
+  {0, 0x4ec4ec4ec4ec4ec5},
+  {1, 0x6db6db6db6db6db7},
+  {0, 0xeeeeeeeeeeeeeeef},
+  {4, 0x1},
+  {0, 0xf0f0f0f0f0f0f0f1},
+  {1, 0x8e38e38e38e38e39},
+  {0, 0x86bca1af286bca1b},
+  {2, 0xcccccccccccccccd},
+  {0, 0xcf3cf3cf3cf3cf3d},
+  {1, 0x2e8ba2e8ba2e8ba3},
+  {0, 0xd37a6f4de9bd37a7},
+  {3, 0xaaaaaaaaaaaaaaab},
+  {0, 0x8f5c28f5c28f5c29},
+  {1, 0x4ec4ec4ec4ec4ec5},
+  {0, 0x84bda12f684bda13},
+  {2, 0x6db6db6db6db6db7},
+  {0, 0x34f72c234f72c235},
+  {1, 0xeeeeeeeeeeeeeeef},
+  {0, 0xef7bdef7bdef7bdf},
+  {5, 0x1},
+  {0, 0xf83e0f83e0f83e1},
+  {1, 0xf0f0f0f0f0f0f0f1},
+  {0, 0xaf8af8af8af8af8b},
+  {2, 0x8e38e38e38e38e39},
+  {0, 0x14c1bacf914c1bad},
+  {1, 0x86bca1af286bca1b},
+  {0, 0x6f96f96f96f96f97},
+  {3, 0xcccccccccccccccd},
+  {0, 0x8f9c18f9c18f9c19},
+  {1, 0xcf3cf3cf3cf3cf3d},
+  {0, 0x82fa0be82fa0be83},
+  {2, 0x2e8ba2e8ba2e8ba3},
+  {0, 0x4fa4fa4fa4fa4fa5},
+  {1, 0xd37a6f4de9bd37a7},
+  {0, 0x51b3bea3677d46cf},
+  {4, 0xaaaaaaaaaaaaaaab},
+  {0, 0x7d6343eb1a1f58d1},
+  {1, 0x8f5c28f5c28f5c29},
+  {0, 0xfafafafafafafafb},
+  {2, 0x4ec4ec4ec4ec4ec5},
+  {0, 0x21cfb2b78c13521d},
+  {1, 0x84bda12f684bda13},
+  {0, 0x6fb586fb586fb587},
+  {3, 0x6db6db6db6db6db7},
+  {0, 0x823ee08fb823ee09},
+  {1, 0x34f72c234f72c235},
+  {0, 0xcbeea4e1a08ad8f3},
+  {2, 0xeeeeeeeeeeeeeeef},
+  {0, 0x4fbcda3ac10c9715},
+  {1, 0xef7bdef7bdef7bdf},
+  {0, 0xefbefbefbefbefbf},
+};
+
+int dl_safen[65] = {
+    0, INT_MAX, 2642246, 77936, 10206, 2762, 1122,  585, 359, 247,
+  184,     146,     121,   104,    92,   83,   77,   72,  68,  65,
+   63,      61,      59,    58,    58,   57,   57,   56,  56,  56,
+   56,      56,      57,    57,    57,   58,   58,   58,  59,  59,
+   60,      61,      61,    62,    62,   62,   62,   62,  62,  62,
+   62,      62,      62,    62,    62,   62,   62,   62,  62,  62,
+   62,      62,      62,    62,    62};
+
+/* correct for n <= 100, k <= 10 */
+static uint64_t dl_fastbinomial (int n, int k, int *rc) {
+  uint64_t np, answer, z;
+  *rc = 0;
+  if (k <= 0 || n <= 0 || k > 64 || n > dl_safen[k]) {
+    *rc = 1;
+    return ~0UL;
+  }
+  np = n - k;
+  answer = np + 1;
+  for (z=2; z <= (uint64_t)k; z++) {
+    /* this could overflow! but it won't for our range of values for n and k:
+       require that n <= safen[k] */
+    answer = answer * (np + z);
+    fastdiv_t f = dl_precomputed[z];
+    answer >>= f.shift;
+    answer *= f.inverse;
+  }
+  return answer;
+}
+
+/* Optimized multiplicative approach: O(k) time, O(1) space; n must be nonnegative, k may be negative, zero or positive.
    Created by Gemini AI, 7.1.6 fix, 7.8.12 fixes */
-static int64_t binomial_coefficient (int n, int k, int *rc) {
+LUALIB_API int64_t tools_bincoeff (int n, int k, int *rc) {
   int i;
   if (n < 0) {  /* handle negative n first to avoid wrong bounds check */
     if (k < 0) return 0;
-    int64_t res = binomial_coefficient(-n + k - 1, k, rc);
+    int64_t res = tools_bincoeff(-n + k - 1, k, rc);  /* this is SLOW ! */
     if (rc && *rc) return -1;  /* 7.8.12 fix: check *rc value, not pointer address */
     return (k % 2 == 0) ? res : -res;
   }
   /* Standard bounds checks for positive n */
   if (k < 0 || k > n) return 0;
   if (k == 0 || k == n) return 1;
-  if (k > n/2) k = n - k;  /* symmetry optimization */
+  if (n <= 100 && k <= 64) {
+    uint64_t res = dl_fastbinomial(n, k, rc);
+    if (rc && *rc) {}
+    else return (int64_t)res;
+  }
+  if (k > n / 2) k = n - k;
   int64_t res = 1;
-  for (i=1; i <= k; i++) {  /* safe multiplication verification */
-    if (res > INT64_MAX/(n - i + 1)) {
+  for (i=1; i <= k; i++) {
+    /* To prevent integer truncation, we must multiply before dividing.
+       To prevent overflow safely: */
+    int64_t multiplier = (n - i + 1);
+    if (res > INT64_MAX / multiplier) {
       if (rc) *rc = 1;
       return -1;
     }
-    res = res*(n - i + 1)/i;
+    res *= multiplier;
+    res /= i; // Guaranteed to be an exact division at this step in a proper binomial expansion
   }
-  if (res > AGN_LASTCONTINT) {  /* verify exact precision safely fits in a double */
+  if (res > AGN_LASTCONTINT) {
     if (rc) *rc = 1;
     return -1;
   }
   return res;
 }
+
+LUALIB_API double sun_lgamma (double x);  /* forward declaration of logarithmic gamma function */
 
 LUALIB_API double tools_binomial (double n, double k) {  /* 2.10.4 */
   if (tools_isfrac(n) || tools_isfrac(k)) {  /* 2.10.4 improvement, work like in Maple */
@@ -6854,16 +6975,14 @@ LUALIB_API double tools_binomial (double n, double k) {  /* 2.10.4 */
       return sun_pow(-1, n - k, 1)*tools_binomial(-k - 1, n - k);
     else
       return 0.0;
-  } else if (n < k) {  /* 0.28.3 patch */
-    return 0.0;
-  } else {  /* n and k are both integral, 7.1.6 bug fix with mostly larger n */
+  } else {
     int rc = 0;
-    int64_t r0 = binomial_coefficient(n, k, &rc);
+    int64_t r0 = tools_bincoeff(n, k, &rc);
     if (!rc) return (double)r0;
-    /* fallback, may give results slightly off */
-    double r1 = sun_exp(sun_lgamma(n + 1) - sun_lgamma(k + 1) - sun_lgamma(n - k + 1));  /* 2.17.4 tweak */
-    return sun_round(r1);  /* 2.29.3 improvement */
   }
+  /* fallback, may give results slightly off */
+  double r1 = sun_exp(sun_lgamma(n + 1) - sun_lgamma(k + 1) - sun_lgamma(n - k + 1));  /* 2.17.4 tweak */
+  return sun_round(r1);  /* 2.29.3 improvement */
 }
 
 
@@ -16113,6 +16232,39 @@ LUALIB_API double sun_frexp (double x, int *eptr) {
   hx = (hx & 0x800fffff) | 0x3fe00000;
   SET_HIGH_WORD(x, hx);
   return x;
+}
+
+
+/* Extracts the base-2 exponent from a double-precision floating-point number.
+ *
+ * This is an optimized, stripped-down variant of sun_frexp. It discards the
+ * fractional mantissa completely and extracts only the exponent payload,
+ * matching Knuth's requirements for power-of-2 interval scaling.
+ *
+ * @param x The double-precision floating-point input.
+ * @return int The unbiased base-2 exponent, or 0 for special cases (0, Inf, NaN).
+ *
+ * 7.10.0, created by Gemini AI.
+ */
+LUALIB_API int sun_getexp (double x) {
+  int32_t hx, ix, lx;
+  int eptr = 0;
+  EXTRACT_WORDS(hx, lx, x);
+  ix = 0x7fffffff & hx;
+  /* 1. Return 0 immediately for 0, +/- infinity, or NaN */
+  if (ix >= 0x7ff00000 || ((ix | lx) == 0)) {
+    return 0;
+  }
+  /* 2. Handle subnormal numbers */
+  if (ix < 0x00100000) {
+    x *= two54;
+    GET_HIGH_WORD(hx, x);
+    ix = hx & 0x7fffffff;
+    eptr = -54;
+  }
+  /* 3. Extract the exponent bits and remove the IEEE 754 bias */
+  eptr += (ix >> 20) - 1022;
+  return eptr;
 }
 
 

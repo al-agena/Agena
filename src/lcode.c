@@ -906,6 +906,7 @@ static int constfoldingbypass (UnOpr fn, expdesc *e) {
     case OPR_SQUARE: r = v*v; break;
     case OPR_CUBE: r = v*v*v; break;
     case OPR_INVSQRT: r = sqrt(v)/v; break;
+    case OPR_FACT: r = cephes_factorial(v); break;
     default: return 0;
   }
   if (luai_numisnan(r)) return 0;  /* do not attempt to produce NaN */
@@ -1009,6 +1010,7 @@ int luaK_codecompop (FuncState *fs, int base, int nargs, expdesc *e, CmdCode op)
 /*
 ** Apply prefix operation 'op' to expression 'e'.
 */
+
 void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e) {
   expdesc e2;
   e2.t = e2.f = NO_JUMP; e2.k = VKNUM; e2.u.nval = 0;
@@ -1040,14 +1042,14 @@ void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e) {
     }
     /* for those functions which return a (complex) number */
     /* GREP "debug.unused" if you change this check (ldblib.c) */
-    case OPR_ABS: case OPR_ARCTAN: case OPR_COS: case OPR_ENTIER: case OPR_EXP:
-    case OPR_LNGAMMA: case OPR_INT: case OPR_FRAC: case OPR_LN: case OPR_SIGN: case OPR_SIN:
-    case OPR_SQRT: case OPR_TAN: case OPR_ARCSIN: case OPR_ARCCOS: case OPR_ARCSEC:
+    case OPR_ABS: case OPR_ARCTAN: case OPR_COS: case OPR_ENTIER: case OPR_SQRT: case OPR_EXP: case OPR_LN:
+    case OPR_LNGAMMA: case OPR_INT: case OPR_FRAC: case OPR_SIGN: case OPR_SIN: case OPR_FACT:
+    case OPR_TAN: case OPR_ARCSIN: case OPR_ARCCOS: case OPR_ARCSEC:
     case OPR_SINH: case OPR_COSH: case OPR_TANH: case OPR_BNOT: case OPR_RECIP: case OPR_COSXX:
     case OPR_BEA: case OPR_FLIP: case OPR_CONJUGATE: case OPR_ANTILOG2: case OPR_ANTILOG10:
     case OPR_SIGNUM: case OPR_SINC: case OPR_CIS: case OPR_PEPS: case OPR_MEPS: case OPR_CELL:
     case OPR_SQUARE: case OPR_CUBE: case OPR_INVSQRT: case OPR_UNITY: {
-      if (!luaK_isnumeral(e))
+      if (!luaK_isnumeral(e))  /* if you add a new operator, extend constfoldingbypass, as well */
         luaK_exp2anyreg(fs, e);  /* cannot operate on constants */
       codearithbypass(fs, 1, e, op);
       break;
@@ -1122,7 +1124,8 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
     case OPR_DIVIDE:
     case OPR_INTDIVIDE:
     case OPR_MODULUS:
-    case OPR_CARTESIAN: {
+    case OPR_CARTESIAN:
+    case OPR_OVER: {
       luaK_exp2nextreg(fs, v);  /* operand must be on the `stack' */
       break;
     }
@@ -1238,6 +1241,7 @@ void luaK_posfix (FuncState *fs, BinOpr op, expdesc *e1, expdesc *e2) {
     case OPR_COMPARE: { agnK_codefnbin(fs, e1, e2, OPR_COMPARE); break; }        /* added 2.9.4 */
     case OPR_ACOMPARE: { agnK_codefnbin(fs, e1, e2, OPR_ACOMPARE); break; }      /* 2.15.0 fix */
     case OPR_SYMMOD: { agnK_codefnbin(fs, e1, e2, OPR_SYMMOD); break; }          /* added 2.10.0 */
+    case OPR_OVER: { agnK_codefnbin(fs, e1, e2, OPR_OVER); break; }              /* added 7.10.0 */
     case OPR_ROLL: { agnK_codefnbin(fs, e1, e2, OPR_ROLL); break; }              /* added 2.13.0 */
     case OPR_I32ADD: { agnK_codefnbin(fs, e1, e2, OPR_I32ADD); break; }          /* added 2.15.0 */
     case OPR_I32SUB: { agnK_codefnbin(fs, e1, e2, OPR_I32SUB); break; }          /* added 2.15.0 */
