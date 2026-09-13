@@ -119,7 +119,7 @@ end;
 import fastmath;
 local hypotfast := fastmath.hypotfast;
 
-# Mandelbrot set, 25 % _slower_ than fractals.mandelbrot   # hypot(p, q)
+# Mandelbrot set, 17 % _slower_ than fractals.mandelbrot   # hypot(p, q)
 fractals.mandelbrotfast := proc(x, y, iter, radius) is
    local p, q, r, a;
    p, q := x, y;
@@ -128,13 +128,55 @@ fractals.mandelbrotfast := proc(x, y, iter, radius) is
       r := p;
       p := square p - square q + x;
       q := 2*r*q + y;
-      a := hypotfast(p, q)
+      a := sqrt(square p + square q)  # much faster than hypotfast(p, q);
    od;
    return i
 end;
 
 
-fractals.mandelbrot := proc(x, y, iter, radius) is
+fractals.mandelbrotest := proc(x, y, iter, radius) is  # 7.10.0
+   local p, q, r, a, period, pold, qold, c;
+   p, q := x, y;
+   a := hypotfast(x, y);
+   pold, qold, period, c := 0, 0, 1, 0;
+   for i from 0 to iter while a < radius do
+      r := p;
+      p := square p - square q + x;
+      q := 2*r*q + y;
+      if p ~= pold and q ~= qold then return iter fi;
+      a := sqrt(square p + square q); #hypotfast(p, q);
+      c++;
+      # periodicy check: works best in a region that is predominantly solid black interior
+      if c = period then
+         period < 32 ? period +:= 4;
+         c := 0;
+         pold, qold := p, q
+      fi
+   od;
+   return i
+end;
+
+
+fractals.mandelbrot := proc(x, y, iter, radius) is  # tuned by  ~33 % 7.10.0
+   local ci_sq := square(y);
+   local q := square(x - 0.25) + ci_sq;
+   /* Main Cardioid Test */
+   if q * (q + (x - 0.25)) < 0.25 * ci_sq then
+      return iter; # Point is definitely inside the main black cardioid!
+   fi;
+   /* Period-2 Bulb Test */
+   if square(x + 1.0) + ci_sq < 0.0625 then
+      return iter; # Point is definitely inside the smaller left black bulb!
+   fi;
+   local z := x!y;
+   local c := z;
+   for i from 0 to iter while |z| < radius do
+      z := square z + c;
+   od;
+   return i;
+end;
+
+/* fractals.mandelbrot := proc(x, y, iter, radius) is
    local c, z;
    z := x!y;
    c := z;
@@ -142,7 +184,7 @@ fractals.mandelbrot := proc(x, y, iter, radius) is
       z := square z + c
    od;
    return i
-end;
+end; */
 
 
 fractals.mandelbrot2 := proc(x, y, iter, radius) is
@@ -481,7 +523,7 @@ end;
 fractals.draw := proc(fn :: procedure, ?) is
    # fn: the fractal function
    local t, im, iter, arg, text, offset, a, b, c, d, radius,
-         cmap, outfile, color, xdist, xstep, ydist, ystep, xres, xspan, yspan, yres,
+         cmap, outfile, color, xdist, xstep, ydist, ystep, xres, xspan, yspan, yres, xpixel,
          pnt, length, olda, oldb, ratio, res, mouse, update, counter, c1, c2;
    create local table colors;
    # reads a FRACTINT color map
@@ -647,8 +689,9 @@ fractals.draw := proc(fn :: procedure, ?) is
       if unassigned(pnt) then
          for x from a to b by xstep do
             inc counter;
+            xpixel := int((x - a)*xspan + 0.5);  # 7.10.0, hardly gives a boost, ~ 1%
             for y from c to d by ystep do  # the int operator is surprisingly fast
-               gdi.point(im, int((x - a)*xspan + 0.5), int((y - c)*yspan + 0.5),
+               gdi.point(im, xpixel, int((y - c)*yspan + 0.5),
                   COLOURS[int(fn(?[1], x, y, x, y, iter, radius))])
             od;
             everyth(counter, update) ? gdi.flush(im)
@@ -658,8 +701,9 @@ fractals.draw := proc(fn :: procedure, ?) is
          local pnti := imag(pnt);
          for x from a to b by xstep do
             inc counter;
+            xpixel := int((x - a)*xspan + 0.5);  # 7.10.0, hardly gives a boost, ~ 1%
             for y from c to d by ystep do  # the int operator is surprisingly fast
-               gdi.point(im, int((x - a)*xspan + 0.5), int((y - c)*yspan + 0.5),
+               gdi.point(im, xpixel, int((y - c)*yspan + 0.5),
                   COLOURS[int(fn(?[1], x, y, pntr, pnti, iter, radius))])
             od;
             everyth(counter, update) ? gdi.flush(im)
@@ -668,8 +712,9 @@ fractals.draw := proc(fn :: procedure, ?) is
    else
       for x from a to b by xstep do
          inc counter;
+         xpixel := int((x - a)*xspan + 0.5);  # 7.10.0, hardly gives a boost, ~ 1%
          for y from c to d by ystep do  # the int operator is surprisingly fast
-            gdi.point(im, int((x - a)*xspan + 0.5), int((y - c)*yspan + 0.5),
+            gdi.point(im, xpixel, int((y - c)*yspan + 0.5),
                COLOURS[int(fn(x, y, iter, radius, pnt))])
          od;
          everyth(counter, update) ? gdi.flush(im)
@@ -1179,9 +1224,10 @@ end;
 
 procedure fractals.sortmap(colmap :: table, ?) is
    fractals.checkcolourmap(colmap, 'fractals.rgb2hsl');
-   local options, L := checkoptions('fractals.sortmap', ?,
-      mode = string, lumi = string, output = string, header = string, true);
+   local options, L, outfile := checkoptions('fractals.sortmap', ?,
+      mode = string, lumi = string, output = string, file = string, header = string, true);
    options.lumi := options.lumi or '709'
+   outfile := options.output or options.file;  # 7.9.5
    case options.mode
       of 'hue' then  # sort by hue (rainbow order)
          L := sorted(colmap, proc(a, b) is
@@ -1214,8 +1260,8 @@ procedure fractals.sortmap(colmap :: table, ?) is
          end)
       esle
    esac;
-   if options.output then
-      fractals.writemap(L, options.output, header = options.header)
+   if outfile then
+      fractals.writemap(L, outfile, header = options.header)
    else
       return L
    end;
@@ -1263,6 +1309,7 @@ draw(esctime, <: (z, c) -> (z roll (1/8*Pi))^2 + c :>, -0.5, 0.25, 1.5, map='top
 draw(esctime, <: (z, c) -> square(z roll (1/8*Pi)) + c :>, -0.5, 0.25, 1.5, map='topo.map');  # 90/4*Pi/180 = 1/8*Pi
 draw(esctime, <: (z, c) -> square(z roll .39269908169872415481) + c :>, -0.5, 0.25, 1.5, map='topo.map');
 draw(esctime, <: (z, c) with c := -0.85-0.6*I -> c*z*(1-z) :>, 0.5, -0.05, 1.5, map='topo.map', iter=128);
+draw(esctime, <: (z, c) -> 2*sin(z)^2 :>, 0, 0, 2);
 draw(mandel, -0.5, 0, 1.5, map='topo.map', iter=255);
 draw(mandel, -1.007852, 0.310870, 0.005, map='topo.map', iter=255, res=1024:768);
 draw(mandel, -1.007852, 0.310870, 0.005, map='maga.map', iter=255, res=1024:768);
