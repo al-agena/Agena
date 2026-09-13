@@ -1,24 +1,57 @@
+7.10.0 Enceladus, September 13, 2026
+
+- The new `!` prefix operator computes the factorial and is twice as fast as the `fact` function. The functionality could not
+  be implemented as a postfix n! would create grammatical collisions. Examples:
+
+  > n := 4;
+  > !4, !n:
+  24      24
+
+- The new `over` binary operator implements the binomial coefficient n over k. The new operator takes 85 % of the time `binomial`
+  needs. Example:
+
+  5 * 10 over 3 = 5 * (10 over 3) = 5 * 120 = 600.
+
+- `binomial` has been tuned by around 6 %.
+
+- `combinat.numbperm` returned wrong results with larger arguments, for example try combinat.numbperm(30, 15) which is
+  202843204931727360000. This has been fixed. With negative or fractional arguments, the function no longer returns `undefined`
+  but issues an error, imitating the behaviour of Maple.
+
+- `strings.tobytes`: If the fourth optional argument is a sequence or table, then the individual bytes in the given string will be added
+  to it, meaning that if the structure already includes elements, they will be preserved. This is a convenient and fast way of collecting
+  string bytes in sequential order.
+
+- `ads.attrib` returns the internal integer file handle with the new field 'inthandle'. The function will also return the description
+  if it does not completely consist of blanks in the new 'desc' field.
+
+- `fractals.mandel` and `fractals.mandelbrot` which compute Mandelbrot sets have become around 25 to 33 % faster by introducing
+  Cardioid/Bulb Checking.
+  
+- This release has been successfully Dr. Memory-tested on Windows and Valgrind-tested on x86 and x64 Linux.
+
+
 7.9.11 Deimos, September 11, 2026
 
-- `environ.getfenv` can now return the environment of userdata objects. 
+- `environ.getfenv` can now return the environment of userdata objects.
 
 - Slight internal change to `environ.setfenv` for userdata so that this function and `environ.getfenv` can work in tandem with
   this type of input.
 
-- `utils.udata` no longer by default returns a userdata value with an attached environment table. If you need one, call the function
+- `utils.udata` by default now returns a userdata value without an attached environment table. If you need one, call the function
   explicitly with a table as its second argument. The function has also been hardened against stack corruption.
 
-- `utils.udata` and `avl.getstore` could return a value that when called as a function crashed Agena. The bug could also affect
-  `numarray`, `lifo`, `fifo` and `trie` userdata. This has been fixed.
+- `utils.udata` and `avl.getstore` could return a value that when called like a function crashed Agena. The bug could also affect
+  `numarray`, `lifo`, `fifo` and `trie` userdata. This has all been fixed.
 
 
 7.9.10 Deimos, September 10, 2026
 
 - In ADS files, embedded comments added with `ads.comment` have often been problematic, even sometimes causing segmentation faults,
-  especially with ADS files that have been extended or reduced in size. To keep the package safe and maintainable, `ads.comment` 
-  and any associated logic in other functions have been removed, also speeding up `ads.write` a bit. If an old AGB file is being 
-  changed, any comment will be deleted to maintain compatibility. You can still use `ads.desc` to safely store a short description 
-  of 75 characters.
+  especially with ADS files that have been extended or reduced in size. To keep the package safe and maintainable, `ads.comment`
+  and any associated logic in other functions have been removed, also speeding up `ads.write` a bit. If an old AGB file is being
+  changed, any comment will be deleted to maintain compatibility. You can still use `ads.desc` to safely store a short description
+  of 74 characters.
 
 - With lists, `ads.retrieve` no longer returns a string in a table, but just returns the single string.
 
