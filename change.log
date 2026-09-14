@@ -1,6 +1,18 @@
+7.10.1 Enceladus, September 14, 2026
+
+- With any integral n, `binomial(n, k)` and `n over k` have become yet another 30 % faster. The overall performance increase compared
+  to pre-7.10 Agena now is 36 %.
+
+- With lists, `ads.write` will now issue an error if more than one value shall be written.
+
+- `binio.writeline` works again.
+
+- Duplicate numeric testcases included in the test suite dBASE files have been removed.
+
+
 7.10.0 Enceladus, September 13, 2026
 
-- The new `!` prefix operator computes the factorial and is twice as fast as the `fact` function. The functionality could not be 
+- The new `!` prefix operator computes the factorial and is twice as fast as the `fact` function. The functionality could not be
   implemented as a postfix operator because `n!` would create grammatical collisions.. Examples:
 
   > n := 4;
