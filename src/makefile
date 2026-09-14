@@ -185,7 +185,7 @@ raspi:
 # gdi not to work any longer. Do NOT use -D_DARWIN_USE_64_BIT_INODE as it will break results.
 Darwin macos macosx:
 	$(MAKE) all \
-	MYCFLAGS="-O2 -g -DLUA_USE_LINUX -DNOINLINE -D_DIRENT_HAVE_D_TYPE \
+	MYCFLAGS="-std=gnu99 -O2 -g -DLUA_USE_LINUX -DNOINLINE -D_DIRENT_HAVE_D_TYPE \
 		-force_cpusubtype_ALL -mmacosx-version-min=10.4" \
 	MYLIBS="-lreadline -lcurses -lexpat -lpcre2-posix -lpcre2-8 -lpthread \
 		-framework ApplicationServices \
