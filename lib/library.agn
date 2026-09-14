@@ -1243,7 +1243,7 @@ end;
 
 # Writes one or more strings to the file denoted by its file handle filehandle, separated by newlines.
 
-binio.writeline := proc(fd :: number, ?) is  # 2.6.1
+binio.writeline := proc(fd :: userdata, ?) is  # 2.6.1, 7.10.1 fix
    binio.isfdesc(fd) -? error('Error in `binio.writeline`: file handle is invalid.');  # changed 2.21.3
    isall(?, string)  -? error('Error in `binio.writeline`: expected a string.');  # changed 3.15.4/4.6.2
    return binio.writebytes(fd, strings.tobytes(strings.join(?)))
