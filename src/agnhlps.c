@@ -6991,12 +6991,7 @@ LUALIB_API double tools_binomial (double n, double k) {  /* 2.10.4 */
       double newn = -n + k - 1;
       /* Tight upper-bound overflow check using Stirling-like fast log-factorial:
          ln(n!) ~ n*ln(n) - n. If ln(bincoeff) > 43.668, it definitely overflows int64. */
-      if (newn > 30.0 && k > 1.0 && (newn - k) > 1.0) {
-        double ln_est = (newn*sun_log(newn) - newn)
-                      - (k*sun_log(k) - k)
-                      - ((newn - k)*sun_log(newn - k) - (newn - k));
-        if (ln_est > 43.668) goto fallback;
-      }
+      if (tools_isbinomialoverflow(newn, k)) goto fallback;
       int64_t r0 = tools_bincoeff((int)newn, (int)k, &rc);
       if (!rc) return sun_pow(-1, k, 1)*(double)r0;
     } else if (k <= n) {
