@@ -1,13 +1,28 @@
+7.10.2 Enceladus, September 15, 2026
+
+- To reduce disk space usage, new ADS database and list files no longer include the null terminator (\0). This saves one byte per 
+  stored value. Old ADS database and list files can still be read but can no longer be changed.
+
+- The number of initial datasets supported before automatic expansion has been reduced from 20,000 to 4,096, also resulting in
+  smaller initial files.
+
+- With a million or more datasets in an ADS file, `ads.clean`, `ads.find`, `ads.getkeys`, `ads.getvalues`, `ads.retrieve`, 
+  `ads.peekin` crashed Agena. This has been fixed. The functions now also leave the internal stack levelled in case of an I/O 
+  error.
+
+
 7.10.1 Enceladus, September 14, 2026
 
 - With any integral n, `binomial(n, k)` and `n over k` have become yet another 30 % faster. The overall performance increase compared
-  to pre-7.10 Agena now is 36 %.
+  to pre-7.10 Agena now is 36 % and on macOS internal overflow guards are no longer ignored.
 
 - With lists, `ads.write` will now issue an error if more than one value shall be written.
 
 - `binio.writeline` works again.
 
 - Duplicate numeric testcases included in the test suite dBASE files have been removed.
+
+- There are no warnings any more on macOS when compiling the sources.
 
 
 7.10.0 Enceladus, September 13, 2026
