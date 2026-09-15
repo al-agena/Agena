@@ -5,11 +5,6 @@
 
 #include "network.h"
 
-#ifndef _WIN32
-/* Silence GCC warning about empty translation unit on non-Windows platforms */
-static int agena_network_compat_dummy_symbol = 0;
-#endif
-
 #ifdef _WIN32
 pfn_getaddrinfo  fp_getaddrinfo  = NULL;
 pfn_freeaddrinfo fp_freeaddrinfo = NULL;
