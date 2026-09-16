@@ -1,13 +1,22 @@
+7.10.3 Enceladus, September 16, 2026
+
+- With larger arguments, `combinat.stirling1` and `combinat.stirling2` overflowed and returned wrong results or issued out-of-memory
+  errors. This has both been fixed.
+
+- Significantly dropped runtime of `combinat.numbpart(n, k)` from exponential O(2^n) down to polynomial O(n*k). The function also 
+  now issues an error if k > n and correctly returns 1 instead of faulty 0 with n = 0.
+
+
 7.10.2 Enceladus, September 15, 2026
 
-- To reduce disk space usage, new ADS database and list files no longer include the null terminator (\0). This saves one byte per 
+- To reduce disk space usage, new ADS database and list files no longer include the null terminator (\0). This saves one byte per
   stored value. Old ADS database and list files can still be read but can no longer be changed.
 
 - The number of initial datasets supported before automatic expansion has been reduced from 20,000 to 4,096, also resulting in
   smaller initial files.
 
-- With a million or more datasets in an ADS file, `ads.clean`, `ads.find`, `ads.getkeys`, `ads.getvalues`, `ads.retrieve`, 
-  `ads.peekin` crashed Agena. This has been fixed. The functions now also leave the internal stack levelled in case of an I/O 
+- With a million or more datasets in an ADS file, `ads.clean`, `ads.find`, `ads.getkeys`, `ads.getvalues`, `ads.retrieve`,
+  `ads.peekin` crashed Agena. This has been fixed. The functions now also leave the internal stack levelled in case of an I/O
   error.
 
 
