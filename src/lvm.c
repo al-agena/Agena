@@ -7720,30 +7720,6 @@ static void restoretry (lua_State *L, int seterr, int ra) {  /* 2.1 RC 2, writte
   releasetry(L);
 }
 
-/* 7.10.0 */
-static double vm_bincoeff (int n, int k) {
-  double r;
-  int rc = 0;
-  if (n >= 0 && (k < 0 || k > n)) return 0.0;  /* speed-up ! */
-  if (n < 0) {  /* to prevent slow recursion, we will not call tools_bincoeff with negative n,
-    but just call tools_binomial */
-    /* To prevent overflows, we use the following recursions, see: https://mathworld.wolfram.com/BinomialCoefficient.html 3.7.3 */
-    if (k >= 0)
-      return sun_pow(-1, k, 1)*tools_binomial(-n + k - 1, k);
-    else if (k <= n)
-      return sun_pow(-1, n - k, 1)*tools_binomial(-k - 1, n - k);
-    else
-      return 0.0;
-  } else {
-    int64_t result = tools_bincoeff(n, k, &rc);
-    if (rc) { goto err; }
-    return (double)result;
-  }
-err:
-  r = sun_exp(sun_lgamma(n + 1) - sun_lgamma(k + 1) - sun_lgamma(n - k + 1));
-  return sun_round(r);
-}
-
 
 void luaV_execute (lua_State *L, int nexeccalls) {
   LClosure *cl;
@@ -9385,7 +9361,7 @@ void luaV_execute (lua_State *L, int nexeccalls) {
         TValue *rb = RKB(i);
         if (ttisnumber(rb)) {
           lua_Number x = nvalue(rb);
-          setnvalue(ra, tools_isint(x) ? cephes_factorial(x) : tools_gammal(x + 1));  
+          setnvalue(ra, tools_isint(x) ? cephes_factorial(x) : tools_gammal(x + 1));
         } else {
           Protect(luaG_runerror(L, "Error in " LUA_QS ": number expected, got %s.",
             "!", luaT_typenames[(int)ttype(rb)]));
@@ -10127,7 +10103,7 @@ void luaV_execute (lua_State *L, int nexeccalls) {
             luaT_typenames[(int)ttype(rb)], luaT_typenames[(int)ttype(rc)]);
         /* All attempts to use double arithmetic for integral arguments failed, so let's call tools_binomial which
            has proven to be reliable. The speed increase 20 %. 7.10.0 */
-        setnvalue(ra, vm_bincoeff(nvalue(rb), nvalue(rc)));
+        setnvalue(ra, tools_binomial(nvalue(rb), nvalue(rc)));
         DISPATCH();
       }
       case OPR_ROLL: {  /* added 2.13.0, formerly `rot` baselib function, ten percent faster */

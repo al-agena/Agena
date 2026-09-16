@@ -48,15 +48,16 @@ static void aux_checkeboptions (lua_State *L, int pos, int *nargs, lua_Number *e
    Rewritten 7.3.4 to prevent C stack corruption, reduce memory consumption from O(n^2)
    to O(n), by Gemini AI, put to the public domain. */
 
-static int stirling2 (int n, int k);
+static double stirling2 (int n, int k, int *rc);
 
 static long double bell_poly (int n, long double x) {
-  int k;
+  int k, rc;
   long double sum = 0.0L;
   long double p = x;
   if (n <= 0) return x == 0 ? 0.0L : 1.0L;  /* do like Maple V Release 4 does */
   for (k=1; k <= n; k++) {
-    sum += stirling2(n, k) * p;
+    sum += stirling2(n, k, &rc) * p;
+    if (rc) break;
     p *= x;
   }
   return sum;
@@ -415,89 +416,177 @@ static int combinat_bernoulli (lua_State *L) {  /* 2.20.2, 2.34.10 switched to l
 
 
 /* Computes Stirling number of the first kind for n, k. 2.13.0 */
-static int combinat_stirling1 (lua_State *L) {
-  int i, j, n, k, maxj, *a;
-  n = agn_checkinteger(L, 1);
-  k = agn_checkinteger(L, 2);
-  if (tools_isnegint(n) || tools_isnegint(k)) {  /* for both 1st and 2nd kind */
-    lua_pushnumber(L, 0);
-    return 1;
-  }
+#define STIRLING1_LUT_MAX 12
+/* Hardcoded exact lookup table for Stirling numbers of the first kind: s(n, k)
+   Rows represent 'n' from 0 to 12, columns represent 'k' from 0 to 12. */
+static const double stirling1_lut[STIRLING1_LUT_MAX + 1][STIRLING1_LUT_MAX + 1] = {
+    {1}, /* n = 0 */
+    {0, 1}, /* n = 1 */
+    {0, -1, 1}, /* n = 2 */
+    {0, 2, -3, 1}, /* n = 3 */
+    {0, -6, 11, -6, 1}, /* n = 4 */
+    {0, 24, -50, 35, -10, 1}, /* n = 5 */
+    {0, -120, 274, -225, 85, -15, 1}, /* n = 6 */
+    {0, 720, -1764, 1624, -735, 175, -21, 1}, /* n = 7 */
+    {0, -5040, 13068, -13132, 6769, -1960, 322, -28, 1}, /* n = 8 */
+    {0, 40320, -109584, 118124, -67284, 22449, -4536, 546, -36, 1}, /* n = 9 */
+    {0, -362880, 1026576, -1172700, 723680, -269325, 63273, -9450, 870, -45, 1}, /* n = 10 */
+    {0, 3628800, -10628640, 12753576, -8409500, 3416930, -902055, 157773, -18150, 1320, -55, 1}, /* n = 11 */
+    {0, -39916800, 120543840, -150917976, 105258076, -45995730, 13339535, -2637558, 357423, -32670, 1925, -66, 1}  /* n = 12 */
+};
+
+/* Computes Stirling number of the first kind for n, k. */
+static double stirling1 (int n, int k, int *rc) {
+  int i, j, maxj;
+  double *a, r;
+  *rc = 0;
   if (n < k || n == k) {
-    lua_pushinteger(L, (n < k) ? 0 : 1);
-    return 1;
+    return (n < k) ? 0.0 : 1.0;
+  }
+  if (n <= STIRLING1_LUT_MAX) {
+    return stirling1_lut[n][k];
   }
   maxj = n - k;
-  a = agn_malloc(L, (maxj + 1) * sizeof(int), "combinat.stirling1", NULL);  /* 4.11.5 fix */
-  /* Source: https://stackoverflow.com/questions/5133050/dynamic-programming-approach-to-calculating-stirlings-number */
-  for (i=0; i <= maxj; i++) a[i] = 0;
-  a[0] = 1;
-  for (i=1; i <= k; i++) {
-    for (j=1; j <= maxj; j++)
-      a[j] -= (i + j - 1)*a[j - 1];
+  a = malloc((maxj + 1) * sizeof(double));
+  if (a == NULL) {
+    *rc = 1;
+    return -1.0;
   }
-  lua_pushinteger(L, a[maxj]);
-  xfree(a);
+  for (i=0; i <= maxj; i++) a[i] = 0.0;
+  a[0] = 1.0;
+  for (i=1; i <= k; i++) {
+    for (j=1; j <= maxj; j++) {
+      double factor = (double)i + (double)j - 1.0;
+      a[j] -= factor * a[j - 1];
+    }
+  }
+  r = a[maxj];
+  free(a);
+  return r;
+}
+
+static int combinat_stirling1 (lua_State *L) {
+  int n, k, rc;
+  n = agn_checkinteger(L, 1);
+  k = agn_checkinteger(L, 2);
+  if (tools_isnegint(n) || tools_isnegint(k)) {
+    lua_pushnumber(L, 0.0);
+    return 1;
+  }
+  double result = stirling1(n, k, &rc);
+  if (rc) {
+    luaL_error(L, "Error in " LUA_QS ": memory allocation failed.", "combinat.stirling1");
+    return 0;
+  }
+  /* Safely pushes as a standard lua_Number (double) without integer casting bottlenecks */
+  lua_pushnumber(L, result);
   return 1;
 }
 
 
 /* Computes Stirling number of the second kind for n, k. 2.13.0 */
+#define STIRLING2_LUT_MAX 12
+/* Hardcoded exact lookup table for Stirling numbers of the second kind: S2(n, k)
+   Rows represent 'n' from 0 to 12, columns represent 'k' from 0 to 12. */
+static const double stirling2_lut[STIRLING2_LUT_MAX + 1][STIRLING2_LUT_MAX + 1] = {
+  {1}, /* n = 0 */
+  {0, 1}, /* n = 1 */
+  {0, 1, 1}, /* n = 2 */
+  {0, 1, 3, 1}, /* n = 3 */
+  {0, 1, 7, 6, 1}, /* n = 4 */
+  {0, 1, 15, 25, 10, 1}, /* n = 5 */
+  {0, 1, 31, 90, 65, 15, 1}, /* n = 6 */
+  {0, 1, 63, 301, 350, 140, 21, 1}, /* n = 7 */
+  {0, 1, 127, 966, 1701, 1050, 266, 28, 1}, /* n = 8 */
+  {0, 1, 255, 3025, 7770, 6951, 2646, 462, 36, 1}, /* n = 9 */
+  {0, 1, 511, 9330, 34105, 42525, 22827, 5880, 750, 45, 1}, /* n = 10 */
+  {0, 1, 1023, 28501, 145750, 246730, 179487, 63987, 11880, 1155, 55, 1}, /* n = 11 */
+  {0, 1, 2047, 86526, 611501, 1379400, 1323652, 627396, 159027, 22275, 1705, 66, 1}  /* n = 12 */
+};
 
-static int stirling2 (int n, int k) {
-  int r, *a, i, j, maxj;
-  if (tools_isnegint(n) || tools_isnegint(k)) {  /* for both 1st and 2nd kind */
-    r = 0;
-  } else if (n < k || n == k) {
-    r = (n < k) ? 0 : 1;
-  } else {
-    maxj = n - k;
-    a = malloc((maxj + 1) * sizeof(int));  /* 4.11.5 fix */
-    if (a == NULL) return -1;
-    /* Source: https://stackoverflow.com/questions/5133050/dynamic-programming-approach-to-calculating-stirlings-number */
-    for (i=0; i <= maxj; i++) a[i] = 1;
-    for (i=2; i <= k; i++) {
-      for (j=1; j <= maxj; j++)
-        a[j] += i*a[j - 1];
-    }
-    r = a[maxj];
-    xfree(a);
+/* Computes Stirling number of the second kind for n, k.  */
+static double stirling2 (int n, int k, int *rc) {
+  int i, j, maxj;
+  double *a, r;
+  *rc = 0;
+  if (n < k || n == k) {
+    return (n < k) ? 0.0 : 1.0;
   }
+  if (n <= STIRLING2_LUT_MAX) {
+    return stirling2_lut[n][k];
+  }
+  maxj = n - k;
+  a = malloc((maxj + 1) * sizeof(double));
+  if (a == NULL) {
+    *rc = 1;
+    return -1.0;
+  }
+  for (i=0; i <= maxj; i++) a[i] = 1.0;
+  for (i=2; i <= k; i++) {
+    for (j=1; j <= maxj; j++) {
+      a[j] += (double)i * a[j - 1];
+    }
+  }
+  r = a[maxj];
+  free(a);
   return r;
 }
 
 static int combinat_stirling2 (lua_State *L) {
-  int n, k, r;
+  int n, k, rc;
   n = agn_checkinteger(L, 1);
   k = agn_checkinteger(L, 2);
-  r = stirling2(n, k);
-  if (r == -1) {
-    luaL_error(L, "Error in " LUA_QS ": memory allocation failed.", "combinat.stirling2");
+  if (tools_isnegint(n) || tools_isnegint(k)) {
+    lua_pushnumber(L, 0.0);
+    return 1;
   }
-  lua_pushnumber(L, r);
+  /* Explicit check for k = 0 before diving into allocations */
+  if (k == 0) {
+    lua_pushnumber(L, (n == 0) ? 1.0 : 0.0);
+    return 1;
+  }
+  double result = stirling2(n, k, &rc);
+  if (rc) {
+    luaL_error(L, "Error in " LUA_QS ": memory allocation failed.", "combinat.stirling2");
+    return 0;
+  }
+  /* Pushes directly as a standard lua_Number (double) */
+  lua_pushnumber(L, result);
   return 1;
 }
 
 
-/* See: https://stackoverflow.com/questions/35149865/computes-the-number-of-ways-to-partition-n-into-the-sum-of-positive-integers-c */
-static int intpartition (int n, int k) {
-  if (k == 0) return 0;
-  if (n == 0) return 1;
-  if (n < 0)  return 0;
-  return intpartition(n, k - 1) + intpartition(n - k, k);
+static double intpartition (int n, int k) {
+  int i, j;
+  if (n == 0 && k == 0) return 1.0;
+  if (k <= 0 || n < 0) return 0.0;
+  if (k > n) k = n; /* Partitioning n into parts larger than n is identical to parts up to n */
+  /* Allocate 1D array initialized to 0.0, representing ways to make each value up to n */
+  double *dp = (double *)calloc(n + 1, sizeof(double));
+  if (dp == NULL) return -1.0; /* Out of memory flag */
+  dp[0] = 1.0; /* Base case: 1 way to make 0 */
+  /* Compute partitions iteratively using the 1D space shortcut */
+  for (i=1; i <= k; i++) {
+    for (j=i; j <= n; j++) {
+      dp[j] += dp[j - i];
+    }
+  }
+  double result = dp[n];
+  free(dp);
+  return result;
 }
 
 /* Computes the number of partitions of n, the partition numbers, taken r at a time. By default, r = n. Behaves like Maple V's
    combinat.numbperm. See: https://oeis.org/A000041; 2.22.1
-   The approximation tools_numbpartapx is slower than recursion. */
+   7.10.3 Dropped runtime from exponential O(2^n) down to polynomial O(n*k). */
 static int combinat_numbpart (lua_State *L) {
   double n, r;
   int approx;
   n = agn_checknonnegint(L, 1);
   r = agnL_optnonnegint(L, 2, n);
   approx = agnL_optboolean(L, 3, 0);
-  if (n == 0) n = 1;
-  if (r == 0) n = 0;
+  if (r > n)
+    luaL_error(L, "Error in " LUA_QS ": 2nd argument must be a non-negative integer <= %d.", "combinat.numbpart", n);
   lua_pushnumber(L, intpartition(n, r));
   if (approx)  /* UNDOC */
     lua_pushnumber(L, tools_numbpartapx(n));

@@ -940,7 +940,6 @@ LUALIB_API double   tools_branch (double x, int d);
 LUALIB_API double   tools_matheps (double x);
 LUALIB_API double   tools_cbrteps (double x);
 LUALIB_API double   tools_binomial (double n, double k);
-LUALIB_API int64_t  tools_bincoeff (int n, int k, int *rc);
 LUALIB_API double   tools_expx2 (double x, int sign);
 LUALIB_API double   tools_cexpx2 (double a, double b, double sign, double *im);
 LUALIB_API void     sun_sincos (double x, double *s, double *c);  /* 35 % faster than calling sin and cos individually */
