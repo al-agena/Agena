@@ -2,7 +2,7 @@
 # ! build Agena in /home/proglang/agena !
 Summary: Agena Programming Language
 Name: agena
-Version: 7.10.2
+Version: 7.10.3
 Release: 1
 # change Release number in build.sh file, as well.
 #Source0: %{name}-%{version}-src.tar.gz
