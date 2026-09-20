@@ -156,20 +156,37 @@ static int keyfile_start (lua_State *L) {
 
 static int keyfile_write (lua_State *L) {
   pblKeyFile_t **pf = checkkeyfile(L, 1);
-  size_t klen, dlen;
-  const char *key = agn_checklstring(L, 2, &klen);
-  const char *data = agn_checklstring(L, 3, &dlen);
+  int isseq, rc;
+  size_t klen, dlen, j;
+  const char *key = luaL_checklstring(L, 2, &klen);  /* 7.10.4 extension for numbers */
+  char *data = NULL;
   if (*pf == NULL) {
     luaL_error(L, "Error in " LUA_QS ": cannot operate on a closed file.", "keyfile.write");
   }
   if (klen == 0 || klen > 255) {
     luaL_error(L, "Error in " LUA_QS ": key length must be in [1, 255].", "keyfile.write");
   }
+  if ( (isseq = lua_isseq(L, 3)) ) {  /* 7.10.4 extension */
+    dlen = agn_seqsize(L, 3);
+    if (dlen < 1)
+      luaL_error(L, "Error in " LUA_QS ": sequence is empty.", "keyfile.write");
+    data = (char *)agn_stralloc(L, dlen, "keyfile.write", NULL);
+    for (j=0; j < dlen; j++) {
+      data[j] = (unsigned char)agn_seqrawgetiinteger(L, 3, j + 1, &rc);
+      if (!rc) {
+        xfree(data);
+        luaL_error(L, "Error in " LUA_QS ": sequence must consist of integers only.", "keyfile.write");
+      }
+    }
+  } else {
+    data = (char *)luaL_checklstring(L, 3, &dlen);  /* dito */
+  }
   /* Assuming pblKfInsert signature */
   if (pblKfInsert(*pf, (void *)key, klen + 1, (void *)data, dlen + 1) != 0) {
     luaL_error(L, "Error in " LUA_QS ": failed to insert record, pbl code %d.", "keyfile.write", pbl_errno);
   }
-  lua_pushboolean(L, 1);
+  if (isseq) { xfree(data); }
+  lua_pushtrue(L);
   return 1;
 }
 
@@ -220,7 +237,7 @@ static int keyfile_read (lua_State *L) {
   size_t keylen;
   long int reclen;
   pblKeyFile_t **pf = checkkeyfile(L, 1);
-  const char *key = agn_checklstring(L, 2, &keylen);
+  const char *key = luaL_checklstring(L, 2, &keylen);  /* 7.10.4 extension */
   int firstone = lua_isnoneornil(L, 3);
   if (*pf == NULL) {
     luaL_error(L, "Error in " LUA_QS ": cannot operate on a closed file.", "keyfile.read");

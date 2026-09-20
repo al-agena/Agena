@@ -1558,7 +1558,7 @@ LUALIB_API int my_unlock (int hnd, off64_t start, off64_t size) {
 
 /* my_move(hnd, low*4L+24L, low*4L+28L, cnt*4L+24L); */
 /* fpos: from position, tpos: to position, size */
-LUALIB_API void my_move (int hnd, off64_t fpos, off64_t tpos, off64_t size) {  /* 2.11.0 fix */
+LUALIB_API void __my_move (int hnd, off64_t fpos, off64_t tpos, off64_t size) {  /* 2.11.0 fix */
   off64_t segment;
   char buff[BASE_MOVELEN];
   segment = size - fpos;
@@ -1596,6 +1596,59 @@ LUALIB_API void my_move (int hnd, off64_t fpos, off64_t tpos, off64_t size) {  /
       my_read(hnd, buff, segment);
       my_seek(hnd, tpos);
       my_write(hnd, buff, segment);
+    }
+  }
+}
+
+
+LUALIB_API void my_move (int hnd, off64_t fpos, off64_t tpos, off64_t size) {  /* 2.11.0 fix */
+  off64_t segment;
+  char buff[BASE_MOVELEN];
+  
+  segment = size - fpos;
+  if (segment < 1)
+    return;
+    
+  if (fpos < 0 || tpos < 0)
+    fprintf(stderr, "Agena IO subsystem: move error\n");
+    
+  /* CASE 1: Shifting data DOWNWARDS (Left) - Copy from front to back */
+  if (fpos > tpos) {
+    while (segment >= BASE_MOVELEN) {
+      my_seek(hnd, fpos);
+      my_read(hnd, buff, BASE_MOVELEN);
+      my_seek(hnd, tpos);
+      my_write(hnd, buff, BASE_MOVELEN);
+      fpos += BASE_MOVELEN;
+      tpos += BASE_MOVELEN;
+      segment -= BASE_MOVELEN;
+    }
+    if (segment > 0) {
+      my_seek(hnd, fpos);
+      my_read(hnd, buff, segment);
+      my_seek(hnd, tpos);
+      my_write(hnd, buff, segment);
+    }
+  }
+  
+  /* CASE 2: Shifting data UPWARDS (Right) - Copy strictly from back to front */
+  if (fpos < tpos) {
+    /* 
+       FIXED: Instead of a strict loop followed by a broken forward cleanup block, 
+       this loop dynamically adjusts chunk sizes and works backwards the entire time.
+    */
+    while (segment > 0) {
+      /* Use BASE_MOVELEN if we have a full chunk left, otherwise use the exact remaining bytes */
+      off64_t chunk = (segment > BASE_MOVELEN) ? BASE_MOVELEN : segment;
+      
+      /* Target the offsets relative to the very tail end of the remaining data block */
+      my_seek(hnd, fpos + segment - chunk);
+      my_read(hnd, buff, chunk);
+      my_seek(hnd, tpos + segment - chunk);
+      my_write(hnd, buff, chunk);
+      
+      /* Deduct the chunk we just successfully processed */
+      segment -= chunk;
     }
   }
 }

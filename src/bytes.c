@@ -14,7 +14,9 @@
 #include "agenalib.h"
 #include "agnxlib.h"
 #include "charbuf.h"
+#include "ints.h"
 #include "long.h"
+
 /* For unknown reasons I am too tired to clarify, we import the *GET_*, *SET_*, *INSERT*, *EXTRACT*,
    etc. Sun Microsystems macros from the following header file instead of agnhlps.h: */
 #include "agnhlps.h"
@@ -121,21 +123,32 @@ static int bytes_setnumwords (lua_State *L) {  /* 2.13.0 */
 
 
 /* Returns a sequence with all the bytes of a number x in Little Endian order. */
-static int bytes_tobytes (lua_State *L) {  /* 2.6.1, extended 2.9.0; rewritten 2.9.4; changed 2.17.4 */
+static int bytes_tobytes (lua_State *L) {  /* 2.6.1, extended 2.9.0; rewritten 2.9.4; changed 2.17.4, extended 7.10.4 */
   union ldshape d;
   lua_Number x;
   int s, i, tolittle;
-  const int E[] = { sizeof(int32_t), sizeof(lua_Number), sizeof(float), sizeof(uint16_t), SIZEOFLDBL};
+  const int E[] = { sizeof(int32_t), sizeof(int64_t), sizeof(lua_Number), sizeof(float), sizeof(uint16_t), SIZEOFLDBL, sizeof(agn_Complex)};
   getanynumber(L, d, 1, "bytes.tobytes");
-  s = luaL_optint(L, 2, lua_isnumber(L, 1) ? sizeof(lua_Number) : SIZEOFLDBL);
+  if (isints(L, 1))
+    s = -(int)sizeof(int64_t);
+  else if (isdlong(L, 1))
+    s = SIZEOFLDBL;
+  else if (lua_iscomplex(L, 1))
+    s = sizeof(agn_Complex);
+  else
+    s = luaL_optint(L, 2, sizeof(lua_Number));
   tolittle = agnL_optboolean(L, 3, 1);  /* new 2.17.4 */
   (void)tolittle;  /* not used on Little Endian systems */
-  if (!tools_isintenum(fabs(s), E, sizeof(E)/sizeof(*E)))  /* 2.38.3 fix */
-    luaL_error(L, "Error in " LUA_QS ": second argument must either be %d, +/-%d, %d or %d.",
-      "bytes.tobytes", sizeof(uint16_t), sizeof(int32_t), sizeof(lua_Number), SIZEOFLDBL);
-  agn_createseq(L, s);
+  if (!tools_isintenum(abs(s), E, sizeof(E)/sizeof(*E)))  /* 2.38.3 fix */
+    luaL_error(L, "Error in " LUA_QS ": second argument must either be %d, +/-%d, %d, %d or %d.",
+      "bytes.tobytes", sizeof(uint16_t), sizeof(int32_t), sizeof(lua_Number), SIZEOFLDBL, sizeof(agn_Complex));
+  agn_createseq(L, abs(s));  /* 7.10.4 fix */
+  if (s == -8) s = 10008;  /* 7.10.4 */
   if (s == -4) s = 10004;  /* 2.25.5, to prevent compiler warnings in Debian Bullseye */
   if (s == -2) s = 10002;  /* 2.38.3, to prevent compiler warnings in Debian Bullseye */
+  if (lua_iscomplex(L, 1) && s == (int)sizeof(agn_Complex)) {
+    s = 10016;
+  }
   switch (s) {
     case sizeof(lua_Number): {
       /* using tools_double2uint does not work GCC 4.5.2, but not in GCC 4.8.1; tuned 2.14.9 */
@@ -207,6 +220,40 @@ static int bytes_tobytes (lua_State *L) {  /* 2.6.1, extended 2.9.0; rewritten 2
       }
       break;
     }
+    case 10008: {  /* added 7.10.4 */
+      int64_t y = d.i64;
+      s = sizeof(int64_t);
+      #if BYTE_ORDER == BIG_ENDIAN
+      if (tolittle) tools_swapint64_t(&y);
+      #endif
+      unsigned char *src = (unsigned char *)&y;
+      for (i=0; i < s; i++) {
+        agn_seqsetinumber(L, -1, i + 1, src[i]);
+      }
+      break;
+    }
+    case 10016: {  /* added 7.10.4 */
+      lua_Number re, im;
+      unsigned char *src;
+#ifndef PROPCMPLX
+      re = creal(d.z); im = cimag(d.z);
+#else
+      re = d.z[0]; im = d.z[1];
+#endif      
+      s = sizeof(agn_Complex);
+      #if BYTE_ORDER == BIG_ENDIAN
+      if (tolittle) { tools_swapint64_t(&re); tools_swapint64_t(&im); }
+      #endif
+      src = (unsigned char *)&re;
+      for (i=0; i < sizeof(lua_Number); i++) {
+        agn_seqsetinumber(L, -1, i + 1, src[i]);
+      }
+      src = (unsigned char *)&im;
+      for (; i < 2*sizeof(lua_Number); i++) {
+        agn_seqsetinumber(L, -1, i + 1, src[i - sizeof(lua_Number)]);
+      }
+      break;
+    }
     default:
       lua_assert(0);
   }
@@ -220,19 +267,21 @@ static int bytes_tobytes (lua_State *L) {  /* 2.6.1, extended 2.9.0; rewritten 2
    answer by dreamlax. */
 
 static int bytes_tonumber (lua_State *L) {  /* 2.6.1 */
-  int i, size, isfloat;
-  const int E[] = { sizeof(int32_t), sizeof(lua_Number), sizeof(float), sizeof(uint16_t), SIZEOFLDBL};
+  int i, size, flag;
+  const int E[] = { sizeof(int32_t), sizeof(int64_t), sizeof(lua_Number), sizeof(float), sizeof(uint16_t), SIZEOFLDBL, sizeof(agn_Complex)};
   luaL_argcheck(L, lua_isseq(L, 1), 1, "sequence expected");
-  isfloat = agnL_optboolean(L, 2, 0);
+  flag = agnL_optboolean(L, 2, 0);
   size = agn_seqsize(L, 1);
   if (!tools_isintenum(size, E, sizeof(E)/sizeof(*E)))
-    luaL_error(L, "Error in " LUA_QS ": expected a sequence of %d, %d, %d or %d integers.",
-      "bytes.tonumber", sizeof(uint16_t), sizeof(int32_t), sizeof(lua_Number), SIZEOFLDBL);
+    luaL_error(L, "Error in " LUA_QS ": expected a sequence of %d, %d, %d, %d or %d integers.",
+      "bytes.tonumber", sizeof(uint16_t), sizeof(int32_t), sizeof(lua_Number), SIZEOFLDBL, sizeof(agn_Complex));
   union {
     lua_Number x;
+    agn_Complex z;  /* 7.10.4 extension */
     long double ld;
     uint16_t us;
-    int32_t i;  /* 2.18.2 */
+    int32_t i;      /* 2.18.2 extension */
+    int64_t i64;    /* 7.10.4 extension */
     float f;
     unsigned char c[size];
   } dst;
@@ -244,21 +293,28 @@ static int bytes_tonumber (lua_State *L) {  /* 2.6.1 */
 #endif
   }
 #ifndef __ARMCPU  /* 2.37.1 */
-  if (size == SIZEOFLDBL) {
+  if (flag && size == SIZEOFLDBL) {
     createdlong(L, dst.ld);
 #else
   if (0) {
     lua_assert(0);
 #endif
+  } else if (flag && size == sizeof(float)) {
+    lua_pushnumber(L, dst.f);
+  } else if (flag && size == sizeof(int64_t)) {
+    createint64(L, dst.i64);
+  } else if (size == sizeof(uint16_t)) {
+    lua_pushnumber(L, dst.us);
+  } else if (size == sizeof(lua_Number)) {
+    lua_pushnumber(L, dst.x);
+  } else if (size == sizeof(agn_Complex)) {  
+#ifndef PROPCMPLX
+    agn_pushcomplex(L, creal(dst.z), cimag(dst.z));
+#else
+    agn_pushcomplex(L, dst.z[0], dst.z[1]);
+#endif
   } else {
-    if (isfloat && size == sizeof(float))
-      lua_pushnumber(L, dst.f);
-    else if (size == sizeof(uint16_t))
-      lua_pushnumber(L, dst.us);
-    else if (size == sizeof(lua_Number))
-      lua_pushnumber(L, dst.x);
-    else
-      lua_pushnumber(L, dst.i);
+    lua_pushnumber(L, dst.i);
   }
   return 1;
 }
@@ -2083,7 +2139,7 @@ static int bytes_interweave (lua_State *L) {
 #ifdef DONOTCOMPILEME
   if (sh < 0)
     hx <<= sh;
-  else 
+  else
 #endif
   if (sh > 0)
     hx >>= sh;

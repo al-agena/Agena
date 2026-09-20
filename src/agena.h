@@ -31,7 +31,7 @@
 #define agena_h
 
 #define AGENA_VERSION     "agena 7.10"
-#define AGENA_EDITION     "7.10.3"
+#define AGENA_EDITION     "7.10.4"
 #define AGENA_MOTTO       "enceladus"
 #define AGENA_NAME        "agena"
 #define AGENA_LOGO        ">>"
@@ -1027,6 +1027,10 @@ LUA_API void         lua_getuservalue (lua_State *L, int i);
 LUA_API void         lua_setuservalue (lua_State *L, int i);
 
 LUA_API void  *lua_getextraspace (lua_State *L);
+
+LUA_API void lua_callk (lua_State *L, int nargs, int nresults, int ctx,
+                        lua_CFunction k);
+//LUA_API size_t lua_rawlen (lua_State *L, int idx);
 
 /* lhf's ae package functions for evaluating mathematical expressions in C */
 

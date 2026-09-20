@@ -28,6 +28,7 @@
 #include "jwent.h"
 #include "ldebug.h"   /* for luaG_runerror */
 #include "llimits.h"  /* for MAX_INT */
+#include "long.h"
 #include "lstrlib.h"
 #include "lucase.def"
 #include "sunpro.h"
@@ -345,7 +346,7 @@ static int str_repeat (lua_State *L) {  /* extended 2.22.0 */
 }
 
 
-static int str_tochars (lua_State *L) {
+static int str_tochars (lua_State *L) {  /* fixed to process embedded zeros */
   int i, n, c, nbytes;
   luaL_Buffer b;
   luaL_buffinit(L, &b);
@@ -359,7 +360,6 @@ static int str_tochars (lua_State *L) {
           luaL_clearbuffer(&b);  /* 2.14.9 improvement */
           luaL_error(L, "Error in " LUA_QS ": invalid value at index %d.", "strings.tochars", i);
         }
-        if (c == 0) break;  /* 2.6.1, embedded zero ? */
         luaL_addchar(&b, uchar(c));
       }
     } else {  /* sequence contains unsigned word-aligned uint32_t's; 2.22.2 */
@@ -370,16 +370,13 @@ static int str_tochars (lua_State *L) {
       (void)tolittle;  /* not used on Little Endian systems */
       s = sizeof(uint32_t);
       for (i=1; i <= n; i++) {
-        c = agn_seqgetinumber(L, 1, i);
-        if (c == 0) break;  /* 2.6.1, embedded zero ? */
-        y = c;
+        y = agn_seqgetinumber(L, 1, i);
         #if BYTE_ORDER == BIG_ENDIAN
         if (tolittle) tools_swapuint32_t(&y);
         #endif
         src = (unsigned char *)&y;
         for (j=0; j < s; j++) {
           c = uchar(src[j]);
-          if (c == 0) break;  /* avoid strings with embedded zeros in result */
           luaL_addchar(&b, c);
         }
       }
@@ -390,7 +387,6 @@ static int str_tochars (lua_State *L) {
     for (i=1; i <= n; i++) {
       c = agnL_checkint(L, i);
       luaL_argcheck(L, uchar(c) == c, i, "invalid value");
-      if (c == 0) break;  /* 2.6.1, embedded zero ? */
       luaL_addchar(&b, uchar(c));
     }
   }
@@ -442,6 +438,60 @@ static int str_tobytes (lua_State *L) {
     xfree(a);
   }
   if (idx > 0) lua_settop(L, 4);  /* return structure if given as 4th argument */
+  return 1;
+}
+
+
+static int str_tonumber (lua_State *L) {  /* 7.10.4 */
+  int flag;
+  size_t i, l;
+  const char *str = luaL_checklstring(L, 1, &l);
+  flag = agnL_optboolean(L, 2, 0);
+  const int E[] = { sizeof(int32_t), sizeof(int64_t), sizeof(lua_Number), sizeof(float), sizeof(uint16_t), SIZEOFLDBL, sizeof(agn_Complex)};
+  if (!tools_isintenum(l, E, sizeof(E)/sizeof(*E)))
+    luaL_error(L, "Error in " LUA_QS ": expected a string of %d, %d, %d, %d or %d characters.",
+      "strings.tonumber", sizeof(uint16_t), sizeof(int32_t), sizeof(lua_Number), SIZEOFLDBL, sizeof(agn_Complex));
+  union {
+    lua_Number x;
+    agn_Complex z;
+    long double ld;
+    uint16_t us;
+    int32_t i;
+    int64_t i64;
+    float f;
+    unsigned char c[l];
+  } dst;
+  for (i=0; i < l; i++) {
+#if BYTE_ORDER != BIG_ENDIAN
+    dst.c[i] = uchar(str[i]);
+#else
+    dst.c[l - 1 - i] = uchar(str[i]);
+#endif
+  }
+#ifndef __ARMCPU
+  if (l == SIZEOFLDBL) {
+    createdlong(L, dst.ld);
+#else
+  if (0) {
+    lua_assert(0);
+#endif
+  } else if (flag && l == sizeof(float)) {
+    lua_pushnumber(L, dst.f);
+  } else if (l == sizeof(uint16_t)) {
+    lua_pushnumber(L, dst.us);
+  } else if (flag && l == sizeof(int64_t)) {
+    createint64(L, dst.i64);
+  } else if (l == sizeof(lua_Number)) {
+    lua_pushnumber(L, dst.x);
+  } else if (l == sizeof(agn_Complex)) {
+#ifndef PROPCMPLX
+    agn_pushcomplex(L, creal(dst.z), cimag(dst.z));
+#else
+    agn_pushcomplex(L, dst.z[0], dst.z[1]);
+#endif
+  } else {
+    lua_pushnumber(L, dst.i);
+  }
   return 1;
 }
 
@@ -1403,7 +1453,7 @@ static const char *get2digits (const char *s) {
 }
 
 #define DLong ieee_long_double_shape_type
-#define checkandgetdlong(L,idx) (((DLong *)luaL_checkudata(L, idx, "longdouble"))->value)
+/* #define checkandgetdlong(L,idx) (((DLong *)luaL_checkudata(L, idx, "longdouble"))->value) */
 
 /*
 ** Check whether a conversion specification is valid. When called,
@@ -6708,6 +6758,7 @@ static const luaL_Reg strlib[] = {
   {"tochars", str_tochars},
   {"tolatin", str_tolatin},               /* added on January 04, 2013 */
   {"tolower", str_tolower},               /* added on March 17, 2022 */
+  {"tonumber", str_tonumber},             /* added on September 20, 2026 */
   {"toupper", str_toupper},               /* added on March 17, 2022 */
   {"toutf8", str_toutf8},                 /* added on January 04, 2013 */
   {"trim", str_trim},                     /* added on October 11, 2024 */
