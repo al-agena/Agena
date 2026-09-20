@@ -1452,8 +1452,6 @@ static const char *get2digits (const char *s) {
   return s;
 }
 
-#define DLong ieee_long_double_shape_type
-/* #define checkandgetdlong(L,idx) (((DLong *)luaL_checkudata(L, idx, "longdouble"))->value) */
 
 /*
 ** Check whether a conversion specification is valid. When called,
