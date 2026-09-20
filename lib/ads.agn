@@ -2,7 +2,7 @@
 
 package.checkclib('ads');  # has C dynamic link library been found ?
 
-ads.initstring := 'ads v4.1.0 as of September 16, 2026\n';
+ads.initstring := 'ads v4.2.0 as of September 19, 2026\n';
 
 # ads.createdict:
 # Create an ADB file from a text dictionary. In the text file keys and values must be
