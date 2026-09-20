@@ -9,7 +9,7 @@ Unicode True
 !ifndef VERSION
   !define VER_MAJOR '7'
   !define VER_MINOR '10'
-  !define VER_REVISION '3'
+  !define VER_REVISION '4'
   !define NICKNAME "Enceladus"
   !define VERSION '${VER_MAJOR}.${VER_MINOR}.${VER_REVISION}'
 !endif

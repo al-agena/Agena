@@ -3,7 +3,7 @@
 ;-----------------------------------------------------------------------------------------
 Unicode True
 !define APPNAME "Agena"
-!define VERSION "7.10.3"
+!define VERSION "7.10.4"
 !define NICKNAME "Enceladus"
 !define COMPANYNAME "Alexander Walz"
 Name "${APPNAME} ${VERSION}"
