@@ -1759,6 +1759,7 @@ strings.sub
 strings.tobytes
 strings.tochars
 strings.tolatin
+strings.tonumber
 strings.toutf8
 strings.transform
 strings.trim

@@ -733,6 +733,7 @@
       <KEYWORD3>strings.tobytes</KEYWORD3>
       <KEYWORD3>strings.tochars</KEYWORD3>
       <KEYWORD3>strings.tolatin</KEYWORD3>
+      <KEYWORD3>strings.tonumber</KEYWORD3>
       <KEYWORD3>strings.toutf8</KEYWORD3>
       <KEYWORD3>strings.transform</KEYWORD3>
       <KEYWORD3>strings.trim</KEYWORD3>

@@ -130,7 +130,8 @@ object TPersHolder
             'isupperalpha,isupperlatin,isutf8,isvowel,iswrapped,itouni,jaro,join,le,lcs,leven,ljustify,lower,lt,ltrim,match,matches,mfind,' +
             'neq,ngrams,obfusxor,pack,packsize,random,repeat,replace,reverse,rjustify,rotateleft,rotateright,rtrim,seek,separate,shannon,' +
             'strcoll,strcmp,strcspn,strftime,stricmp,strlen,strncmp,strnstr,strptime,strspn,strstr,strtoul,strverscmp,strxfrm,sub,subs,' +
-            'tobytes,tochars,tolatin,toutf8,transform,trim,uncapitalise,unique,unpack,unwrap,upper,utf8size,walker,words,wrap,wrapmissing'
+            'tobytes,tochars,tolatin,tonumber,toutf8,transform,trim,uncapitalise,unique,unpack,unwrap,upper,utf8size,walker,words,wrap,' +
+            'wrapmissing'
         end
         item
           FontID = 7
