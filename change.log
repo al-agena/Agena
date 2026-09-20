@@ -1,9 +1,46 @@
+7.10.4 Enceladus, September 20, 2026
+
+- Since ADS databases and lists could not be reliably extended, automatic expansion built into `ads.write` and the functions
+  `ads.expand`, `ads.clean` have been removed. Users are encouraged to either set up ADS files with enough free slots or
+  migrate to the `keyfile` package which provides a much more reliable way to add data subsequently.
+
+- New `strings.tonumber` takes a string with the binary representation of a number and converts it into an Agena number
+  or an alternative number format.
+  
+  The function supports strings containing C doubles, C long doubles, C complex doubles, uint16_t's, int32_t's, int64_t's 
+  and floats. Pass `true` as a second argument to indicate either a C 4-byte float instead of a signed 4-byte integer, or 
+  a C 8-byte signed integer instead of a C double. See example below.
+
+- With databases, `ads.write` now accepts sequences of integers representing bytes and writes them in binary mode to an
+  ADS file. See also `strings.tonumber`, `bytes.tobytes` and `strings.tobytes`/`bytes.tonumber` to convert back and forth 
+  across platforms.
+
+- `keyfile.write` now accepts numbers and converts them to strings before writing them to a file. You may also pass a
+  sequence of integers representing bytes as a third argument to store binary data.
+
+- Likewise, `keyfile.read` accepts a number as a key and converts it to a string before starting the search. Examples:
+
+  > keyfile.new('test.key');
+  > fh := keyfile.open('test.key');
+  > keyfile.write(fh, 1, bytes.tobytes(Pi));
+  > strings.tonumber(keyfile.read(fh, 1)):
+  3.1415926535898
+  > keyfile.close(fh);
+
+- `strings.tochars` cut off the string after the first embedded zero added. This has been fixed.
+
+- `bytes.tobytes` now accepts signed and unsigned 64-bit integers created with the `ints` package. It can also now split
+  complex numbers an C 4-byte floats into their bytes.
+  
+- Likewise, `bytes.tonumber` accepts bytes representing complex numbers, signed 8-byte integers and 4-byte C floats.
+
+
 7.10.3 Enceladus, September 16, 2026
 
 - With larger arguments, `combinat.stirling1` and `combinat.stirling2` overflowed and returned wrong results or issued out-of-memory
   errors. This has both been fixed.
 
-- Significantly dropped runtime of `combinat.numbpart(n, k)` from exponential O(2^n) down to polynomial O(n*k). The function also 
+- Significantly dropped runtime of `combinat.numbpart(n, k)` from exponential O(2^n) down to polynomial O(n*k). The function also
   now issues an error if k > n and correctly returns 1 instead of faulty 0 with n = 0.
 
 
