@@ -561,7 +561,7 @@ typedef DWORD (WINAPI *PGetModuleFileNameEx)(HANDLE, HMODULE, LPTSTR, DWORD);
 static const char *GetProcessDescriptionUniversal (DWORD dwProcessId) {
   static char szDescription[1024];
   szDescription[0] = '\0'; /* Safe initialization */
-  /* Use the safest lowest-privilege access mask. 
+  /* Use the safest lowest-privilege access mask.
      Windows 2000 ignores the modern mask bit and treats it as standard query access. */
   HANDLE hProcess = OpenProcess(0x1000 | PROCESS_VM_READ, FALSE, dwProcessId);
   if (hProcess == NULL) {
@@ -643,7 +643,7 @@ static int os_getprocesses (lua_State *L) {
     return 0;
   }
   /* Dynamically switch access flags to prevent runtime drops on Windows 2000 */
-  DWORD dwQueryFlag = PROCESS_QUERY_INFORMATION; 
+  DWORD dwQueryFlag = PROCESS_QUERY_INFORMATION;
   struct WinVer winversion;
   if (getWindowsVersion(&winversion) >= MS_WINVISTA) {
     dwQueryFlag = 0x1000; /* PROCESS_QUERY_LIMITED_INFORMATION Hex Literal */
@@ -1766,24 +1766,31 @@ static int os_freemem (lua_State *L) {
   lua_Number div;
   static const char *const unit[] = {"bytes", "kbytes", "mbytes", "gbytes", "tybtes", NULL};  /* 2.10.0 */
   div = tools_intpow(1024, agnL_checkoption(L, 1, "bytes", unit, 0));
-#if defined(_WIN32)
-  MEMORYSTATUS memstat;
-#elif __OS2__
-  APIRET result;
-  ULONG memInfo[3];
-#elif defined(__APPLE__)
-  vm_size_t pagesize;
-  vm_statistics_data_t vminfo;
-  mach_port_t system;
-  unsigned int c;
-#endif
-#if defined(_WIN32)
-  memstat.dwLength = sizeof(MEMORYSTATUS);
-  GlobalMemoryStatus(&memstat);
-  lua_pushnumber(L, (lua_Number)memstat.dwAvailPhys/div);
+#if defined(_WIN32)  /* 7.10.5 fix by Gemini AI, compatible with Windows 2000 */
+  /* 1. Declare the function pointer signature for GlobalMemoryStatusEx */
+  typedef BOOL (WINAPI *PFN_MS_EX)(LPMEMORYSTATUSEX);
+  /* 2. Try to dynamically resolve the function out of kernel32.dll */
+  HMODULE hKernel = GetModuleHandle("kernel32.dll");
+  PFN_MS_EX pGlobalMemoryStatusEx = hKernel ? (PFN_MS_EX)GetProcAddress(hKernel, "GlobalMemoryStatusEx") : NULL;
+  if (pGlobalMemoryStatusEx) {  /* modern Windows path (XP, Vista, 7, 10, 11, etc.) */
+    MEMORYSTATUSEX memstatEx;
+    memstatEx.dwLength = sizeof(MEMORYSTATUSEX);
+    if (pGlobalMemoryStatusEx(&memstatEx)) {
+      lua_pushnumber(L, (lua_Number)memstatEx.ullAvailPhys / div);
+    } else {
+      lua_pushfail(L);
+    }
+  } else { /* legacy Windows path (Windows 2000 / NT4) */
+    MEMORYSTATUS memstat;
+    memstat.dwLength = sizeof(MEMORYSTATUS);
+    GlobalMemoryStatus(&memstat);
+    lua_pushnumber(L, (lua_Number)memstat.dwAvailPhys / div);
+  }
 #elif defined(__unix__) && !defined(__DJGPP__) || defined(__HAIKU__)  /* excludes DJGPP */
   lua_pushnumber(L, (lua_Number)(sysconf(_SC_AVPHYS_PAGES) * sysconf(_SC_PAGESIZE))/div);
 #elif defined (__OS2__)
+  APIRET result;
+  ULONG memInfo[3];
   result = DosQuerySysInfo(QSV_TOTPHYSMEM, QSV_TOTAVAILMEM,
       &memInfo[0], sizeof(memInfo));
   if (result != 0)  /* return free virtual memory */
@@ -1791,6 +1798,10 @@ static int os_freemem (lua_State *L) {
   else
     lua_pushnumber(L, (lua_Number)(memInfo[2])/div);
 #elif defined(__APPLE__)
+  vm_size_t pagesize;
+  vm_statistics_data_t vminfo;
+  mach_port_t system;
+  unsigned int c;
   c = HOST_VM_INFO_COUNT;
   system = mach_host_self();
   pagesize = 0;  /* 2.3.3 fix */

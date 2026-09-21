@@ -203,8 +203,8 @@ mingw:
 		-DWIN32_LEAN_AND_MEAN -DLUA_BUILD_AS_DLL -D_FILE_OFFSET_BITS=64 -DPCRE2_CODE_UNIT_WIDTH=8" \
 	"MYLIBS=$(MYLIBS) agena.res" \
 	"LIBS=$(MYLIBS) $(WINSYSLIBS)" \
-	"MYLDFLAGS=-s" agena.exe
-	$(CC) -mwindows -static -static-libgcc -o run.exe $(MYLDFLAGS) run.c run.res
+	"MYLDFLAGS=-s -Wl,--large-address-aware" agena.exe
+	$(CC) -mwindows -static -static-libgcc -o run.exe -s -Wl,--large-address-aware run.c run.res
 
 # Run this for analysis with Dr. Memory only. Change back to make mingw before deploying.
 drmem:
@@ -217,7 +217,7 @@ drmem:
 		-DWIN32_LEAN_AND_MEAN -DLUA_BUILD_AS_DLL -D_FILE_OFFSET_BITS=64 -DPCRE2_CODE_UNIT_WIDTH=8" \
 	"MYLIBS=$(MYLIBS) agena.res" \
 	"LIBS=$(MYLIBS) $(WINSYSLIBS)" \
-	"MYLDFLAGS=-g3 -static-libgcc" agena.exe
+	"MYLDFLAGS=-g3 -static-libgcc -Wl,--large-address-aware" agena.exe
 
 mingwsse:
 	windres agena.rc -O coff -o agena.res
@@ -229,7 +229,7 @@ mingwsse:
 		-DLUA_BUILD_AS_DLL -D_FILE_OFFSET_BITS=64 -DPCRE2_CODE_UNIT_WIDTH=8 -DSSE2" \
 	"MYLIBS=$(MYLIBS) agena.res" \
 	"LIBS=$(MYLIBS) $(WINSYSLIBS)" \
-	"MYLDFLAGS=-s" agena.exe
+	"MYLDFLAGS=-s -Wl,--large-address-aware" agena.exe
 
 posix:
 	$(MAKE) all MYCFLAGS=-DLUA_USE_POSIX

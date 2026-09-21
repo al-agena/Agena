@@ -1557,98 +1557,45 @@ LUALIB_API int my_unlock (int hnd, off64_t start, off64_t size) {
 
 
 /* my_move(hnd, low*4L+24L, low*4L+28L, cnt*4L+24L); */
-/* fpos: from position, tpos: to position, size */
-LUALIB_API void __my_move (int hnd, off64_t fpos, off64_t tpos, off64_t size) {  /* 2.11.0 fix */
-  off64_t segment;
-  char buff[BASE_MOVELEN];
-  segment = size - fpos;
-  if (segment < 1)
+/* fpos: from position, tpos: to position, size, 7.10.5, created by Gemini AI */
+LUALIB_API void my_move (int hnd, off64_t fpos, off64_t tpos, off64_t size) {
+  if (size <= 0 || fpos == tpos) {
+    return; 
+  }
+  if (fpos < 0 || tpos < 0) {
+    fprintf(stderr, "Agena IO subsystem: move error (negative offsets)\n");
     return;
-  if (fpos < 0 || tpos < 0)
-    fprintf(stderr, "Agena IO subsystem: move error\n");
-  if (fpos > tpos) {
-    while (segment >= BASE_MOVELEN) {
-      my_seek(hnd, fpos);
-      my_read(hnd, buff, BASE_MOVELEN);
-      my_seek(hnd, tpos);
-      my_write(hnd, buff, BASE_MOVELEN);
-      fpos += BASE_MOVELEN;
-      tpos += BASE_MOVELEN;
-      segment -= BASE_MOVELEN;
-    }
-    if (segment > 0) {
-      my_seek(hnd, fpos);
-      my_read(hnd, buff, segment);
-      my_seek(hnd, tpos);
-      my_write(hnd, buff, segment);
-    }
   }
-  if (fpos < tpos) {
-    while (segment >= BASE_MOVELEN) {
-      my_seek(hnd, fpos + segment - BASE_MOVELEN);
-      my_read(hnd, buff, BASE_MOVELEN);
-      my_seek(hnd, tpos + segment - BASE_MOVELEN);
-      my_write(hnd, buff, BASE_MOVELEN);
-      segment -= BASE_MOVELEN;
-    }
-    if (segment > 0) {
-      my_seek(hnd, fpos);
-      my_read(hnd, buff, segment);
-      my_seek(hnd, tpos);
-      my_write(hnd, buff, segment);
-    }
-  }
-}
-
-
-LUALIB_API void my_move (int hnd, off64_t fpos, off64_t tpos, off64_t size) {  /* 2.11.0 fix */
-  off64_t segment;
   char buff[BASE_MOVELEN];
-  
-  segment = size - fpos;
-  if (segment < 1)
-    return;
-    
-  if (fpos < 0 || tpos < 0)
-    fprintf(stderr, "Agena IO subsystem: move error\n");
-    
-  /* CASE 1: Shifting data DOWNWARDS (Left) - Copy from front to back */
+  off64_t bytes_left = size;
+  /* Case 1: Moving towards the beginning of the file (or disjoint regions): Safe to copy Front-to-Back */
   if (fpos > tpos) {
-    while (segment >= BASE_MOVELEN) {
-      my_seek(hnd, fpos);
-      my_read(hnd, buff, BASE_MOVELEN);
-      my_seek(hnd, tpos);
-      my_write(hnd, buff, BASE_MOVELEN);
-      fpos += BASE_MOVELEN;
-      tpos += BASE_MOVELEN;
-      segment -= BASE_MOVELEN;
-    }
-    if (segment > 0) {
-      my_seek(hnd, fpos);
-      my_read(hnd, buff, segment);
-      my_seek(hnd, tpos);
-      my_write(hnd, buff, segment);
-    }
-  }
-  
-  /* CASE 2: Shifting data UPWARDS (Right) - Copy strictly from back to front */
-  if (fpos < tpos) {
-    /* 
-       FIXED: Instead of a strict loop followed by a broken forward cleanup block, 
-       this loop dynamically adjusts chunk sizes and works backwards the entire time.
-    */
-    while (segment > 0) {
-      /* Use BASE_MOVELEN if we have a full chunk left, otherwise use the exact remaining bytes */
-      off64_t chunk = (segment > BASE_MOVELEN) ? BASE_MOVELEN : segment;
-      
-      /* Target the offsets relative to the very tail end of the remaining data block */
-      my_seek(hnd, fpos + segment - chunk);
+    off64_t current_fpos = fpos;
+    off64_t current_tpos = tpos;
+    while (bytes_left > 0) {
+      off64_t chunk = (bytes_left > BASE_MOVELEN) ? BASE_MOVELEN : bytes_left;
+      my_seek(hnd, current_fpos);
       my_read(hnd, buff, chunk);
-      my_seek(hnd, tpos + segment - chunk);
+      my_seek(hnd, current_tpos);
       my_write(hnd, buff, chunk);
-      
-      /* Deduct the chunk we just successfully processed */
-      segment -= chunk;
+      current_fpos += chunk;
+      current_tpos += chunk;
+      bytes_left -= chunk;
+    }
+  } 
+  /* Case 2: Moving towards the end of the file with potential overlap:
+     Must copy Back-to-Front to prevent overwriting source data */
+  else {
+    while (bytes_left > 0) {
+      off64_t chunk = (bytes_left > BASE_MOVELEN) ? BASE_MOVELEN : bytes_left;
+      /* Calculate offsets relative to the end of the remaining block */
+      off64_t source_offset = fpos + bytes_left - chunk;
+      off64_t dest_offset = tpos + bytes_left - chunk;
+      my_seek(hnd, source_offset);
+      my_read(hnd, buff, chunk);
+      my_seek(hnd, dest_offset);
+      my_write(hnd, buff, chunk);
+      bytes_left -= chunk;
     }
   }
 }
