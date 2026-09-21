@@ -1,3 +1,11 @@
+7.10.4 Update 1 Enceladus, September 21, 2026
+
+- In the Windows editions, you can now use around twice as much memory in an Agena session.
+
+- `os.freemem` now returns the correct amount of available RAM on 64-bit Windows flavours. Before, the return was mostly 
+  artificially capped at `4 GBytes`.
+
+
 7.10.4 Enceladus, September 20, 2026
 
 - Since ADS databases and lists could not be reliably extended, automatic expansion built into `ads.write` and the functions
@@ -6,13 +14,13 @@
 
 - New `strings.tonumber` takes a string with the binary representation of a number and converts it into an Agena number
   or an alternative number format.
-  
-  The function supports strings containing C doubles, C long doubles, C complex doubles, uint16_t's, int32_t's, int64_t's 
-  and floats. Pass `true` as a second argument to indicate either a C 4-byte float instead of a signed 4-byte integer, or 
+
+  The function supports strings containing C doubles, C long doubles, C complex doubles, uint16_t's, int32_t's, int64_t's
+  and floats. Pass `true` as a second argument to indicate either a C 4-byte float instead of a signed 4-byte integer, or
   a C 8-byte signed integer instead of a C double. See example below.
 
 - With databases, `ads.write` now accepts sequences of integers representing bytes and writes them in binary mode to an
-  ADS file. See also `strings.tonumber`, `bytes.tobytes` and `strings.tobytes`/`bytes.tonumber` to convert back and forth 
+  ADS file. See also `strings.tonumber`, `bytes.tobytes` and `strings.tobytes`/`bytes.tonumber` to convert back and forth
   across platforms.
 
 - `keyfile.write` now accepts numbers and converts them to strings before writing them to a file. You may also pass a
@@ -30,8 +38,8 @@
 - `strings.tochars` cut off the string after the first embedded zero added. This has been fixed.
 
 - `bytes.tobytes` now accepts signed and unsigned 64-bit integers created with the `ints` package. It can also now split
-  complex numbers an C 4-byte floats into their bytes.
-  
+  complex numbers and 4-byte floats into their bytes.
+
 - Likewise, `bytes.tonumber` accepts bytes representing complex numbers, signed 8-byte integers and 4-byte C floats.
 
 
