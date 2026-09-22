@@ -9,7 +9,7 @@ Unicode True
 !ifndef VERSION
   !define VER_MAJOR '7'
   !define VER_MINOR '10'
-  !define VER_REVISION '4'
+  !define VER_REVISION '5'
   !define NICKNAME "Enceladus"
   !define VERSION '${VER_MAJOR}.${VER_MINOR}.${VER_REVISION}'
 !endif
@@ -1092,62 +1092,144 @@ ${MementoSection} "FRACTINT colour maps" SecMiscFractint
   SectionIn 1
 
   SetOutPath $INSTDIR\share\fractint
-
+  File ..\..\share\fractint\alamo.gif
   File ..\..\share\fractint\alamo.map
+  File ..\..\share\fractint\bagheram.gif
   File ..\..\share\fractint\bagheram.map
+  File ..\..\share\fractint\bordeaux.gif
   File ..\..\share\fractint\bordeaux.map
-  File ..\..\share\fractint\brgtsaph.map
-  File ..\..\share\fractint\dancooper.map
-  File ..\..\share\fractint\donald.map
-  File ..\..\share\fractint\drowning.map
-  File ..\..\share\fractint\hafez.map
-  File ..\..\share\fractint\hafez2.map
-  File ..\..\share\fractint\m-maybe.map
-  File ..\..\share\fractint\maga.map
-  File ..\..\share\fractint\mondrian.map
-  File ..\..\share\fractint\oasis.map
-  File ..\..\share\fractint\office.map
-  File ..\..\share\fractint\office2.map
-  File ..\..\share\fractint\orgteal.map
-  File ..\..\share\fractint\orozil.map
-  File ..\..\share\fractint\orozil2.map
-  File ..\..\share\fractint\rauschen.map
-  File ..\..\share\fractint\sapphire.map
-  File ..\..\share\fractint\teahouse.map
-  File ..\..\share\fractint\usa.map
-  File ..\..\share\fractint\velvet.map
-  File ..\..\share\fractint\y2ktechn.map
-  File ..\..\share\fractint\chloro.map
-  File ..\..\share\fractint\chloro2.map
-  File ..\..\share\fractint\cinemat.map
-  File ..\..\share\fractint\fa18raaf.map
-  File ..\..\share\fractint\fa18usaf.map
-  File ..\..\share\fractint\h2o.map
-  File ..\..\share\fractint\h2o2.map
-  File ..\..\share\fractint\h2o3.map
-  File ..\..\share\fractint\h2o4.map
-  File ..\..\share\fractint\h2o5.map
-  File ..\..\share\fractint\h2o6.map
-  File ..\..\share\fractint\iaf.map
-  File ..\..\share\fractint\lime.map
-  File ..\..\share\fractint\painter.map
-  File ..\..\share\fractint\paintr2.map
-  File ..\..\share\fractint\pluto.map
-  File ..\..\share\fractint\prism.map
-  File ..\..\share\fractint\prism2.map
-  File ..\..\share\fractint\prism3.map
-  File ..\..\share\fractint\prism4.map
-  File ..\..\share\fractint\prism5.map
-  File ..\..\share\fractint\spectra2.map
-  File ..\..\share\fractint\spectra3.map
-  File ..\..\share\fractint\spectra4.map
-  File ..\..\share\fractint\spectral.map
-  File ..\..\share\fractint\tiranga.map
+  File ..\..\share\fractint\bordsprg.gif
   File ..\..\share\fractint\bordsprg.map
+  File ..\..\share\fractint\brgtsaph.gif
+  File ..\..\share\fractint\brgtsaph.map
+  File ..\..\share\fractint\chloro.gif
+  File ..\..\share\fractint\chloro.map
+  File ..\..\share\fractint\chloro2.gif
+  File ..\..\share\fractint\chloro2.map
+  File ..\..\share\fractint\cinemat.gif
+  File ..\..\share\fractint\cinemat.map
+  File ..\..\share\fractint\courtyrd.gif
+  File ..\..\share\fractint\courtyrd.map
+  File ..\..\share\fractint\cyannavy.gif
+  File ..\..\share\fractint\cyannavy.map
+  File ..\..\share\fractint\cynvbord.gif
+  File ..\..\share\fractint\cynvbord.map
+  File ..\..\share\fractint\dancooper.gif
+  File ..\..\share\fractint\dancooper.map
+  File ..\..\share\fractint\donald.gif
+  File ..\..\share\fractint\donald.map
+  File ..\..\share\fractint\drowning.gif
+  File ..\..\share\fractint\drowning.map
+  File ..\..\share\fractint\fa18raaf.gif
+  File ..\..\share\fractint\fa18raaf.map
+  File ..\..\share\fractint\fa18usaf.gif
+  File ..\..\share\fractint\fa18usaf.map
+  File ..\..\share\fractint\h2o.gif
+  File ..\..\share\fractint\h2o.map
+  File ..\..\share\fractint\h2o2.gif
+  File ..\..\share\fractint\h2o2.map
+  File ..\..\share\fractint\h2o3.gif
+  File ..\..\share\fractint\h2o3.map
+  File ..\..\share\fractint\h2o4.gif
+  File ..\..\share\fractint\h2o4.map
+  File ..\..\share\fractint\h2o5.gif
+  File ..\..\share\fractint\h2o5.map
+  File ..\..\share\fractint\h2o6.gif
+  File ..\..\share\fractint\h2o6.map
+  File ..\..\share\fractint\hafez.gif
+  File ..\..\share\fractint\hafez.map
+  File ..\..\share\fractint\hafez2.gif
+  File ..\..\share\fractint\hafez2.map
+  File ..\..\share\fractint\hafez3.gif
+  File ..\..\share\fractint\hafez3.map
+  File ..\..\share\fractint\hafez4.gif
+  File ..\..\share\fractint\hafez4.map
+  File ..\..\share\fractint\hafez5.gif
+  File ..\..\share\fractint\hafez5.map
+  File ..\..\share\fractint\hafez6.gif
+  File ..\..\share\fractint\hafez6.map
+  File ..\..\share\fractint\iaf.gif
+  File ..\..\share\fractint\iaf.map
+  File ..\..\share\fractint\khancita.gif
+  File ..\..\share\fractint\khancita.map
+  File ..\..\share\fractint\lime.gif
+  File ..\..\share\fractint\lime.map
+  File ..\..\share\fractint\m-maybe.gif
+  File ..\..\share\fractint\m-maybe.map
+  File ..\..\share\fractint\maga.gif
+  File ..\..\share\fractint\maga.map
+  File ..\..\share\fractint\mondrian.gif
+  File ..\..\share\fractint\mondrian.map
+  File ..\..\share\fractint\oasis.gif
+  File ..\..\share\fractint\oasis.map
+  File ..\..\share\fractint\office.gif
+  File ..\..\share\fractint\office.map
+  File ..\..\share\fractint\office2.gif
+  File ..\..\share\fractint\office2.map
+  File ..\..\share\fractint\orgteal.gif
+  File ..\..\share\fractint\orgteal.map
+  File ..\..\share\fractint\orozil.gif
+  File ..\..\share\fractint\orozil.map
+  File ..\..\share\fractint\orozil2.gif
+  File ..\..\share\fractint\orozil2.map
+  File ..\..\share\fractint\painter.gif
+  File ..\..\share\fractint\painter.map
+  File ..\..\share\fractint\paintr2.gif
+  File ..\..\share\fractint\paintr2.map
+  File ..\..\share\fractint\pinkmos2.gif
+  File ..\..\share\fractint\pinkmos2.map
+  File ..\..\share\fractint\pinkmosq.gif
+  File ..\..\share\fractint\pinkmosq.map
+  File ..\..\share\fractint\pluto.gif
+  File ..\..\share\fractint\pluto.map
+  File ..\..\share\fractint\prism.gif
+  File ..\..\share\fractint\prism.map
+  File ..\..\share\fractint\prism2.gif
+  File ..\..\share\fractint\prism2.map
+  File ..\..\share\fractint\prism3.gif
+  File ..\..\share\fractint\prism3.map
+  File ..\..\share\fractint\prism4.gif
+  File ..\..\share\fractint\prism4.map
+  File ..\..\share\fractint\prism5.gif
+  File ..\..\share\fractint\prism5.map
+  File ..\..\share\fractint\rand01.gif
   File ..\..\share\fractint\rand01.map
+  File ..\..\share\fractint\rand02.gif
   File ..\..\share\fractint\rand02.map
+  File ..\..\share\fractint\rand03.gif
   File ..\..\share\fractint\rand03.map
+  File ..\..\share\fractint\rand04.gif
   File ..\..\share\fractint\rand04.map
+  File ..\..\share\fractint\rauschen.gif
+  File ..\..\share\fractint\rauschen.map
+  File ..\..\share\fractint\realcsi1.gif
+  File ..\..\share\fractint\realcsi1.map
+  File ..\..\share\fractint\realcsi2.gif
+  File ..\..\share\fractint\realcsi2.map
+  File ..\..\share\fractint\realcsi3.gif
+  File ..\..\share\fractint\realcsi3.map
+  File ..\..\share\fractint\sapphire.gif
+  File ..\..\share\fractint\sapphire.map
+  File ..\..\share\fractint\shirhotl.gif
+  File ..\..\share\fractint\shirhotl.map
+  File ..\..\share\fractint\spectra2.gif
+  File ..\..\share\fractint\spectra2.map
+  File ..\..\share\fractint\spectra3.gif
+  File ..\..\share\fractint\spectra3.map
+  File ..\..\share\fractint\spectra4.gif
+  File ..\..\share\fractint\spectra4.map
+  File ..\..\share\fractint\spectral.gif
+  File ..\..\share\fractint\spectral.map
+  File ..\..\share\fractint\teahouse.gif
+  File ..\..\share\fractint\teahouse.map
+  File ..\..\share\fractint\tiranga.gif
+  File ..\..\share\fractint\tiranga.map
+  File ..\..\share\fractint\usa.gif
+  File ..\..\share\fractint\usa.map
+  File ..\..\share\fractint\velvet.gif
+  File ..\..\share\fractint\velvet.map
+  File ..\..\share\fractint\y2ktechn.gif
+  File ..\..\share\fractint\y2ktechn.map
   File ..\..\share\fractint\alexmaps.txt
 
 ${MementoSectionEnd}
