@@ -3521,6 +3521,7 @@ numfilter.new
 keyfile.allkeys
 keyfile.close
 keyfile.commit
+keyfile.count
 keyfile.has
 keyfile.isopen
 keyfile.iterate

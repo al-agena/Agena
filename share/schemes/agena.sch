@@ -557,7 +557,7 @@ object TPersHolder
           FontID = 7
           Name = 'keyfile'
           Keywords =
-            'keyfile,allkeys,close,commit,has,isopen,iterate,new,open,purge,read,start,sync,update,write'
+            'keyfile,allkeys,close,commit,count,has,isopen,iterate,new,open,purge,read,start,sync,update,write'
         end
         item
           FontID = 7
