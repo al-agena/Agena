@@ -1,9 +1,22 @@
-7.10.4 Update 1 Enceladus, September 21, 2026
+7.10.5 Enceladus, September 22, 2026
 
 - In the Windows editions, you can now use around twice as much memory in an Agena session.
 
-- `os.freemem` now returns the correct amount of available RAM on 64-bit Windows flavours. Before, the return was mostly 
+- `os.freemem` now returns the correct amount of available RAM on 64-bit Windows flavours. Before, the return was mostly
   artificially capped at `4 GBytes`.
+
+- New `keyfile.count` counts the number of keys in a key file. The count is in real-time and linear. You can optionally count
+  only specific or unique keys, and pattern matching is supported.
+
+- The `size` operator returns the number of keys in a key file. `empty` and `filled` check whether a key file is empty or has
+  at least one key. `in` and `notin` check whether a key is part or is not part of a key file, with literal comparison
+  supported only.
+
+- `keyfile.allkeys` now accepts a table, set, sequence or register in which to store the result. You can also search for specific
+  keys by passing a string instead of a function, with pattern matching supported.
+
+- Added new FRACTINT colour maps. They give vivid, distinct fractals. The share/fractint folder now also contains a preview GIF
+  thumbnail for each map.
 
 
 7.10.4 Enceladus, September 20, 2026
