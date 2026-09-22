@@ -48,14 +48,14 @@ extern "C" {
 #endif
 
 #ifdef _WIN32
-    #include <direct.h>
-    #include <io.h>
+  #include <direct.h>
+  #include <io.h>
 	#include <string.h>
 #elif defined(__SOLARIS) || defined(__OS2__)  /* 7.6.3 extension */
-    #include <dirent.h>
+  #include <dirent.h>
 #else
 #ifndef __CYGWIN__
-    #include <sys/dir.h>
+  #include <sys/dir.h>
 #endif
 #endif
 

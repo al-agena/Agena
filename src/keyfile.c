@@ -280,18 +280,23 @@ static int keyfile_read (lua_State *L) {
 
 /* Checks whether the key file denoted by its handle fh contains the key `key` and returns `true` or
    `false`. */
-static int keyfile_has (lua_State *L) {
+
+static int aux_has (lua_State *L, int idx1, int idx2, const char *pn) {
   size_t keylen;
-  pblKeyFile_t **pf = checkkeyfile(L, 1);
-  const char *key = agn_checklstring(L, 2, &keylen);
+  pblKeyFile_t **pf = checkkeyfile(L, idx1);
+  const char *key = agn_checklstring(L, idx2, &keylen);
   if (*pf == NULL) {
-    luaL_error(L, "Error in " LUA_QS ": cannot operate on a closed file.", "keyfile.has");
+    luaL_error(L, "Error in " LUA_QS ": cannot operate on a closed file.", pn);
   }
   if (keylen == 0 || keylen > 255) {
-    lua_pushfalse(L);
+    return 0;
   } else {
-    lua_pushboolean(L, pblKfFind(*pf, PBLFI, (void *)key, keylen + 1, NULL, NULL) >= 0);
+    return pblKfFind(*pf, PBLFI, (void *)key, keylen + 1, NULL, NULL) >= 0;
   }
+}
+
+static int keyfile_has (lua_State *L) {
+  lua_pushboolean(L, aux_has(L, 1, 2, "keyfile.has"));
   return 1;
 }
 
@@ -390,9 +395,16 @@ static int keyfile_iterate (lua_State *L) {
    those keys where the call to f evaluates to `true`.
 
    See also: keyfile.has. */
+
+#define aux_insertinto(L,k,kl) { \
+  lua_pushlstring(L, (const char *)(k), (kl)); \
+  agn_structinsert(L, -2, -1); \
+  agn_poptop(L); \
+}
+
 static int keyfile_allkeys (lua_State *L) {
-  int hasfunc, istrue, unique, nargs;
-  size_t keylen, c;
+  int hasfunc, istrue, unique, nargs, structat, strmatch;
+  size_t keylen;
   long int reclen;
   char key[256] = { 0 };
   char oldkey[256] = { 0 };
@@ -400,19 +412,34 @@ static int keyfile_allkeys (lua_State *L) {
   if (*pf == NULL) {
     luaL_error(L, "Error in " LUA_QS ": cannot operate on a closed file.", "keyfile.allkeys");
   }
+  strmatch = unique = structat = 0;
   nargs = lua_gettop(L);
-  hasfunc = nargs >= 2 && lua_isfunction(L, 2);
-  unique = nargs > 1 && lua_istrue(L, nargs);  /* insert a key only once */
+  hasfunc = nargs > 1 && lua_isfunction(L, 2);
+  if (nargs > 1) {
+    if (lua_istable(L, nargs) || lua_isseq(L, nargs) || lua_isreg(L, nargs) || lua_isset(L, nargs)) {
+      structat = nargs--;
+    }
+    strmatch = lua_isstring(L, 2);
+    unique = lua_istrue(L, nargs);  /* insert a key only once */
+  }
   keylen = sizeof(key);
   luaL_checkstack(L, 2 + hasfunc, "not enough stack space");
-  lua_createtable(L, 8, 0);
+  if (!structat) {
+    lua_createtable(L, 8, 0);
+  } else {
+    lua_pushvalue(L, structat);
+  }
   reclen = pblKfFirst(*pf, key, &keylen);  /* reclen < 0 indicates either no more records or an error */
   if (reclen < 0) return 1;
-  c = 1;
   if (unique) memcpy(oldkey, key, keylen);
-  if (!hasfunc) {
-    lua_pushlstring(L, (const char *)key, keylen - 1);
-    lua_rawseti(L, -2, c++);
+  if (strmatch) {
+    size_t l;
+    char *lookup;
+    const char *pattern = lua_tolstring(L, 2, &l);
+    lookup = agnL_strmatch(L, key, keylen, pattern, l);
+    if (lookup) {
+      aux_insertinto(L, key, keylen - 1);
+    }
     while (1) {
       reclen = pblKfNext(*pf, key, &keylen);
       if (reclen < 0) return 1;
@@ -421,8 +448,24 @@ static int keyfile_allkeys (lua_State *L) {
         if (!strcmp(oldkey, key)) continue;
         memcpy(oldkey, key, keylen);
       }
-      lua_pushlstring(L, (const char *)key, keylen - 1);
-      lua_rawseti(L, -2, c++);
+      lookup = agnL_strmatch(L, key, keylen, pattern, l);
+      if (lookup) {
+        aux_insertinto(L, key, keylen - 1);
+      }
+    }
+  } else if (!hasfunc) {
+    lua_pushlstring(L, (const char *)key, keylen - 1);
+    agn_structinsert(L, -2, -1);
+    agn_poptop(L);
+    while (1) {
+      reclen = pblKfNext(*pf, key, &keylen);
+      if (reclen < 0) return 1;
+      if (unique) {
+        /* the keys are implicitly sorted in the B-Tree, so we can easily check for duplicates */
+        if (!strcmp(oldkey, key)) continue;
+        memcpy(oldkey, key, keylen);
+      }
+      aux_insertinto(L, key, keylen - 1);
     }
   } else {
     lua_pushvalue(L, 2);
@@ -435,12 +478,12 @@ static int keyfile_allkeys (lua_State *L) {
     istrue = agn_istrue(L, -1);
     agn_poptop(L);
     if (istrue) {
-      lua_pushlstring(L, (const char *)key, keylen - 1);
-      lua_rawseti(L, -2, c++);
+      aux_insertinto(L, key, keylen - 1);
     }
     while (1) {
       reclen = pblKfNext(*pf, key, &keylen);
       if (reclen < 0) return 1;
+      luaL_checkstack(L, 2, "not enough stack space");
       lua_pushvalue(L, 2);
       lua_pushlstring(L, (const char *)key, keylen - 1);
       lua_call(L, 1, 1);
@@ -455,11 +498,109 @@ static int keyfile_allkeys (lua_State *L) {
           if (!strcmp(oldkey, key)) continue;
           memcpy(oldkey, key, keylen);
         }
-        lua_pushlstring(L, (const char *)key, keylen - 1);
-        lua_rawseti(L, -2, c++);
+        aux_insertinto(L, key, keylen - 1);
       }
     }
   }
+  return 1;
+}
+
+
+static size_t aux_sizeof (lua_State *L, const char *pn) {
+  int hasfunc, istrue, unique, nargs, i, strmatch;
+  size_t keylen, c;
+  long int reclen;
+  char key[256] = { 0 };
+  char oldkey[256] = { 0 };
+  pblKeyFile_t **pf = checkkeyfile(L, 1);
+  if (*pf == NULL) {
+    luaL_error(L, "Error in " LUA_QS ": cannot operate on a closed file.", pn);
+  }
+  nargs = lua_gettop(L);
+  hasfunc = unique = strmatch = 0;
+  if (nargs > 1) {
+    hasfunc = lua_isfunction(L, 2);
+    strmatch = lua_isstring(L, 2);
+    unique  = lua_istrue(L, nargs);  /* insert a key only once */
+    for (i=2; i <= nargs; i++) {
+      if (!lua_isfunction(L, i) && !lua_isboolean(L, i) && !lua_isstring(L, i))
+        luaL_error(L, "Error in " LUA_QS ": expected a function, string or boolean for argument #%d.", pn, i);
+    }
+  }
+  keylen = sizeof(key);
+  reclen = pblKfFirst(*pf, key, &keylen);  /* reclen < 0 indicates either no more records or an error */
+  if (reclen < 0) return 0;
+  c = 0;
+  if (unique) memcpy(oldkey, key, keylen);
+  if (strmatch) {
+    size_t l;
+    char *lookup;
+    const char *pattern = lua_tolstring(L, 2, &l);
+    lookup = agnL_strmatch(L, key, keylen, pattern, l);
+    if (lookup) c++;
+    while (1) {
+      reclen = pblKfNext(*pf, key, &keylen);
+      if (reclen < 0) return c;
+      if (unique) {
+        /* the keys are implicitly sorted in the B-Tree, so we can easily check for duplicates */
+        if (!strcmp(oldkey, key)) continue;
+        memcpy(oldkey, key, keylen);
+      }
+      lookup = agnL_strmatch(L, key, keylen, pattern, l);
+      if (lookup) c++;
+    }
+  } else if (!hasfunc) {
+    c++;
+    while (1) {
+      reclen = pblKfNext(*pf, key, &keylen);
+      if (reclen < 0) return c;
+      if (unique) {
+        /* the keys are implicitly sorted in the B-Tree, so we can easily check for duplicates */
+        if (!strcmp(oldkey, key)) continue;
+        memcpy(oldkey, key, keylen);
+      }
+      c++;
+    }
+  } else {
+    luaL_checkstack(L, 2, "not enough stack space");
+    lua_pushvalue(L, 2);
+    lua_pushlstring(L, (const char *)key, keylen - 1);
+    lua_call(L, 1, 1);
+    if (!lua_isboolean(L, -1)) {
+      agn_poptoptwo(L);
+      luaL_error(L, "Error in " LUA_QS ": function must return a boolean.", pn);
+    }
+    istrue = agn_istrue(L, -1);
+    agn_poptop(L);
+    c += istrue;
+    while (1) {
+      reclen = pblKfNext(*pf, key, &keylen);
+      if (reclen < 0) return c;
+      luaL_checkstack(L, 2, "not enough stack space");
+      lua_pushvalue(L, 2);
+      lua_pushlstring(L, (const char *)key, keylen - 1);
+      lua_call(L, 1, 1);
+      if (!lua_isboolean(L, -1)) {
+        agn_poptoptwo(L);
+        luaL_error(L, "Error in " LUA_QS ": function must return a boolean.", pn);
+      }
+      istrue = agn_istrue(L, -1);
+      agn_poptop(L);
+      if (istrue) {
+        if (unique) {
+          if (!strcmp(oldkey, key)) continue;
+          memcpy(oldkey, key, keylen);
+        }
+        c++;
+      }
+    }
+  }
+  return c;
+}
+
+
+static int keyfile_count (lua_State *L) {
+  lua_pushinteger(L, aux_sizeof(L, "keyfile.count"));
   return 1;
 }
 
@@ -513,6 +654,52 @@ static int keyfile_isopen (lua_State *L) {
 
 /* ---------------- metamethods ----------------------------------------------------- */
 
+static int mt_size (lua_State *L) {
+  lua_pushinteger(L, aux_sizeof(L, "(__size mt)"));
+  return 1;
+}
+
+
+static int mt_empty (lua_State *L) {
+  size_t keylen;
+  long int reclen;
+  char key[256] = { 0 };
+  pblKeyFile_t **pf = checkkeyfile(L, 1);
+  if (*pf == NULL) {
+    luaL_error(L, "Error in " LUA_QS ": cannot operate on a closed file.", "(__empty mt)");
+  }
+  reclen = pblKfFirst(*pf, key, &keylen);  /* reclen < 0 indicates either no more records or an error */
+  lua_pushboolean(L, (reclen < 0));
+  return 1;
+}
+
+
+static int mt_filled (lua_State *L) {
+  size_t keylen;
+  long int reclen;
+  char key[256] = { 0 };
+  pblKeyFile_t **pf = checkkeyfile(L, 1);
+  if (*pf == NULL) {
+    luaL_error(L, "Error in " LUA_QS ": cannot operate on a closed file.", "(__filled mt)");
+  }
+  reclen = pblKfFirst(*pf, key, &keylen);  /* reclen < 0 indicates either no more records or an error */
+  lua_pushboolean(L, (reclen >= 0));
+  return 1;
+}
+
+
+static int mt_in (lua_State *L) {
+  lua_pushboolean(L, aux_has(L, 2, 1, "(__in mt)"));
+  return 1;
+}
+
+
+static int mt_notin (lua_State *L) {
+  lua_pushboolean(L, !aux_has(L, 2, 1, "(__notin mt)"));
+  return 1;
+}
+
+
 static int mt_gc (lua_State *L) {
   pblKeyFile_t **pf = checkkeyfile(L, 1);
   if (pf != NULL && *pf != NULL) {
@@ -535,29 +722,11 @@ static int mt_tostring (lua_State *L) {
 }
 
 
-static const luaL_Reg keyfilelib[] = {
-  {"__gc",            mt_gc},
-  {"__tostring",      mt_tostring},
-  {"allkeys",         keyfile_allkeys},
-  {"close",           keyfile_close},
-  {"commit",          keyfile_commit},
-  {"has",             keyfile_has},
-  {"isopen",          keyfile_isopen},
-  {"iterate",         keyfile_iterate},
-  {"purge",           keyfile_purge},
-  {"read",            keyfile_read},
-  {"start",           keyfile_start},
-  {"sync",            keyfile_sync},
-  {"update",          keyfile_update},
-  {"write",           keyfile_write},
-  {NULL, NULL}
-};
-
-
 static const luaL_Reg keyfile[] = {
   {"allkeys",         keyfile_allkeys},
   {"close",           keyfile_close},
   {"commit",          keyfile_commit},
+  {"count",           keyfile_count},
   {"has",             keyfile_has},
   {"isopen",          keyfile_isopen},
   {"iterate",         keyfile_iterate},
@@ -573,19 +742,30 @@ static const luaL_Reg keyfile[] = {
 };
 
 
-static void createmeta (lua_State *L) {
-  luaL_newmetatable(L, AGENA_KEYFILELIBNAME);  /* create metatable for key files */
-  lua_pushvalue(L, -1);  /* push metatable */
-  lua_setfield(L, -2, "__index");  /* metatable.__index = metatable */
-  luaL_register(L, NULL, keyfilelib);  /* file methods */
-}
-
-/*
-** Open keyfile library
-*/
 LUALIB_API int luaopen_keyfile (lua_State *L) {
-  createmeta(L);
+  /* Metatable for OOP file handle objects */
+  luaL_newmetatable(L, AGENA_KEYFILELIBNAME);
+  /* Set metatable.__index = metatable */
+  lua_pushvalue(L, -1);
+  lua_setfield(L, -2, "__index");
+  /* Register the functions directly into the metatable as OOP methods */
+  luaL_register(L, NULL, keyfile);
+  /* Register the special garbage collection destructor into the metatable */
+  lua_pushcfunction(L, mt_gc);
+  lua_setfield(L, -2, "__gc");
+  lua_pushcfunction(L, mt_tostring);
+  lua_setfield(L, -2, "__tostring");
+  lua_pushcfunction(L, mt_size);
+  lua_setfield(L, -2, "__size");
+  lua_pushcfunction(L, mt_empty);
+  lua_setfield(L, -2, "__empty");
+  lua_pushcfunction(L, mt_filled);
+  lua_setfield(L, -2, "__filled");
+  lua_pushcfunction(L, mt_in);
+  lua_setfield(L, -2, "__in");
+  lua_pushcfunction(L, mt_notin);
+  lua_setfield(L, -2, "__notin");
+  /* Create the procedural global package table (e.g., global 'ads') */
   luaL_register(L, AGENA_KEYFILELIBNAME, keyfile);
   return 1;
 }
-
