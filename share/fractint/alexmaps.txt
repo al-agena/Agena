@@ -8,6 +8,9 @@ brgtsaph.map
 chloro.map
 chloro2.map
 cinemat.map
+courtyrd.map
+cyannavy.map
+cynvbord.map
 dancooper.map
 donald.map
 drowning.map
@@ -21,7 +24,12 @@ h2o5.map
 h2o6.map
 hafez.map
 hafez2.map
+hafez3.map
+hafez4.map
+hafez5.map
+hafez6.map
 iaf.map
+khancita.map
 lime.map
 m-maybe.map
 maga.map
@@ -34,6 +42,8 @@ orozil.map
 orozil2.map
 painter.map
 paintr2.map
+pinkmosq.map
+pinkmos2.map
 pluto.map
 prism.map
 prism2.map
@@ -45,7 +55,11 @@ rand02.map
 rand03.map
 rand04.map
 rauschen.map
+realcsi1.map
+realcsi2.map
+realcsi3.map
 sapphire.map
+shirhotl.map
 spectra2.map
 spectra3.map
 spectra4.map
@@ -57,3 +71,14 @@ velvet.map
 y2ktechn.map
 
 Some of the maps have been created using images taken in Shiraz, Iran, and in San Antonio, Texas.
+
+Script to generate GIF thumbnails:
+
+import fractals alias;
+path := 'c:/agena/share/fractint/'
+maps := os.list(path & '*.map');
+for infile in maps do
+   outfile := os.prefix(path & infile) & '.gif';
+   draw(mandel, -1.007852, 0.310870, 0.005, map=infile, iter=255, res=100:75, file=outfile)
+od;
+
