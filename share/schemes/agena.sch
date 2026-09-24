@@ -604,6 +604,12 @@ object TPersHolder
         end
         item
           FontID = 7
+          Name = 'binpack'
+          Keywords =
+            'binpack,bool,chars,cdouble,dd,double,dump,int32,int64,longdouble,new,nil,pack,tostring,uchar,uint16,uint32,unpack'
+        end
+        item
+          FontID = 7
           Name = 'sema'
           Keywords =
             'sema,close,isopen,limit,new,open,reset,shrink,state'

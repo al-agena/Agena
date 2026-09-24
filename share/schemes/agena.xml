@@ -3577,6 +3577,23 @@
       <KEYWORD3>suffix.sa</KEYWORD3>
       <KEYWORD3>suffix.save</KEYWORD3>
       <KEYWORD3>suffix.unique</KEYWORD3>
+      <KEYWORD3>binpack.bool</KEYWORD3>
+      <KEYWORD3>binpack.chars</KEYWORD3>
+      <KEYWORD3>binpack.cdouble</KEYWORD3>
+      <KEYWORD3>binpack.dd</KEYWORD3>
+      <KEYWORD3>binpack.double</KEYWORD3>
+      <KEYWORD3>binpack.dump</KEYWORD3>
+      <KEYWORD3>binpack.int32</KEYWORD3>
+      <KEYWORD3>binpack.int64</KEYWORD3>
+      <KEYWORD3>binpack.longdouble</KEYWORD3>
+      <KEYWORD3>binpack.new</KEYWORD3>
+      <KEYWORD3>binpack.nil</KEYWORD3>
+      <KEYWORD3>binpack.pack</KEYWORD3>
+      <KEYWORD3>binpack.tostring</KEYWORD3>
+      <KEYWORD3>binpack.uchar</KEYWORD3>
+      <KEYWORD3>binpack.uint16</KEYWORD3>
+      <KEYWORD3>binpack.uint32</KEYWORD3>
+      <KEYWORD3>binpack.unpack</KEYWORD3>
     </KEYWORDS>
   </RULES>
 </MODE>
