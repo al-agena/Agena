@@ -22,6 +22,12 @@ typedef struct {
   double lo;
 } dd_pair;
 
+#define checkdd(L,n) (dd_pair *)luaL_checkudata(L, n, AGENA_DDLIBNAME)
+#define isdd(L,n)    (luaL_isudata(L, n, AGENA_DDLIBNAME) && agn_isutypeset(L, n))
+
+INLINE int dd_pushdd (lua_State *L, dd_pair val);
+INLINE dd_pair getdd (lua_State *L, int idx);
+
 /* Constants accurate to ~31 decimal digits;
    In double-double arithmetic, the "shortness" of the high part isn't a lack of precision—it
    is a requirement of the format. To maintain the Double-Double invariant, the high part must

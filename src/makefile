@@ -61,7 +61,7 @@ CORE_O= lapi.o lcode.o ldebug.o ldo.o ldump.o lfunc.o lgc.o llex.o lmem.o \
 
 LIB_O= agnxlib.o lbaselib.o ldblib.o liolib.o lmathlib.o loslib.o ltablib.o \
   agnt64.o lrtable.o lenviron.o lstrlib.o utils.o units.o loadlib.o linit.o \
-  cephes.o binio.o xml.o sofa.o sdncal.o iniparse.o lreglib.o registry.o \
+  cephes.o binio.o xml.o sofa.o sdncal.o iniparse.o lreglib.o registry.o binpack.o \
   stack.o intvec.o dblvec.o charbuf.o memfile.o lseqlib.o lsetlib.o agnhlps.o \
   pbl.o pblhash.o pblkf.o keyfile.o bfield.o jwent.o fzy.o tuples.o long.o ints.o \
   interp.o calc.o linalg.o stats.o combinat.o numtheory.o dual.o xbase.o utf8.o \
@@ -346,6 +346,7 @@ divsufsort.o:	divsufsort.c divsufsort.h divsufsort_private.h
 sssort.o: sssort.c divsufsort.h divsufsort_private.h
 trsort.o: trsort.c divsufsort.h divsufsort_private.h
 suffix.o: suffix.c agena.h agnxlib.h agenalib.h
+binpack.o: binpack.c agena.h agnxlib.h agenalib.h
 fzy.o:	fzy.c fzy.h agena.h agnxlib.h agenalib.h lucase.def
 tuples.o: tuples.c agena.h agnxlib.h agenalib.h
 long.o:	long.c agena.h agnxlib.h agenalib.h agnhlps.h

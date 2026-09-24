@@ -581,8 +581,13 @@ LUALIB_API double   tools_tobigendian (double x);
    | (((x) & 0x000000000000ff00ull) << 40) \
    | (((x) & 0x00000000000000ffull) << 56))
 #endif
+
+#define tools_swapi32(x) ((int32_t)tools_swapu32(x))
+#define tools_swapi64(x) ((int64_t)tools_swapu64(x))
+
 #define tools_unswapu32  tools_swapu32
 #define tools_unswapu64  tools_swapu64  /* 2.17.1 change */
+
 #define tools_tolittleendian(d) (d)     /* Little Endian, do nothing; 2.17.1 change */
 #define tools_ftok(inode,device,id) ((inode & 0xffff) | ((device & 0xff) << 16) | ((id & 0xffu) << 24))  /* System V Inter Process Communications key */
 

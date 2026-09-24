@@ -56,17 +56,14 @@ LUALIB_API int (luaopen_dd) (lua_State *L);
 #endif
 
 
-#define checkdd(L,n) (dd_pair *)luaL_checkudata(L, n, AGENA_DDLIBNAME)
-#define isdd(L,n)    (luaL_isudata(L, n, AGENA_DDLIBNAME) && agn_isutypeset(L, n))
-
-static INLINE int aux_pushdd (lua_State *L, dd_pair val) {
+int dd_pushdd (lua_State *L, dd_pair val) {
   dd_pair *userdata = (dd_pair *)lua_newuserdata(L, sizeof(dd_pair));
   *userdata = val;
   lua_setmetatabletoobject(L, -1, AGENA_DDLIBNAME, 1);
   return 1;
 }
 
-static INLINE dd_pair getdd (lua_State *L, int idx) {
+dd_pair getdd (lua_State *L, int idx) {
   if (agn_isnumber(L, idx)) {
     return (dd_pair){agn_tonumber(L, idx), 0.0};
   }
@@ -81,7 +78,7 @@ static int dd_apply1 (lua_State *L, dd_pair (*f)(dd_pair)) {
   /* 2. Execute the function and get the result */
   dd_pair result = f(a);
   /* 3. Push the result back to the Lua stack as a new userdata */
-  return aux_pushdd(L, result);
+  return dd_pushdd(L, result);
 }
 
 static int dd_apply2 (lua_State *L, dd_pair (*f)(dd_pair, dd_pair)) {
@@ -89,7 +86,7 @@ static int dd_apply2 (lua_State *L, dd_pair (*f)(dd_pair, dd_pair)) {
   dd_pair a = getdd(L, 1);
   dd_pair b = getdd(L, 2);
   /* 2. Execute and push. */
-  return aux_pushdd(L, f(a, b));
+  return dd_pushdd(L, f(a, b));
 }
 
 static int dd_apply1bool (lua_State *L, int (*f)(dd_pair)) {
@@ -125,7 +122,7 @@ static int ddf_new (lua_State *L) {
       val.hi = d;
       val.lo = 0.0;
     }
-    aux_pushdd(L, val);
+    dd_pushdd(L, val);
   }
   return 1;
 }
@@ -141,7 +138,7 @@ static int mt_pow (lua_State *L) { return dd_apply2(L, dd_pow); }
 static int mt_ipow (lua_State *L) {
   dd_pair a = getdd(L, 1);
   int b = agn_checkposint(L, 2);
-  return aux_pushdd(L, dd_pow_n(a, b));
+  return dd_pushdd(L, dd_pow_n(a, b));
 }
 
 static int mt_abs (lua_State *L)    { return dd_apply1(L, dd_abs); }
@@ -289,7 +286,7 @@ static int ddf_fma (lua_State *L) {
   dd_pair a = getdd(L, 1);
   dd_pair b = getdd(L, 2);
   dd_pair c = getdd(L, 3);
-  aux_pushdd(L, dd_fma(a, b, c));
+  dd_pushdd(L, dd_fma(a, b, c));
   return 1;
 }
 
@@ -298,15 +295,15 @@ static int ddf_modf (lua_State *L) {
   dd_pair i_part;
   dd_pair f_part = dd_modf(a, &i_part);
   luaL_checkstack(L, 2, "not enough stack space");
-  aux_pushdd(L, i_part); /* integral part */
-  aux_pushdd(L, f_part); /* fractional part */
+  dd_pushdd(L, i_part); /* integral part */
+  dd_pushdd(L, f_part); /* fractional part */
   return 2;
 }
 
 static int ddf_root (lua_State *L) {
   dd_pair a = getdd(L, 1);
   int b = agn_checkposint(L, 2);
-  return aux_pushdd(L, dd_root_n(a, b));
+  return dd_pushdd(L, dd_root_n(a, b));
 }
 
 static int ddf_sincos (lua_State *L) {
@@ -314,8 +311,8 @@ static int ddf_sincos (lua_State *L) {
   dd_pair si, co;
   luaL_checkstack(L, 2, "not enough stack space");
   dd_sincos(a, &si, &co);
-  aux_pushdd(L, si);
-  aux_pushdd(L, co);
+  dd_pushdd(L, si);
+  dd_pushdd(L, co);
   return 2;
 }
 
@@ -332,7 +329,7 @@ static int ddf_renorm (lua_State *L) {
     a = getdd(L, 1);
     z.hi = dd2double(a);
     z.lo = 0.0;
-    return aux_pushdd(L, z);
+    return dd_pushdd(L, z);
   }
   if (nargs == 2) {  /* 7.5.1 fix */
     hi = agn_checknumber(L, 1);
@@ -342,14 +339,14 @@ static int ddf_renorm (lua_State *L) {
     hi = a.hi;
     lo = a.lo;
   }
-  return aux_pushdd(L, dd_renorm(hi, lo));
+  return dd_pushdd(L, dd_renorm(hi, lo));
 }
 
 
 static int ddf_ldexp (lua_State *L) {
   dd_pair a = getdd(L, 1);
   int b = agn_checkinteger(L, 2);
-  return aux_pushdd(L, dd_ldexp(a, b));
+  return dd_pushdd(L, dd_ldexp(a, b));
   return 1;
 }
 
@@ -359,7 +356,7 @@ static int ddf_frexp (lua_State *L) {
   dd_pair a = getdd(L, 1);
   dd_pair r = dd_frexp(a, &e);
   luaL_checkstack(L, 2, "not enough stack space");
-  aux_pushdd(L, r);
+  dd_pushdd(L, r);
   lua_pushinteger(L, e);
   return 2;
 }
@@ -413,7 +410,7 @@ static int ddf_test1 (lua_State *L) {
     }
   }
   /* Return the final result to the script */
-  return aux_pushdd(L, x);
+  return dd_pushdd(L, x);
 }
 
 static int ddf_test2 (lua_State *L) {
@@ -428,7 +425,7 @@ static int ddf_test2 (lua_State *L) {
     }
   }
   /* Return the final result to the script */
-  return aux_pushdd(L, x);
+  return dd_pushdd(L, x);
 }
 
 
@@ -440,7 +437,7 @@ static int ddf_test3 (lua_State *L) {
   third.lo = 1.850371707708594e-17;
   /* If your printer is working, this will print many 3s */
   printf("C-Side Print: %s\n", dd_to_str(third));
-  return aux_pushdd(L, third);
+  return dd_pushdd(L, third);
 }
 
 
@@ -452,7 +449,7 @@ static int ddf_test4 (lua_State *L) {
   /* This is (1/3 - (double)(1/3)) */
   third.lo = (1.0 - (third.hi * 3.0)) / 3.0;
   printf("C-Side Print: %s\n", dd_to_str(third));
-  return aux_pushdd(L, third);
+  return dd_pushdd(L, third);
 }
 
 
@@ -590,101 +587,101 @@ static void createmeta (lua_State *L) {
 LUALIB_API int luaopen_dd (lua_State *L) {
   createmeta(L);
   luaL_register(L, AGENA_DDLIBNAME, ddlib);
-  aux_pushdd(L, DD_NOUGHT);
+  dd_pushdd(L, DD_NOUGHT);
   lua_setfield(L, -2, "naught");
-  aux_pushdd(L, DD_NOUGHT);
+  dd_pushdd(L, DD_NOUGHT);
   lua_setfield(L, -2, "nought");
-  aux_pushdd(L, DD_ONE);
+  dd_pushdd(L, DD_ONE);
   lua_setfield(L, -2, "one");
-  aux_pushdd(L, DD_TWO);
+  dd_pushdd(L, DD_TWO);
   lua_setfield(L, -2, "two");
-  aux_pushdd(L, DD_THREE);
+  dd_pushdd(L, DD_THREE);
   lua_setfield(L, -2, "three");
-  aux_pushdd(L, DD_FOUR);
+  dd_pushdd(L, DD_FOUR);
   lua_setfield(L, -2, "four");
-  aux_pushdd(L, DD_FIVE);
+  dd_pushdd(L, DD_FIVE);
   lua_setfield(L, -2, "five");
-  aux_pushdd(L, DD_SIX);
+  dd_pushdd(L, DD_SIX);
   lua_setfield(L, -2, "six");
-  aux_pushdd(L, DD_SEVEN);
+  dd_pushdd(L, DD_SEVEN);
   lua_setfield(L, -2, "seven");
-  aux_pushdd(L, DD_EIGHT);
+  dd_pushdd(L, DD_EIGHT);
   lua_setfield(L, -2, "eight");
-  aux_pushdd(L, DD_NINE);
+  dd_pushdd(L, DD_NINE);
   lua_setfield(L, -2, "nine");
-  aux_pushdd(L, DD_TEN);
+  dd_pushdd(L, DD_TEN);
   lua_setfield(L, -2, "ten");
-  aux_pushdd(L, DD_ELEVEN);
+  dd_pushdd(L, DD_ELEVEN);
   lua_setfield(L, -2, "eleven");
-  aux_pushdd(L, DD_TWELVE);
+  dd_pushdd(L, DD_TWELVE);
   lua_setfield(L, -2, "twelve");
-  aux_pushdd(L, (dd_pair){16.0, 0.0});
+  dd_pushdd(L, (dd_pair){16.0, 0.0});
   lua_setfield(L, -2, "sixteen");  /* 7.4.1 */
-  aux_pushdd(L, (dd_pair){100.0, 0.0});
+  dd_pushdd(L, (dd_pair){100.0, 0.0});
   lua_setfield(L, -2, "hundred");
-  aux_pushdd(L, (dd_pair){1000.0, 0.0});
+  dd_pushdd(L, (dd_pair){1000.0, 0.0});
   lua_setfield(L, -2, "thousand");
-  aux_pushdd(L, dd_div_d_d(1.0, 2.0));
+  dd_pushdd(L, dd_div_d_d(1.0, 2.0));
   lua_setfield(L, -2, "half");
-  aux_pushdd(L, dd_div_d_d(1.0, 3.0));
+  dd_pushdd(L, dd_div_d_d(1.0, 3.0));
   lua_setfield(L, -2, "third");
-  aux_pushdd(L, dd_div_d_d(1.0, 4.0));
+  dd_pushdd(L, dd_div_d_d(1.0, 4.0));
   lua_setfield(L, -2, "quarter");
-  aux_pushdd(L, dd_div_d_d(3.0, 4.0));
+  dd_pushdd(L, dd_div_d_d(3.0, 4.0));
   lua_setfield(L, -2, "threequarter");
-  aux_pushdd(L, dd_div_d_d(1.0, 5.0));
+  dd_pushdd(L, dd_div_d_d(1.0, 5.0));
   lua_setfield(L, -2, "fifth");
-  aux_pushdd(L, dd_div_d_d(1.0, 6.0));
+  dd_pushdd(L, dd_div_d_d(1.0, 6.0));
   lua_setfield(L, -2, "sixth");
-  aux_pushdd(L, dd_div_d_d(1.0, 8.0));
+  dd_pushdd(L, dd_div_d_d(1.0, 8.0));
   lua_setfield(L, -2, "eighth");
-  aux_pushdd(L, dd_div_d_d(1.0, 12.0));
+  dd_pushdd(L, dd_div_d_d(1.0, 12.0));
   lua_setfield(L, -2, "twelfth");
-  aux_pushdd(L, dd_div_d_d(1.0, 16.0));
+  dd_pushdd(L, dd_div_d_d(1.0, 16.0));
   lua_setfield(L, -2, "sixteenth");
-  aux_pushdd(L, dd_div_d_d(1.0, 10.0));
+  dd_pushdd(L, dd_div_d_d(1.0, 10.0));
   lua_setfield(L, -2, "tenth");
-  aux_pushdd(L, dd_div_d_d(1.0, 12.0));
+  dd_pushdd(L, dd_div_d_d(1.0, 12.0));
   lua_setfield(L, -2, "twelfth");
-  aux_pushdd(L, dd_div_d_d(1.0, 16.0));
+  dd_pushdd(L, dd_div_d_d(1.0, 16.0));
   lua_setfield(L, -2, "sixteenth");
-  aux_pushdd(L, dd_div_d_d(1.0, 100.0));
+  dd_pushdd(L, dd_div_d_d(1.0, 100.0));
   lua_setfield(L, -2, "hundredth");
-  aux_pushdd(L, dd_div_d_d(1.0, 1000.0));
+  dd_pushdd(L, dd_div_d_d(1.0, 1000.0));
   lua_setfield(L, -2, "thousandth");
-  aux_pushdd(L, DD_PI);
+  dd_pushdd(L, DD_PI);
   lua_setfield(L, -2, "Pi");
-  aux_pushdd(L, DD_2PI);
+  dd_pushdd(L, DD_2PI);
   lua_setfield(L, -2, "Pi2");
-  aux_pushdd(L, DD_PI_2);
+  dd_pushdd(L, DD_PI_2);
   lua_setfield(L, -2, "PiO2");
-  aux_pushdd(L, DD_PI_4);
+  dd_pushdd(L, DD_PI_4);
   lua_setfield(L, -2, "PiO4");
-  aux_pushdd(L, DD_PI_180);
+  dd_pushdd(L, DD_PI_180);
   lua_setfield(L, -2, "PiO180");
-  aux_pushdd(L, DD_E);
+  dd_pushdd(L, DD_E);
   lua_setfield(L, -2, "E");
-  aux_pushdd(L, DD_LN2);
+  dd_pushdd(L, DD_LN2);
   lua_setfield(L, -2, "Ln2");
-  aux_pushdd(L, DD_INV_LN2);
+  dd_pushdd(L, DD_INV_LN2);
   lua_setfield(L, -2, "Invln2");
-  aux_pushdd(L, DD_ZETA2);
+  dd_pushdd(L, DD_ZETA2);
   lua_setfield(L, -2, "Zeta2");
-  aux_pushdd(L, DD_EULER_GAMMA);
+  dd_pushdd(L, DD_EULER_GAMMA);
   lua_setfield(L, -2, "Euler");
-  aux_pushdd(L, DD_SQRT2);
+  dd_pushdd(L, DD_SQRT2);
   lua_setfield(L, -2, "sqrt2");
-  aux_pushdd(L, DD_SQRT3);
+  dd_pushdd(L, DD_SQRT3);
   lua_setfield(L, -2, "sqrt3");
-  aux_pushdd(L, DD_MAX);
+  dd_pushdd(L, DD_MAX);
   lua_setfield(L, -2, "ddmax");
-  aux_pushdd(L, DD_MIN);
+  dd_pushdd(L, DD_MIN);
   lua_setfield(L, -2, "ddmin");
-  aux_pushdd(L, DD_NAN);
+  dd_pushdd(L, DD_NAN);
   lua_setfield(L, -2, "undefined");
-  aux_pushdd(L, DD_INF);
+  dd_pushdd(L, DD_INF);
   lua_setfield(L, -2, "infinity");
-  aux_pushdd(L, DD_APPROX_EPS);
+  dd_pushdd(L, DD_APPROX_EPS);
   lua_setfield(L, -2, "Eps");
   return 1;
 }

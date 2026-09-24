@@ -1359,8 +1359,8 @@ static int agnB_has_aux (lua_State *L) {  /* Agena 1.6.13, 3 to 7 times faster t
       break;
     }
     case LUA_TSEQ: {
-      int i;
-      for (i=0; i < agn_seqsize(L, -2); i++) {
+      size_t i, sz = agn_seqsize(L, -2);  /* 7.10.6 fix, avoid re-evaluation with each iteration ! */
+      for (i=0; i < sz; i++) {
         lua_seqrawgeti(L, -2, i + 1);
         if (lua_equal(L, -1, -2)) {
           agn_poptop(L);
@@ -1374,8 +1374,8 @@ static int agnB_has_aux (lua_State *L) {  /* Agena 1.6.13, 3 to 7 times faster t
       break;
     }
     case LUA_TREG: {  /* 2.3.0 RC 3 */
-      int i;
-      for (i=0; i < agn_reggettop(L, -2); i++) {
+      size_t i, sz = agn_reggettop(L, -2);  /* 7.10.6 fix, avoid re-evaluation with each iteration ! */
+      for (i=0; i < sz; i++) {
         agn_regrawgeti(L, -2, i + 1);
         if (lua_equal(L, -1, -2)) {
           agn_poptop(L);
@@ -1435,16 +1435,16 @@ static int agnB_has_aux (lua_State *L) {  /* Agena 1.6.13, 3 to 7 times faster t
       }
       /* we do not need to check for pairs for a pair traversed above has been converted to a sequence */
       case LUA_TSEQ: {
-        int i;
-        for (i=0; i < agn_seqsize(L, -2); i++) {
+        size_t i, sz = agn_seqsize(L, -2);  /* 7.10.6 fix, avoid re-evaluation with each iteration ! */
+        for (i=0; i < sz; i++) {
           lua_seqrawgeti(L, -2, i + 1);
           has_query(L, -2, 1);
         }
         break;
       }
       case LUA_TREG: {  /* 2.3.0 RC 3 */
-        int i;
-        for (i=0; i < agn_reggettop(L, -2); i++) {
+        size_t i, sz = agn_reggettop(L, -2);  /* 7.10.6 fix, avoid re-evaluation with each iteration ! */
+        for (i=0; i < sz; i++) {
           agn_regrawgeti(L, -2, i + 1);
           has_query(L, -2, 1);
         }
@@ -1721,12 +1721,14 @@ static int agnB_recurse_aux (lua_State *L,
       break;
     }
     case LUA_TSEQ: {
-      int i, j;
+      int j;
+      size_t i, sz;
       if (descendorrecurse == 2) {  /* called by `map` ? 3.9.2 */
         luaL_error(L, "Error in " LUA_QS ": sequences are not supported.", procname);
       }
       if (collect) agn_createseq(L, 0);
-      for (i=0; i < agn_seqsize(L, -2 - collect); i++) {
+      sz = agn_seqsize(L, -2 - collect);  /* 7.10.6 fix, avoid re-evaluation with each iteration ! */
+      for (i=0; i < sz; i++) {
         luaL_checkstack(L, slots, "not enough stack space");  /* 3.5.4 fix */
         lua_pushvalue(L, -1 - collect);  /* push function */
         lua_seqrawgeti(L, -3 - collect, i + 1);  /* push value */
@@ -1778,12 +1780,13 @@ static int agnB_recurse_aux (lua_State *L,
       break;
     }
     case LUA_TREG: {  /* 2.3.0 RC 3 */
-      int i, j;
+      int j;
       if (descendorrecurse == 2) {  /* called by `map` ? 3.9.2 */
         luaL_error(L, "Error in " LUA_QS ": sets are not supported.", procname);
       }
       if (collect) agn_createreg(L, agn_getregsize(L));
-      for (i=0; i < agn_reggettop(L, -2 - collect); i++) {
+      size_t i, sz = agn_reggettop(L, -2 - collect);  /* 7.10.6 fix, avoid re-evaluation with each iteration ! */
+      for (i=0; i < sz; i++) {
         luaL_checkstack(L, slots, "not enough stack space");  /* 3.5.4 fix */
         lua_pushvalue(L, -1 - collect);  /* push function */
         agn_regrawgeti(L, -3 - collect, i + 1);  /* push value */
@@ -1911,16 +1914,16 @@ static int agnB_recurse_aux (lua_State *L,
         break;
       }
       case LUA_TSEQ: {
-        int i;
-        for (i=0; i < agn_seqsize(L, -2); i++) {
+        size_t i, sz = agn_seqsize(L, -2);  /* 7.10.6 fix, avoid re-evaluation with each iteration ! */
+        for (i=0; i < sz; i++) {
           lua_seqrawgeti(L, -2, i + 1);
           recurse_query(L, -2, 1, collect, offset + 2, type, procname, first, last, descendorrecurse, ignorehash);
         }
         break;
       }
       case LUA_TREG: {  /* 2.3.0 RC 3 */
-        int i;
-        for (i=0; i < agn_reggettop(L, -2); i++) {
+        size_t i, sz = agn_reggettop(L, -2);  /* 7.10.6 fix, avoid re-evaluation with each iteration ! */
+        for (i=0; i < sz; i++) {
           agn_regrawgeti(L, -2, i + 1);
           recurse_query(L, -2, 1, collect, offset + 2, type, procname, first, last, descendorrecurse, ignorehash);
         }

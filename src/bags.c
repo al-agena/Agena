@@ -118,7 +118,8 @@ static int bags_minclude (lua_State *L) {  /* based on bags.include, extended 3.
       break;
     }
     case LUA_TSEQ: {
-      for (i=1; i <= agn_seqsize(L, 2); i++) {
+      size_t i, sz = agn_seqsize(L, 2);  /* 7.10.6 fix, avoid re-evaluation with each iteration ! */
+      for (i=1; i <= sz; i++) {
         lua_seqrawgeti(L, 2, i);
         lua_gettable(L, 1);
         if (lua_isnil(L, -1)) {  /* element not yet in bag ? */

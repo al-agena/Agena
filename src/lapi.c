@@ -8233,14 +8233,14 @@ LUA_API int agn_log2 (lua_State *L, unsigned int x) {
 
 
 void lua_callk (lua_State *L, int nargs, int nresults, int ctx, lua_CFunction k) {  /* 7.10.4 */
-  /* Since HDF5 functions do not yield, we safely ignore 'k' and 'ctx' 
+  /* Since HDF5 functions do not yield, we safely ignore 'k' and 'ctx'
      and execute a standard, direct Lua 5.1 function call */
   lua_call(L, nargs, nresults);
 }
 
 
 /* added 7.10.4, taken from Lua 5.2.4 lapi.c */
-/*LUA_API size_t lua_rawlen (lua_State *L, int idx) {  
+/*LUA_API size_t lua_rawlen (lua_State *L, int idx) {
   StkId o = index2addr(L, idx);
   switch (ttypenv(o)) {
     case LUA_TSTRING: return tsvalue(o)->len;

@@ -100,7 +100,8 @@ static int skycrane_obcount (lua_State *L) {  /* based on bags.minclude, 3.13.2 
       break;
     }
     case LUA_TSEQ: {
-      for (i=1; i <= agn_seqsize(L, 1); i++) {
+      size_t i, sz = agn_seqsize(L, 1);  /* 7.10.6 fix, avoid re-evaluation with each iteration ! */
+      for (i=1; i <= sz; i++) {
         lua_seqrawgeti(L, 1, i);
         lua_gettable(L, -2);
         if (lua_isnil(L, -1)) {  /* element not yet in bag ? */

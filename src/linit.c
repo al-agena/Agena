@@ -78,6 +78,7 @@ static const luaL_Reg lualibs[] = {
   {AGENA_INTMAPLIBNAME, luaopen_intmap},      /* 7.7.3/7.7.11 */
   {AGENA_DBLMAPLIBNAME, luaopen_dblmap},      /* 7.7.11 */
   {AGENA_SUFFIXLIBNAME, luaopen_suffix},      /* 7.9.0 */
+  {AGENA_BINPACKLIBNAME, luaopen_binpack},    /* 7.10.6 */
 #if defined(__DJGPP__) || defined(__OS2__) || defined(LUA_ANSI)
   {AGENA_ICONVLIBNAME, luaopen_iconv},        /* 2.26.1 */
   {AGENA_ADSLIBNAME, luaopen_ads},

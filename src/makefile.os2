@@ -72,7 +72,7 @@ LIB_O=  agnxlib.o lbaselib.o ldblib.o liolib.o lmathlib.o loslib.o ltablib.o lrt
 	bimaps.o fzy.o jbmath.o ival.o miniz.o minizip.o fifo.o lifo.o trie.o ints.o dblhash.o \
 	numcuckoo.o numfilter.o dcastro.o dd.o ddmath.o getaddrinfo.o pbl.o pblhash.o pblkf.o keyfile.o \
 	abci.o strhash.o strmap.o intmap.o uintmap.o dblmap.o iniparse.o divsufsort.o sssort.o trsort.o \
-	suffix.o
+	suffix.o binpack.o
 
 LUA_T=  agena.exe
 LUA_O=  agena.o
@@ -297,6 +297,7 @@ divsufsort.o:	divsufsort.c divsufsort.h divsufsort_private.h
 sssort.o: sssort.c divsufsort.h divsufsort_private.h
 trsort.o: trsort.c divsufsort.h divsufsort_private.h
 suffix.o: suffix.c agena.h agnxlib.h agenalib.h
+binpack.o: binpack.c agena.h agnxlib.h agenalib.h
 fzy.o:	fzy.c fzy.h agena.h agnxlib.h agenalib.h lucase.def
 testlib.o: testlib.c agena.h agnxlib.h agenalib.h agnhlps.h
 rbtree.o:	rbtree.c rbtree.h

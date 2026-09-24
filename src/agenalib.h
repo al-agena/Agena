@@ -204,6 +204,9 @@ LUALIB_API int (luaopen_dblmap) (lua_State *L);  /* 7.7.11 */
 #define AGENA_SUFFIXLIBNAME "suffix"
 LUALIB_API int (luaopen_suffix) (lua_State *L);   /* 7.9.0 */
 
+#define AGENA_BINPACKLIBNAME "binpack"
+LUALIB_API int (luaopen_binpack) (lua_State *L);  /* 7.10.6 */
+
 /* *** For DOS, OS/2 and ANSI ***********************************************************/
 
 #if defined(__DJGPP__) || defined(__OS2__) || defined(LUA_ANSI)

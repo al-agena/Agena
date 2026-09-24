@@ -253,7 +253,7 @@ static int mt_filled (lua_State *L) {
 
 static int mt_tostring (lua_State *L) {  /* at the console, the queue is formatted as follows: */
   if (luaL_isudata(L, 1, AGENA_LIFOLIBNAME))
-    lua_pushfstring(L, "lifo(%p)", lua_topointer(L, 1));
+    lua_pushfstring(L, "%s(%p)", AGENA_LIFOLIBNAME, lua_topointer(L, 1));
   else {
     void *p = lua_touserdata(L, 1);
     lua_pushfstring(L, (p != NULL) ? "userdata(%p)" : "unknown(%p)", lua_topointer(L, 1));
