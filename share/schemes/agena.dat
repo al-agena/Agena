@@ -211,6 +211,7 @@ binio.lines
 binio.open
 binio.readbytes
 binio.readchar
+binio.readchars
 binio.readindex
 binio.readint64
 binio.readlong

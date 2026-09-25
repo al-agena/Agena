@@ -173,7 +173,7 @@ object TPersHolder
           Name = 'binio'
           Keywords =
             'binio,clearerror,close,eof,ferror,fgetpos,filepos,fsetpos,getieee,getieeedouble,getieeeexpo,getieeemahi,getieeemalo,getieeesign,' +
-            'ieee,isatty,isfdesc,length,lines,open,readbytes,readchar,readindex,readint64,readlong,readlongdouble,readnumber,readobject,readshortstring,' +
+            'ieee,isatty,isfdesc,length,lines,open,readbytes,readchar,readchars,readindex,readint64,readlong,readlongdouble,readnumber,readobject,readshortstring,' +
             'readstring,readuint64,rewind,seek,setieee,setieeedouble,setieeeexpo,setieeemahi,setieeemalo,setieeesign,sync,toend,writebytes,writechar,' +
             'writedouble,writeindex,writeint64,writeline,writelong,writelongdouble,writenumber,writeobject,writeshortstring,writestring,writeuint64'
         end

@@ -1581,6 +1581,7 @@
       <KEYWORD3>binio.open</KEYWORD3>
       <KEYWORD3>binio.readbytes</KEYWORD3>
       <KEYWORD3>binio.readchar</KEYWORD3>
+      <KEYWORD3>binio.readchars</KEYWORD3>
       <KEYWORD3>binio.readindex</KEYWORD3>
       <KEYWORD3>binio.readint64</KEYWORD3>
       <KEYWORD3>binio.readlong</KEYWORD3>
