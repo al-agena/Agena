@@ -7946,41 +7946,28 @@ numarray.aux.readvalues := proc(fh, a, sizevalue, datatype, buffersize) is
          a[d++] := ints.setwords(buf[i + 1], buf[i], datatype == 'int64')
       od
    else
+      local arraysize, flag, include := binio.length(fh)/sizevalue, true, numarray.include;  # 7.10.7 tweaks
       do
-         r := numarray.read(fh, buffersize);
+         r := binio.readchars(fh, buffersize);
          if assigned r then
             sizer := size r;
             if sizer % sizevalue <> 0 then  # this does not seem to be a file with doubles
                error('Error in `numarray.read' & datatype & 's`: file size is invalid.')
             fi;
-            c +:= sizer \ sizevalue;
-            numarray.resize(a, c);
+            if flag then
+               numarray.resize(a, arraysize);  /* will simply return if array has final size already */
+               flag := false
+            fi;
             case datatype
                of 'uchar' then
-                  numarray.include(a, d, r);
-                  d +:= size r
-               of 'double', 'int32', 'uint32', 'ushort', 'longdouble' then
-                  for i to sizer by sizevalue do
-                     create sequence t(sizevalue);
-                     for j to sizevalue do     # read sizeof(datatype) bytes
-                        t[j] := r[i + j - 1]
-                     od;
-                     a[d++] := bytes.tonumber(t)  # convert to number or long double ud, 2.14.9, 2.15.5 fix
+                  for i in r do
+                     a[d++] := abs(i)
                   od
-               of 'cdouble' then
-                  local zr, zi;
-                  for i to sizer by sizevalue do
-                     create sequence t(sizevalue\2);
-                     for j to sizevalue\2 do   # read sizeof(datatype) bytes
-                        t[j] := r[i + j - 1]
-                     od;
-                     zr := bytes.tonumber(t);  # convert to number, real part
-                     for j from sizevalue\2 + 1 to sizevalue do   # read sizeof(datatype) bytes
-                        t[j - sizevalue\2] := r[i + j - 1]
-                     od;
-                     zi := bytes.tonumber(t);  # convert to number, imaginary part, 4.9.5 fix
-                     a[d++] := zr!zi  # convert to complex number
-                  od
+                  #d +:= size r
+               of 'double', 'cdouble', 'int32', 'uint32', 'ushort', 'longdouble' then
+                  for i to sizer by sizevalue do  # convert to number or long double ud, 2.14.9, 2.15.5 fix; 7.10.7 boost
+                     a[d++] := bytes.tonumber(r[i to i + sizevalue - 1])
+                  od;
                else
                   error('Error in `numarray.aux.readvalues`: unknown data type.')
                esle
