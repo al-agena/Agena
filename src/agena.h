@@ -31,7 +31,7 @@
 #define agena_h
 
 #define AGENA_VERSION     "agena 7.10"
-#define AGENA_EDITION     "7.10.6"
+#define AGENA_EDITION     "7.10.7"
 #define AGENA_MOTTO       "enceladus"
 #define AGENA_NAME        "agena"
 #define AGENA_LOGO        ">>"
@@ -232,6 +232,7 @@ LUA_API agn_Complex (agn_optcomplex) (lua_State *L, int narg, agn_Complex def); 
 }
 #define agn_pushcomplexnan(L)  (agn_createcomplex(L, AGN_NAN))
 #else
+LUA_API lua_Number *agn_checkcomplex (lua_State *L, int idx);
 #define agn_pushcomplex(L,a,b) (agn_createcomplex(L, (a), (b)))
 #define agn_pushcomplexnan(L)  (agn_createcomplex(L, AGN_NAN, 0))
 LUA_API void agn_optcomplex (lua_State *L, int idx, lua_Number *def, lua_Number *re, lua_Number *im);

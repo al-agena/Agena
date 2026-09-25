@@ -13,8 +13,8 @@ typedef struct NumArray {
     uint16_t *us;      /* pointer to unsigned 16-bit integers */
     long double *ld;   /* pointer to 80-bit floating-point numbers */
     agn_Complex *z;    /* pointer to agn_Complex values */
-    int64_t *i64;      /* pointer to signed 32-bit integers */
-    uint64_t *ui64;    /* pointer to unsigned 32-bit integers */
+    int64_t *i64;      /* pointer to signed 64-bit integers */
+    uint64_t *ui64;    /* pointer to unsigned 64-bit integers */
   } data;
   int64_t dims[NAMAXDIMS]; /* the individual dimensions */
   int ndims;           /* total number of dimensions */

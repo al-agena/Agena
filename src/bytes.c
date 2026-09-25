@@ -239,7 +239,7 @@ static int bytes_tobytes (lua_State *L) {  /* 2.6.1, extended 2.9.0; rewritten 2
       re = creal(d.z); im = cimag(d.z);
 #else
       re = d.z[0]; im = d.z[1];
-#endif      
+#endif
       s = sizeof(agn_Complex);
       #if BYTE_ORDER == BIG_ENDIAN
       if (tolittle) { tools_swapint64_t(&re); tools_swapint64_t(&im); }
@@ -267,12 +267,19 @@ static int bytes_tobytes (lua_State *L) {  /* 2.6.1, extended 2.9.0; rewritten 2
    answer by dreamlax. */
 
 static int bytes_tonumber (lua_State *L) {  /* 2.6.1 */
-  int i, size, flag;
+  int flag, isseq;
+  size_t i, len;
+  const char *str = NULL;
   const int E[] = { sizeof(int32_t), sizeof(int64_t), sizeof(lua_Number), sizeof(float), sizeof(uint16_t), SIZEOFLDBL, sizeof(agn_Complex)};
-  luaL_argcheck(L, lua_isseq(L, 1), 1, "sequence expected");
+  isseq = lua_isseq(L, 1);
+  luaL_argcheck(L, isseq || agn_isstring(L, 1), 1, "sequence or string expected");
   flag = agnL_optboolean(L, 2, 0);
-  size = agn_seqsize(L, 1);
-  if (!tools_isintenum(size, E, sizeof(E)/sizeof(*E)))
+  if (isseq) {
+    len = agn_seqsize(L, 1);
+  } else {
+    str = lua_tolstring(L, 1, &len);
+  }
+  if (!tools_isintenum(len, E, sizeof(E)/sizeof(*E)))
     luaL_error(L, "Error in " LUA_QS ": expected a sequence of %d, %d, %d, %d or %d integers.",
       "bytes.tonumber", sizeof(uint16_t), sizeof(int32_t), sizeof(lua_Number), SIZEOFLDBL, sizeof(agn_Complex));
   union {
@@ -283,31 +290,41 @@ static int bytes_tonumber (lua_State *L) {  /* 2.6.1 */
     int32_t i;      /* 2.18.2 extension */
     int64_t i64;    /* 7.10.4 extension */
     float f;
-    unsigned char c[size];
+    unsigned char c[32];
   } dst;
-  for (i=0; i < size; i++) {
-#if BYTE_ORDER != BIG_ENDIAN
-    dst.c[i] = (unsigned char)agn_seqgetinumber(L, 1, i + 1);
-#else
-    dst.c[size - 1 - i] = (unsigned char)agn_seqgetinumber(L, 1, i + 1);
-#endif
+  if (isseq) {
+    for (i=0; i < len; i++) {
+    #if BYTE_ORDER != BIG_ENDIAN
+      dst.c[i] = (unsigned char)agn_seqgetinumber(L, 1, i + 1);
+    #else
+      dst.c[len - 1 - i] = (unsigned char)agn_seqgetinumber(L, 1, i + 1);
+    #endif
+    }
+  } else {  /* got a string */
+    #if BYTE_ORDER == BIG_ENDIAN
+    for (i=0; i < len; i++) {
+      dst.c[i] = (unsigned char)str[len - 1 - i];
+    }
+    #else
+    memcpy(dst.c, str, len);
+    #endif
   }
-#ifndef __ARMCPU  /* 2.37.1 */
-  if (flag && size == SIZEOFLDBL) {
-    createdlong(L, dst.ld);
-#else
+  #ifndef __ARMCPU  /* 2.37.1 */
+  if (flag && len == SIZEOFLDBL) {
+      createdlong(L, dst.ld);
+  #else
   if (0) {
     lua_assert(0);
-#endif
-  } else if (flag && size == sizeof(float)) {
+  #endif
+  } else if (flag && len == sizeof(float)) {
     lua_pushnumber(L, dst.f);
-  } else if (flag && size == sizeof(int64_t)) {
+  } else if (flag && len == sizeof(int64_t)) {
     createint64(L, dst.i64);
-  } else if (size == sizeof(uint16_t)) {
+  } else if (len == sizeof(uint16_t)) {
     lua_pushnumber(L, dst.us);
-  } else if (size == sizeof(lua_Number)) {
+  } else if (len == sizeof(lua_Number)) {
     lua_pushnumber(L, dst.x);
-  } else if (size == sizeof(agn_Complex)) {  
+  } else if (len == sizeof(agn_Complex)) {
 #ifndef PROPCMPLX
     agn_pushcomplex(L, creal(dst.z), cimag(dst.z));
 #else

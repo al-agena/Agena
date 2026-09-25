@@ -4564,7 +4564,7 @@ sublist:
 LUAI_FUNC void luaV_seqsublist (lua_State *L, StkId t, StkId inds, StkId idx) {  /* Agena 1.2 */
   int i, start, stop;
   size_t c, length;
-  Seq *h, *newtable;
+  Seq *h, *newseq;
   const TValue *v;
   lua_lock(L);
   start = stop = 0;  /* to prevent compiler warnings */
@@ -4575,22 +4575,22 @@ LUAI_FUNC void luaV_seqsublist (lua_State *L, StkId t, StkId inds, StkId idx) { 
     stop = tools_posrelat(nvalue(inds + 1), length);
     if (start > stop || (start < 1 || stop > length)) {  /* 1.11.8 */
       /* work like in Maple and return an empty sequence, 3.9.0 */
-      newtable = agnSeq_new(L, 0);
+      newseq = agnSeq_new(L, 0);
       goto sublist;
     }
   } else {
     lua_unlock(L);
     luaG_runerror(L, "Error when indexing sequences: invalid arguments.");  /* 1.11.8 */
   }
-  newtable = agnSeq_new(L, stop - start + 1);
+  newseq = agnSeq_new(L, stop - start + 1);
   i = 1; c = 0;
   if (start > 1 && start <= length) i = start;
   stop = (stop < length) ? stop : h->size;
   for (; i <= stop; i++) {
     c++;
     v = seqitem(h, i - 1);
-    agnSeq_seti(L, newtable, c, v);
-    luaC_barrierseq(L, newtable, v);
+    agnSeq_seti(L, newseq, c, v);
+    luaC_barrierseq(L, newseq, v);
   }
   /* we do not need to resize */
   /* delete indices, keep substring */
@@ -4598,7 +4598,7 @@ sublist:
   setnilvalue(inds);
   setnilvalue(inds + 1);
   /* return sublist */
-  setseqvalue(L, idx, newtable);
+  setseqvalue(L, idx, newseq);
   /* setting L->top to func confuses the stack */
   lua_unlock(L);
 }
@@ -4607,7 +4607,7 @@ sublist:
 LUAI_FUNC void luaV_regsublist (lua_State *L, StkId t, StkId inds, StkId idx) {  /* 2.3.0 RC 3 */
   int i, start, stop;
   size_t c, length;
-  Reg *h, *newtable;
+  Reg *h, *newreg;
   const TValue *v;
   lua_lock(L);
   start = stop = 0;  /* to prevent compiler warnings */
@@ -4618,22 +4618,22 @@ LUAI_FUNC void luaV_regsublist (lua_State *L, StkId t, StkId inds, StkId idx) { 
     stop = tools_posrelat(nvalue(inds + 1), length);
     if (start > stop || (start < 1 || stop > length)) { /* 1.11.8 */
       /* work like in Maple and return an empty register, 3.9.0 */
-      newtable = agnReg_new(L, 0);
+      newreg = agnReg_new(L, 0);
       goto sublist;
     }
   } else {
     lua_unlock(L);
     luaG_runerror(L, "Error when indexing register: invalid arguments.");  /* 1.11.8 */
   }
-  newtable = agnReg_new(L, stop - start + 1);
+  newreg = agnReg_new(L, stop - start + 1);
   i = 1; c = 0;
   if (start > 1 && start <= length) i = start;
   stop = (stop < length) ? stop : h->top;
   for (; i <= stop; i++) {
     c++;
     v = regitem(h, i - 1);
-    agnReg_seti(L, newtable, c, v);
-    luaC_barrierreg(L, newtable, v);
+    agnReg_seti(L, newreg, c, v);
+    luaC_barrierreg(L, newreg, v);
   }
   /* we do not need to resize */
   /* delete indices, keep substring */
@@ -4641,7 +4641,7 @@ sublist:
   setnilvalue(inds);
   setnilvalue(inds + 1);
   /* return sublist */
-  setregvalue(L, idx, newtable);
+  setregvalue(L, idx, newreg);
   /* setting L->top to func confuses the stack */
   lua_unlock(L);
 }
@@ -8028,6 +8028,7 @@ void luaV_execute (lua_State *L, int nexeccalls) {
     } else
       luaG_runerror(L, "Error in indexing operation: string, table, sequence or register expected, got %s.",
         luaT_typenames[(int)ttype(rb)]);
+    Protect(luaC_checkGC(L));  /* 7.10.7 fix to prevent out-of-memory errors */
     /* do not adjust L->top ! The stack will be confused otherwise */
     DISPATCH();
   }

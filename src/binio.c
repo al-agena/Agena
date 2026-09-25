@@ -597,7 +597,7 @@ static int binio_readbytes (lua_State *L) {
   eofalreadygiven = 0;
   checkoptions = 2;  /* check two options */
   n = (agn_isinteger(L, 2)) ? agn_tointeger(L, 2) : agn_getbuffersize(L);
-  if (n < 1) n = agn_getbuffersize(L);  /* 2.34.9 adaption */
+  if (n < 1 || n > 1048576) n = agn_getbuffersize(L);  /* 2.34.9 adaption, 7.10.7 cap fix */
   while (checkoptions-- && nargs != 0 && lua_ispair(L, nargs)) {  /* 2.28.6 */
     luaL_checkstack(L, 2, "not enough stack space");
     agn_pairgeti(L, nargs, 1);  /* get left value, set to stack index -2 */
@@ -663,6 +663,31 @@ static int binio_readbytes (lua_State *L) {
     luaL_error(L, "Error in " LUA_QS " with file #%d: %s.", "binio.readbytes", hnd, my_ioerror(en));
   }
   xfree(ignore);
+  return 1;
+}
+
+
+static int binio_readchars (lua_State *L) {  /* 7.10.7 */
+  size_t n;
+  int hnd, en;
+  ssize_t res;
+  hnd = agn_tofileno(L, 1, 0);
+  if (hnd == -1)
+    luaL_error(L, "Error in " LUA_QS ": file handle is invalid or closed.", "binio.readchars");
+  n = (agn_isinteger(L, 2)) ? agn_tointeger(L, 2) : agn_getbuffersize(L);
+  if (n < 1 || n > 1048576) n = agn_getbuffersize(L);
+  /* end of option check */
+  char buffer[n];
+  set_errno(0);  /* reset, better be sure than sorry, as Windows 2000 seems susceptible to uncleared errno's */
+  res = read(hnd, buffer, n);
+  en = errno;
+  if (res > 0) {
+    lua_pushlstring(L, buffer, res);
+  } else if (res == 0) {  /* end of file reached */
+    lua_pushnil(L);
+  } else {
+    luaL_error(L, "Error in " LUA_QS " with file #%d: %s.", "binio.readchars", hnd, my_ioerror(en));
+  }
   return 1;
 }
 
@@ -1905,6 +1930,7 @@ static const luaL_Reg binio[] = {
   {"open",             binio_open},              /* July 13, 2008 */
   {"readbytes",        binio_readbytes},         /* July 18, 2009 */
   {"readchar",         binio_readchar},          /* July 13, 2008 */
+  {"readchars",        binio_readchars},         /* September 25, 2026 */
   {"readindex",        binio_readindex},         /* January 05, 2018 */
   {"readint64",        binio_readint64},         /* March 28, 2026 */
   {"readlong",         binio_readlong},          /* October 26, 2008 */
