@@ -1,5 +1,5 @@
 #/bin/sh
-AGENANAME="agena-7.10.6"
+AGENANAME="agena-7.10.7"
 pkgrm SMCagena
 pkgmk -o
 pkgtrans -s /var/spool/pkg /export/home/proglang/agena/$AGENANAME-sol10-x86-local SMCagena
