@@ -1,3 +1,22 @@
+7.10.7 Enceladus, September 25, 2026
+
+- The sublist operation for tables, sequences and registers, `a[2 to 3]` for example, missed a GC trigger, causing 
+  out-of-memory errors during intensive loops. This has been fixed.
+
+- Introduced `binio.readchars` which reads in a given number of characters from a (binary) file, including embedded 
+  zeros if existing and returns a string. It is faster than `binio.readbytes`.
+
+- On Little Endian systems, `numarray.write` has become around six times faster.
+
+- Optimized `numarray.read*` performance: reading numeric data now requires only a fraction of the time taken by 
+  previous versions. Import times are also linear instead of quadratic and do not depend on the size of the data type 
+  any longer.
+
+- In case of an I/O error, `numarray.write` could leak memory. This has been fixed.
+
+- `binio.readbytes` no longer crashes Agena when the buffer size is too large.
+
+
 7.10.6 Enceladus, September 24, 2026
 
 - The new `binpack` library provides functions to convert Agena numbers, complex numbers, Booleans, null, and strings
@@ -6,7 +25,7 @@
   While the package does not pack data as tightly as `strings.pack` and `strings.unpack`, it saves you from having to
   construct and store a format string for subsequent unpacking.
 
-  You can either use `binpack.pack` and `binpack.unpack` to serialise one or more arguments. Examples:
+  Use `binpack.pack` and `binpack.unpack` to serialise one or more arguments. Examples:
 
   > str := binpack.pack(1, 'agena', 2*Pi, Pi!E, true, false, null, fail, long.Pi, ints.int64(10), dd.new(2.1));
   > binpack.unpack(str):
