@@ -1560,7 +1560,7 @@ LUALIB_API int my_unlock (int hnd, off64_t start, off64_t size) {
 /* fpos: from position, tpos: to position, size, 7.10.5, created by Gemini AI */
 LUALIB_API void my_move (int hnd, off64_t fpos, off64_t tpos, off64_t size) {
   if (size <= 0 || fpos == tpos) {
-    return; 
+    return;
   }
   if (fpos < 0 || tpos < 0) {
     fprintf(stderr, "Agena IO subsystem: move error (negative offsets)\n");
@@ -1582,7 +1582,7 @@ LUALIB_API void my_move (int hnd, off64_t fpos, off64_t tpos, off64_t size) {
       current_tpos += chunk;
       bytes_left -= chunk;
     }
-  } 
+  }
   /* Case 2: Moving towards the end of the file with potential overlap:
      Must copy Back-to-Front to prevent overwriting source data */
   else {
@@ -2797,7 +2797,7 @@ LUALIB_API void tools_swapint32_t (int32_t *n) {  /* 7.9.5, 5 % tweak */
 #endif
 }
 
-LUALIB_API void tools_swapint64_tX (int64_t *n) {  /* 7.9.5, 1 % tweak */
+LUALIB_API void tools_swapint64_t (int64_t *n) {  /* 7.9.5, 1 % tweak */
   if (!n) return;
 #if __GNUC_PREREQ(4, 3)
   *n = (int64_t)__builtin_bswap64((uint64_t)*n);

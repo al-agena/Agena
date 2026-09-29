@@ -669,9 +669,11 @@ static int binio_readbytes (lua_State *L) {
 
 static int binio_readchars (lua_State *L) {  /* 7.10.7 */
   size_t n;
-  int hnd, en;
+  int hnd, en, nargs, pushsize;
   ssize_t res;
   hnd = agn_tofileno(L, 1, 0);
+  nargs = lua_gettop(L);
+  pushsize = nargs > 1 && lua_istrue(L, nargs);  /* 7.10.8 extension */
   if (hnd == -1)
     luaL_error(L, "Error in " LUA_QS ": file handle is invalid or closed.", "binio.readchars");
   n = (agn_isinteger(L, 2)) ? agn_tointeger(L, 2) : agn_getbuffersize(L);
@@ -688,7 +690,8 @@ static int binio_readchars (lua_State *L) {  /* 7.10.7 */
   } else {
     luaL_error(L, "Error in " LUA_QS " with file #%d: %s.", "binio.readchars", hnd, my_ioerror(en));
   }
-  return 1;
+  if (pushsize) lua_pushinteger(L, res);
+  return 1 + pushsize;
 }
 
 

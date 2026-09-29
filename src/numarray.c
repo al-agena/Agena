@@ -46,6 +46,18 @@ static void aux_pushcomplex (lua_State *L, agn_pComplex c) {  /* 4.11.3 */
   setcvalue(L->top++, c);
 }
 
+static const char *const datatypes[] =  /* GREP "typedef enum { NAUCHAR" in numarray.h */
+  {"uchar", "double", "int32", "ushort", "uint32", "uint64", "int64", "longdouble", "cdouble", NULL};
+
+static const int sizetypes[] =
+  {sizeof(unsigned char), sizeof(double), sizeof(int32_t), sizeof(unsigned short),
+   sizeof(uint32_t), sizeof(uint64_t), sizeof(int64_t), sizeof(long double),
+#ifndef PROPCMPLX
+   sizeof(complex double),
+#else
+   2*sizeof(double),
+#endif
+   };
 
 /* numarray.[uchar|double|integer](n)
 
@@ -144,8 +156,8 @@ static NumArray *createarray (lua_State *L, char what, int64_t nops, int ndims, 
     }
     case NALDOUBLE: {
 #ifndef __ARMCPU
-      a->data.ld = calloc(nops, SIZEOFLDBL);
-      if (a->data.ld == NULL) \
+      a->data.ld = calloc(nops, sizeof(long double));
+      if (a->data.ld == NULL)
         luaL_error(L, "Error in " LUA_QS ": memory allocation failed.", procname);
       agn_setutypestring(L, -1, "longdouble");
 #else
@@ -3380,7 +3392,7 @@ static int numarray_write (lua_State *L) {  /* rewritten by Gemini AI, 7.10.7. 6
   int64_t nvals, start, bufdatasize;
   ssize_t nbyteswritten;
   size_t nbytes;
-#if BYTE_ORDER == BIG_ENDIAN  
+#if BYTE_ORDER == BIG_ENDIAN
   size_t bytestowrite;
   int64_t valuestowrite;
 #endif
@@ -3438,7 +3450,7 @@ static int numarray_write (lua_State *L) {  /* rewritten by Gemini AI, 7.10.7. 6
   start += nvals;
 #else
   /* --- SAFE PATH: Small stack buffer chunking for Big Endian architectures --- */
-  unsigned char stack_buf[4096]; 
+  unsigned char stack_buf[4096];
   int64_t chunk_vals = (int64_t)(sizeof(stack_buf) / nbytes);
   do {
     valuestowrite = (nvals > chunk_vals) ? chunk_vals : nvals;
@@ -3459,7 +3471,6 @@ static int numarray_write (lua_State *L) {  /* rewritten by Gemini AI, 7.10.7. 6
     start += valuestowrite;
   } while (nvals > 0);
 #endif
-
   /* 3. Handle Lua return progression state */
   start++;
   if (start > a->size)
@@ -3469,6 +3480,141 @@ static int numarray_write (lua_State *L) {  /* rewritten by Gemini AI, 7.10.7. 6
   tools_fsync(hnd);
   return 1;
 }
+
+/* NAUCHAR, NADOUBLE, NAINT32, NAUINT16, NAUINT32, NAUINT64, NAINT64, NALDOUBLE, NACDOUBLE */
+static int numarray_assign (lua_State *L) {
+  union {
+    lua_Number n;
+    agn_Complex z;
+    long double ld;
+    uint16_t us;
+    int32_t i;
+    uint32_t ui;
+    int64_t i64;
+    uint64_t ui64;
+    unsigned char c[32];
+  } dst;
+  tools_bzero(dst.c, 32);
+  size_t i, l, pos, nitems;
+  NumArray *a = checknumarray(L, 1);
+  const char *str = agn_checklstring(L, 2, &l);
+  if (l == 0)
+    luaL_error(L, "Error in " LUA_QS ": string is empty.", "numarray.assign");
+  int datatype = a->datatype;
+  int sizedatatype;
+  pos = agnL_optposint(L, 3, 1);
+  if (pos > a->size)
+    luaL_error(L, "Error in " LUA_QS ": position is out-of-range.", "numarray.assign");
+  sizedatatype = sizetypes[datatype];
+  nitems = l/sizedatatype;
+  if ((datatype != NALDOUBLE && (l % sizedatatype != 0)) || (pos + nitems - 1 > a->size))
+    luaL_error(L, "Error in " LUA_QS ": string is of invalid size.", "numarray.assign");
+  pos--;
+  switch (datatype) {
+    case NAUCHAR: {
+      for (i=0; i < nitems; i++) {
+        a->data.c[i + pos] = str[i];
+      }
+      break;
+    }
+    case NADOUBLE: {
+      for (i=0; i < nitems; i++) {
+        memcpy(dst.c, str, sizedatatype);
+        str += sizedatatype;
+        #if BYTE_ORDER == BIG_ENDIAN
+        dst.n = tools_tobigendian(dst.n);
+        #endif
+        a->data.n[i + pos] = dst.n;
+      }
+      break;
+    }
+    case NACDOUBLE: {
+      for (i=0; i < nitems; i++) {
+        memcpy(dst.c, str, sizedatatype);
+        str += sizedatatype;
+        #if BYTE_ORDER == BIG_ENDIAN
+        dst.z = tools_tobigendian(creal(dst.z)) + I*tools_tobigendian(cimag(dst.z));
+        #endif
+#ifndef PROPCMPLX
+        a->data.z[i + pos] = dst.z;
+#else
+        setcdarrayz2(a->data.z, i + pos, dst.z);
+#endif
+      }
+      break;
+    }
+    case NAUINT16: {
+      for (i=0; i < nitems; i++) {
+        memcpy(dst.c, str, sizedatatype);
+        str += sizedatatype;
+        #if BYTE_ORDER == BIG_ENDIAN
+        dst.us = tools_swapuint16(dst.us);
+        #endif
+        a->data.us[i + pos] = dst.us;
+      }
+      break;
+    }
+    case NAINT32: {
+      for (i=0; i < nitems; i++) {
+        memcpy(dst.c, str, sizedatatype);
+        str += sizedatatype;
+        #if BYTE_ORDER == BIG_ENDIAN
+        dst.i = tools_swapint32(dst.i);
+        #endif
+        a->data.i[i + pos] = dst.i;
+      }
+      break;
+    }
+    case NAUINT32: {
+      for (i=0; i < nitems; i++) {
+        memcpy(dst.c, str, sizedatatype);
+        str += sizedatatype;
+        #if BYTE_ORDER == BIG_ENDIAN
+        dst.ui = tools_swapuint32(dst.ui);
+        #endif
+        a->data.ui[i + pos] = dst.ui;
+      }
+      break;
+    }
+    case NAINT64: {
+      for (i=0; i < nitems; i++) {
+        memcpy(dst.c, str, sizedatatype);
+        str += sizedatatype;
+        #if BYTE_ORDER == BIG_ENDIAN
+        dst.i64 = tools_swapint64(dst.i64);
+        #endif
+        a->data.i64[i + pos] = dst.i64;
+      }
+      break;
+    }
+    case NAUINT64: {
+      for (i=0; i < nitems; i++) {
+        memcpy(dst.c, str, sizedatatype);
+        str += sizedatatype;
+        #if BYTE_ORDER == BIG_ENDIAN
+        dst.ui64 = tools_swapuint64(dst.ui64);
+        #endif
+        a->data.ui64[i + pos] = dst.ui64;
+      }
+      break;
+    }
+#if BYTE_ORDER != BIG_ENDIAN && !(defined(__linux__) && defined(__x86_64__))
+    case NALDOUBLE: {
+      for (i=0; i < nitems; i++) {
+        memset(dst.c, 0, 16);
+        memcpy(dst.c, str, sizedatatype);
+        str += sizedatatype;
+        a->data.ld[i + pos] = dst.ld;
+      }
+      break;
+    }
+#endif
+    default:
+      luaL_error(L, "Error in " LUA_QS ": array type is not supported.", "numarray.assign");
+  }
+  return 0;
+}
+
 
 /* numarray.toseq (a)
 
@@ -3684,8 +3830,6 @@ static int numarray_toarray (lua_State *L) {
   int64_t i, n, dims[NAMAXDIMS];
   int what;
   NumArray *a;
-  static const char *const datatypes[] =  /* GREP "typedef enum { NAUCHAR" in numarray.h */
-    {"uchar", "double", "int32", "ushort", "uint32", "uint64", "int64", "longdouble", "cdouble", NULL};  /* 4.9.5 extension */
   what = agnL_checkoption(L, 2, "double", datatypes, 0);
   tools_bzero(dims, NAMAXDIMS*sizeof(int64_t));
   switch (lua_type(L, 1)) {
@@ -6518,6 +6662,7 @@ static const struct luaL_Reg numarray_arraylib [] = {  /* metamethods for numeri
 
 static const luaL_Reg numarraylib[] = {
   {"append",     numarray_append},
+  {"assign",     numarray_assign},
   {"attrib",     numarray_attrib},
   {"band",       numarray_band},
   {"bnot",       numarray_bnot},

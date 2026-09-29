@@ -280,8 +280,8 @@ static int bytes_tonumber (lua_State *L) {  /* 2.6.1 */
     str = lua_tolstring(L, 1, &len);
   }
   if (!tools_isintenum(len, E, sizeof(E)/sizeof(*E)))
-    luaL_error(L, "Error in " LUA_QS ": expected a sequence of %d, %d, %d, %d or %d integers.",
-      "bytes.tonumber", sizeof(uint16_t), sizeof(int32_t), sizeof(lua_Number), SIZEOFLDBL, sizeof(agn_Complex));
+    luaL_error(L, "Error in " LUA_QS ": expected sequence or string of %d, %d, %d, %d or %d integers, got %d.",
+      "bytes.tonumber", sizeof(uint16_t), sizeof(int32_t), sizeof(lua_Number), SIZEOFLDBL, sizeof(agn_Complex), len);
   union {
     lua_Number x;
     agn_Complex z;  /* 7.10.4 extension */
@@ -292,6 +292,7 @@ static int bytes_tonumber (lua_State *L) {  /* 2.6.1 */
     float f;
     unsigned char c[32];
   } dst;
+  tools_bzero(dst.c, 32);
   if (isseq) {
     for (i=0; i < len; i++) {
     #if BYTE_ORDER != BIG_ENDIAN
@@ -311,7 +312,7 @@ static int bytes_tonumber (lua_State *L) {  /* 2.6.1 */
   }
   #ifndef __ARMCPU  /* 2.37.1 */
   if (flag && len == SIZEOFLDBL) {
-      createdlong(L, dst.ld);
+    createdlong(L, dst.ld);
   #else
   if (0) {
     lua_assert(0);
@@ -330,8 +331,10 @@ static int bytes_tonumber (lua_State *L) {  /* 2.6.1 */
 #else
     agn_pushcomplex(L, dst.z[0], dst.z[1]);
 #endif
-  } else {
+  } else if (len == sizeof(int32_t)) {
     lua_pushnumber(L, dst.i);
+  } else {
+    luaL_error(L, "Error in " LUA_QS ": got invalid arguments.", "bytes.tonumber");
   }
   return 1;
 }
