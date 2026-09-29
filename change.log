@@ -1,3 +1,15 @@
+7.10.8 Enceladus, September 30, 2026
+
+- New `numarray.assign` allocates all numbers represented in a binary string to a numarray.
+
+- Slashed down import times of the `numarray.read*` functions yet another time. So, for example, it took 389 seconds
+  to import 10 million C doubles from a hard disk drive on Agena 7.10.5. Now it takes just 0.2 seconds on the same drive.
+
+- `binio.tochars` returns the number of characters read as a second result if given `true` as the last argument.
+
+- `binio.writeline` has been removed as it was without use.
+
+
 7.10.7 Enceladus, September 25, 2026
 
 - The sublist operation for tables, sequences and registers, `a[2 to 3]` for example, missed a GC trigger, causing
@@ -24,7 +36,7 @@
 - The new `binpack` library provides functions to convert Agena numbers, complex numbers, Booleans, null, and strings
   plus signed 64-bit integers, C long doubles and double-to-double numbers to binary strings and back again.
 
-  While the package does not pack data as tightly as `strings.pack`, it saves you from having to construct and store a 
+  While the package does not pack data as tightly as `strings.pack`, it saves you from having to construct and store a
   format string for subsequent unpacking.
 
   Use `binpack.pack` and `binpack.unpack` to serialise one or more arguments. Examples:
