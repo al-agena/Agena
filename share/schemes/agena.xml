@@ -1598,7 +1598,6 @@
       <KEYWORD3>binio.writechar</KEYWORD3>
       <KEYWORD3>binio.writeindex</KEYWORD3>
       <KEYWORD3>binio.writeint64</KEYWORD3>
-      <KEYWORD3>binio.writeline</KEYWORD3>
       <KEYWORD3>binio.writelong</KEYWORD3>
       <KEYWORD3>binio.writelongdouble</KEYWORD3>
       <KEYWORD3>binio.writenumber</KEYWORD3>
@@ -2132,6 +2131,7 @@
       <KEYWORD3>tar.lines</KEYWORD3>
       <KEYWORD3>tar.open</KEYWORD3>
       <KEYWORD3>numarray.append</KEYWORD3>
+      <KEYWORD3>numarray.assign</KEYWORD3>
       <KEYWORD3>numarray.attrib</KEYWORD3>
       <KEYWORD3>numarray.binsearch</KEYWORD3>
       <KEYWORD3>numarray.cdouble</KEYWORD3>

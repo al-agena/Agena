@@ -227,7 +227,6 @@ binio.writebytes
 binio.writechar
 binio.writeindex
 binio.writeint64
-binio.writeline
 binio.writelong
 binio.writenumber
 binio.writeobject
@@ -1040,6 +1039,7 @@ nothing
 notin
 null
 numarray.append
+numarray.assign
 numarray.attrib
 numarray.binsearch
 numarray.cdouble

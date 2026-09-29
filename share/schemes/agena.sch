@@ -175,7 +175,7 @@ object TPersHolder
             'binio,clearerror,close,eof,ferror,fgetpos,filepos,fsetpos,getieee,getieeedouble,getieeeexpo,getieeemahi,getieeemalo,getieeesign,' +
             'ieee,isatty,isfdesc,length,lines,open,readbytes,readchar,readchars,readindex,readint64,readlong,readlongdouble,readnumber,readobject,readshortstring,' +
             'readstring,readuint64,rewind,seek,setieee,setieeedouble,setieeeexpo,setieeemahi,setieeemalo,setieeesign,sync,toend,writebytes,writechar,' +
-            'writedouble,writeindex,writeint64,writeline,writelong,writelongdouble,writenumber,writeobject,writeshortstring,writestring,writeuint64'
+            'writedouble,writeindex,writeint64,writelong,writelongdouble,writenumber,writeobject,writeshortstring,writestring,writeuint64'
         end
         item
           FontID = 7
@@ -509,7 +509,7 @@ object TPersHolder
           FontID = 7
           Name = 'numarray'
           Keywords =
-            'numarray,append,attrib,binsearch,cdouble,celsius,checkarray,convert,countitems,cycle,double,fahren,find,floz,gallon,getbit,geti,' +
+            'numarray,append,assign,attrib,binsearch,cdouble,celsius,checkarray,convert,countitems,cycle,double,fahren,find,floz,gallon,getbit,geti,' +
             'getitem,getparts,getsize,gram,include,int32,int64,introsort,isall,isarray,iterate,km,litre,longdouble,map,member,mile,' +
             'minmax,new,one,ounce,prepend,purge,read,readcdoubles,readdoubles,readint64,readintegers,readlongdoubles,readuchars,' +
             'readuint32,readuint64,readushorts,redim,remove,replicate,resize,satisfy,select,setbit,seti,setitem,setparts,sort,sorted,' +
