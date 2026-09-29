@@ -1241,15 +1241,6 @@ binio.writeobject := proc(fd, values, option, flag) is
 end;
 
 
-# Writes one or more strings to the file denoted by its file handle filehandle, separated by newlines.
-
-binio.writeline := proc(fd :: userdata, ?) is  # 2.6.1, 7.10.1 fix
-   binio.isfdesc(fd) -? error('Error in `binio.writeline`: file handle is invalid.');  # changed 2.21.3
-   isall(?, string)  -? error('Error in `binio.writeline`: expected a string.');  # changed 3.15.4/4.6.2
-   return binio.writebytes(fd, strings.tobytes(strings.join(?)))
-end;
-
-
 # save an object to the given file denoted by fn (a string); 0.12.2, 26.10.2008
 
 binio.writetable := proc(o, fd) is  # 4.10.4
@@ -7935,48 +7926,38 @@ numarray.aux.readvalues := proc(fh, a, sizevalue, datatype, buffersize) is
    fi;
    offset := buffersize % sizevalue;
    if offset <> 0 then  # buffersize is not a multiple of sizeof(datatype) ?
-      buffersize +:= offset
+      buffersize := math.nextmultiple(buffersize, sizevalue)
    fi;
-   if datatype in {'uint64', 'int64'} then  # 6.3.5 extension
-      local buf, sbuf;
-      buf := numarray.readuint32(fh);
-      sbuf := size buf;
-      size a < sbuf\2 ? numarray.resize(a, sbuf\2);  # to make indexing work correctly
-      for i to sbuf - 1 by 2 do  # (u)int64's are stored in Little Endian order
-         a[d++] := ints.setwords(buf[i + 1], buf[i], datatype == 'int64')
-      od
-   else
-      local arraysize, flag, include := binio.length(fh)/sizevalue, true, numarray.include;  # 7.10.7 tweaks
-      do
-         r := binio.readchars(fh, buffersize);
-         if assigned r then
-            sizer := size r;
-            if sizer % sizevalue <> 0 then  # this does not seem to be a file with doubles
-               error('Error in `numarray.read' & datatype & 's`: file size is invalid.')
-            fi;
-            if flag then
-               numarray.resize(a, arraysize);  /* will simply return if array has final size already */
-               flag := false
-            fi;
-            case datatype
-               of 'uchar' then
-                  for i in r do
-                     a[d++] := abs(i)
-                  od
-                  #d +:= size r
-               of 'double', 'cdouble', 'int32', 'uint32', 'ushort', 'longdouble' then
+   local arraysize, flag, include := binio.length(fh)\sizevalue, true, numarray.include;  # 7.10.7 tweaks
+   numarray.resize(a, arraysize);  /* will simply return if array has final size already */
+   do
+      r := binio.readchars(fh, buffersize);
+      if assigned r then
+         sizer := size r;
+         if datatype <> 'longdouble' and sizer % sizevalue <> 0 then  # this does not seem to be a file with doubles
+            error('Error in `numarray.read' & datatype & 's`: file size is invalid.')
+         fi;
+         case datatype
+            of 'uchar', 'double', 'cdouble', 'int32', 'uint32', 'int64', 'uint64', 'ushort' then
+               numarray.assign(a, r, d);
+               d +:= buffersize\sizevalue;
+            of 'longdouble' then
+               if os.islinux() and environ.kernel('is64bit') then
                   for i to sizer by sizevalue do  # convert to number or long double ud, 2.14.9, 2.15.5 fix; 7.10.7 boost
-                     a[d++] := bytes.tonumber(r[i to i + sizevalue - 1])
-                  od;
+                     a[d++] := bytes.tonumber(r[i to i + sizevalue - 1], true)
+                  od
                else
-                  error('Error in `numarray.aux.readvalues`: unknown data type.')
-               esle
-            esac
-         else
-            break # loop
-         fi
-      od
-   fi;
+                  numarray.assign(a, r, d);
+                  d +:= buffersize\sizevalue
+               fi
+            else
+               error('Error in `numarray.aux.readvalues`: unknown data type.')
+            esle
+         esac
+      else
+         break  # loop
+      fi
+   od;
    return if d = 1 then null else a fi  # return array, or null if file size is zero
 end;
 
@@ -8029,15 +8010,15 @@ numarray.readlongdoubles := proc(fh :: userdata, buffersize) is  # 2.35.0
 end;
 
 
-numarray.readuint64 := proc(fh :: userdata, buffersize) is  # 5.3.5
+numarray.readuint64 := proc(fh :: userdata, buffersize) is  # 5.3.5, 7.10.8 fix
    return numarray.aux.readvalues(fh,
-      numarray.uint64(0), environ.system().Ctypes['uint32_t'], 'uint64', buffersize)
+      numarray.uint64(0), environ.system().Ctypes['uint64_t'], 'uint64', buffersize)
 end;
 
 
-numarray.readint64 := proc(fh :: userdata, buffersize) is  # 5.3.5
+numarray.readint64 := proc(fh :: userdata, buffersize) is  # 5.3.5, 7.10.8 fix
    return numarray.aux.readvalues(fh,
-      numarray.int64(0), environ.system().Ctypes['uint32_t'], 'int64', buffersize)
+      numarray.int64(0), environ.system().Ctypes['int64_t'], 'int64', buffersize)
 end;
 
 
