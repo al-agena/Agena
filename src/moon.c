@@ -13,11 +13,12 @@
  */
 
 #include <math.h>
+#include <stdbool.h>
 
 #include "agnhlps.h"
 #include "sofa.h"
 
-typedef enum { false, true } bool;
+/* typedef enum { false, true } bool; */
 
 static double Sky[3] = { 0.0, 0.0, 0.0 };
 static double Dec[3] = { 0.0, 0.0, 0.0 };

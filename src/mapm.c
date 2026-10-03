@@ -2447,18 +2447,18 @@ static int Cnumber (lua_State *L) {  /* mapm.cnumber(x, y) */
 /* mode = 1: one string, mode = 2 two strings (real and imaginary parts) */
 static int Ctostring (lua_State *L, int idx, int mode) {  /* tostring(x,[n,exp]) */
   char *s;
-  int n, bool;
+  int n, isbool;
   M_APM re, im;
   Cgetrealimag(L, idx, re, im);  /* 3.5.1 fix */
   if (idx < 0) {
-    n = DIGITS; bool = 0;
+    n = DIGITS; isbool = 0;
   } else {
     n = agnL_optinteger(L, idx + 1, DIGITS);
-    bool = lua_toboolean(L, idx + 2);
+    isbool = lua_toboolean(L, idx + 2);
   }
   luaL_checkstack(L, mode == 1 ? 4 : 2, "not enough stack space");  /* 3.5.3 fix */
   /* real part */
-  if (bool) {
+  if (isbool) {
     int m = (n < 0) ? m_apm_significant_digits(re) : n;
     s = malloc((m + 16)*sizeof(char));
     if (s != NULL) {
@@ -2472,7 +2472,7 @@ static int Ctostring (lua_State *L, int idx, int mode) {  /* tostring(x,[n,exp])
   xfree(s);
   /* imaginary part */
   if (mode == 1) lua_pushstring(L, (m_apm_compare(im, MM_Zero) < 0) ? "" : "+");  /* 3.5.2 fix for negative imags */
-  if (bool) {
+  if (isbool) {
     int m = (n < 0) ? m_apm_significant_digits(im) : n;
     s = malloc((m + 16)*sizeof(char));
     if (s != NULL) {

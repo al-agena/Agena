@@ -7,6 +7,7 @@
 
 #include <limits.h>
 #include <stddef.h>  /* for size_t */
+#include <stdint.h>
 
 #if (defined (__SVR4) && defined (__sun))
 #define __SOLARIS
@@ -68,12 +69,23 @@
 #endif
 
 /* 32 or 64 bit ?  2.25.5 */
-#if LONG_MAX == 2147483647L
+/*#if LONG_MAX == 2147483647L
 #define IS32BIT
 #elif LONG_MAX == 9223372036854775807L
 #define IS64BIT
 #else
 #error long int is not a 32bit or 64bit type
+#endif*/
+
+#if defined(UINTPTR_MAX) && UINTPTR_MAX == 0xffffffffffffffffULL
+  #define IS64BIT
+#elif defined(UINTPTR_MAX) && UINTPTR_MAX == 0xffffffff
+  #define IS32BIT
+#elif defined(__x86_64__) || defined(__LP64__) || defined(_WIN64)
+  /* fallback for very old compilers */
+  #define IS64BIT
+#else
+  #define IS32BIT
 #endif
 
 /* There are functions defined in agnhlps.c that perform vectorized reading which is very fast but unsafe
@@ -121,6 +133,10 @@
 #else
 /* handle other/unknown sizes */
 #define SIZE_T_BITS 0
+#endif
+
+#ifdef _WIN64
+#define IS64BIT
 #endif
 
 #endif

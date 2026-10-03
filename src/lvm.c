@@ -2144,8 +2144,6 @@ LUAI_FUNC void agenaV_union (lua_State *L, const TValue *tbl1, const TValue *tbl
     const TValue *tm;
     LNode *val;
     int i;
-    unsigned int c;
-    c = 0;
     t1 = usvalue(tbl1);
     t2 = usvalue(tbl2);
     if ((tm = fasttm(L, t1->metatable, TM_UNION)) != NULL ||
@@ -2161,7 +2159,6 @@ LUAI_FUNC void agenaV_union (lua_State *L, const TValue *tbl1, const TValue *tbl
     for (i=0; i < sizenode(t1); i++) {  /* added 0.8.0 */
       val = gnode(t1, i);
       if (ttisnotnil(glkey(val))) {
-        c++;
         v = key2tval(val);
         agnUS_set(L, newtable, v);
         luaC_barrierset(L, newtable, v);  /* Agena 1.2 fix */
@@ -2171,7 +2168,6 @@ LUAI_FUNC void agenaV_union (lua_State *L, const TValue *tbl1, const TValue *tbl
     for (i=0; i < sizenode(t2); i++) {  /* added 0.8.0 */
       val = gnode(t2, i);
       if (ttisnotnil(glkey(val))) {
-        c++;
         v = key2tval(val);
         agnUS_set(L, newtable, v);
         luaC_barrierset(L, newtable, v);  /* Agena 1.2 fix */
@@ -2294,8 +2290,6 @@ LUAI_FUNC void agenaV_union (lua_State *L, const TValue *tbl1, const TValue *tbl
     const TValue *tm;
     LNode *val;
     int i;
-    unsigned int c;
-    c = 0;
     t1 = (ttisuset(tbl1)) ? usvalue(tbl1) : usvalue(tbl2);
     if ((tm = fasttm(L, t1->metatable, TM_UNION)) != NULL) {
       if (ttisfunction(tm)) {
@@ -2309,7 +2303,6 @@ LUAI_FUNC void agenaV_union (lua_State *L, const TValue *tbl1, const TValue *tbl
     for (i=0; i < sizenode(t1); i++) {
       val = gnode(t1, i);
       if (ttisnotnil(glkey(val))) {
-        c++;
         v = key2tval(val);
         agnUS_set(L, newtable, v);
         luaC_barrierset(L, newtable, v);

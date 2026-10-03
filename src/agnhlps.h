@@ -428,16 +428,23 @@ LUALIB_API char *tools_mkdtemp  (char *templ);
 /* NONULL masks with the exception of ISNULL derived from:
    https://codereview.stackexchange.com/questions/231845/fast-strlen-in-c-using-scalar-bithacks,
    user S.S. Anne; the MUSL versions are not faster */
-#ifdef IS32BIT
+#if defined(_WIN64) || defined(__MINGW64__)
+  #include <stdint.h>
+  #define NOT_HIGH_MASK   0x8080808080808080ULL
+  #define HIGH_MASK       0x7f7f7f7f7f7f7f7fULL
+  #define LOW_MASK        0x0101010101010101ULL
+  #define BLOCK_T         uintptr_t
+
+#elif defined(IS32BIT)
   #define NOT_HIGH_MASK   0x80808080
   #define HIGH_MASK       0x7f7f7f7f
   #define LOW_MASK        0x01010101
   #define BLOCK_T         uint32_t
 #elif defined(IS64BIT)
-  #define NOT_HIGH_MASK   0x8080808080808080
-  #define HIGH_MASK       0x7f7f7f7f7f7f7f7f
-  #define LOW_MASK        0x0101010101010101
-  #define BLOCK_T         uint64_t
+  #define NOT_HIGH_MASK   0x8080808080808080ULL
+  #define HIGH_MASK       0x7f7f7f7f7f7f7f7fULL
+  #define LOW_MASK        0x0101010101010101ULL
+  #define BLOCK_T         uintptr_t
 #else
   #error long int is not a 32bit or 64bit type
   #define ISNULL(x)       (0)

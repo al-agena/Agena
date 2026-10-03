@@ -34,16 +34,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifndef HAVE_STDLIB_H
-#  define HAVE_STDLIB_H 1
-#endif
-#ifndef HAVE_STRING_H
-#  define HAVE_STRING_H 1
-#endif
-#ifndef HAVE_MEMORY_H
-#  define HAVE_MEMORY_H 1
-#endif
-
 #ifndef PROJECT_VERSION_FULL
 #  define PROJECT_VERSION_FULL "2.0.1"
 #endif
@@ -170,7 +160,7 @@ extern "C" {
 #  define SS_MISORT_STACKSIZE (64)
 # endif
 #elif SS_BLOCKSIZE <= 4096
-# define SS_MISORT_STACKSIZE (16)
+# define SS_MISORT_STACKSIZE (64)  /* 7.10.9 win64-bit fix: leave this as it is */
 #else
 # define SS_MISORT_STACKSIZE (24)
 #endif

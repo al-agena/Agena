@@ -28,6 +28,8 @@
 #ifndef socklen_t
 #ifdef __APPLE__
 #define socklen_t unsigned int
+#elif defined(_WIN64) || defined(__MINGW64__)
+#define socklen_t size_t  /* 7.10.9 Windows 64-bit change */
 #else
 #define socklen_t int
 #endif

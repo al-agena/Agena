@@ -1410,11 +1410,33 @@ LUALIB_API int tools_eof (FILE *f) {
 /* Returns 1 if writable, 0 if not, -1 on error; created by Gemini AI, 7.3.3 */
 LUALIB_API int tools_writable (FILE *fp) {
     if (fp == NULL) return -1;
-#if defined(_WIN32) || defined(__MSVCRT__)
   /* * In MinGW/MSVC, we check the internal _flag.
    * Note: This assumes standard MSVCRT behavior.
    */
-  return (fp->_flag & (_IOWRT | _IORW)) ? 1 : 0;
+
+#if defined(_WIN32) || defined(__MSVCRT__)
+
+  /* Safe runtime evaluation approach for Opaque FILE tracking (Modern MSYS2 UCRT)
+     If the internal structural definitions are hidden, we inspect the descriptor state. */
+  #if defined(_UCRT) || defined(__stdcall) && !defined(_IOWRT)
+    int fd = fileno(fp);
+    if (fd == -1) return -1;
+
+    /* Safely check the handle via the Windows API */
+    HANDLE h = (HANDLE)_get_osfhandle(fd);
+    if (h == INVALID_HANDLE_VALUE) return -1;
+
+    DWORD flags;
+    if (GetHandleInformation(h, &flags)) {
+        return 1; /* Valid stream handle */
+    }
+    return 0;
+  #else
+    /* Legacy MinGW fallback block: original internal structural check */
+    return (fp->_flag & (_IOWRT | _IORW)) ? 1 : 0;
+  #endif
+
+  /* return (fp->_flag & (_IOWRT | _IORW)) ? 1 : 0; */
 #else
   /* POSIX Implementation */
   int fd = fileno(fp);
@@ -5136,11 +5158,39 @@ on April 08, 2009 - 0.13.4; updated 1.7.9, 07.09.2012. */
 #ifdef _WIN32
 /* for Windows 7 or later, https://stackoverflow.com/questions/32115255/c-how-to-detect-windows-10, posted by Michael Haephrati;
    returns 6 for Windows 8.1, but 10 for Windows 10. */
+#ifdef ZZZ
 LUALIB_API int getSysOpType (int *minorVersion, int *BuildNumber, int *PlatformId, int *ProductType, double *winver, uint8_t *SPmaj, uint8_t *SPmin) {
   int ret = 0;
   NTSTATUS(WINAPI *RtlGetVersion)(LPOSVERSIONINFOEXW);
   OSVERSIONINFOEXW osInfo = {0};  /* 7.7.11 invalid read fix */
   *(FARPROC*)&RtlGetVersion = GetProcAddress(GetModuleHandleA("ntdll"), "RtlGetVersion");
+  *minorVersion = *BuildNumber = *PlatformId = *ProductType = *SPmaj = *SPmin = -1;
+  if (RtlGetVersion != NULL) {
+    osInfo.dwOSVersionInfoSize = sizeof(osInfo);
+    RtlGetVersion(&osInfo);
+    ret = osInfo.dwMajorVersion;
+    *minorVersion = osInfo.dwMinorVersion;
+    *BuildNumber  = osInfo.dwBuildNumber;
+    *PlatformId   = osInfo.dwPlatformId;
+    *ProductType  = osInfo.wProductType;
+    *SPmaj        = osInfo.wServicePackMajor;
+    *SPmin        = osInfo.wServicePackMinor;
+    *winver       = ret + 0.1*(*minorVersion);
+    if (*winver == 10 && *BuildNumber >= 22000) *winver = 11;  /* 2.39.1 */
+  } else
+    *winver = 0.0;
+  return ret;
+}
+#endif
+
+LUALIB_API int getSysOpType (int *minorVersion, int *BuildNumber, int *PlatformId, int *ProductType, double *winver, uint8_t *SPmaj, uint8_t *SPmin) {
+  int ret = 0;
+  /* 1. Define a local type signature for the function pointer */
+  typedef NTSTATUS (WINAPI *RtlGetVersionFn)(LPOSVERSIONINFOEXW);
+  RtlGetVersionFn RtlGetVersion;
+  OSVERSIONINFOEXW osInfo = {0};  /* 7.7.11 invalid read fix */
+  /* 2. Cast the output directly to the function pointer type without changing pointer addresses */
+  RtlGetVersion = (RtlGetVersionFn)GetProcAddress(GetModuleHandleA("ntdll"), "RtlGetVersion");
   *minorVersion = *BuildNumber = *PlatformId = *ProductType = *SPmaj = *SPmin = -1;
   if (RtlGetVersion != NULL) {
     osInfo.dwOSVersionInfoSize = sizeof(osInfo);
@@ -12033,7 +12083,7 @@ LUALIB_API double sun_hypot2 (double y) {  /* 2.14.13, sqrt(1 + x^2), 44 % faste
 
 LUALIB_API double sun_hypot3 (double y) {  /* 2.14.13, sqrt(1 - x^2) */
   double a, b, t1, t2, w;
-  int32_t k, ha, hb;
+  int32_t ha, hb;
   uint32_t lb;
   ha = 0x3ff00000;
   EXTRACT_WORDS(hb, lb, y);
@@ -12041,7 +12091,6 @@ LUALIB_API double sun_hypot3 (double y) {  /* 2.14.13, sqrt(1 - x^2) */
   if ((hb | ((lb | (-lb)) >> 31)) > 0x3ff00000) return AGN_NAN;  /* |x| > 1 */
   if (hb > ha) { a = fabs(y); b = 1; ha = hb; } else { a = 1; b = fabs(y); }
   if ((ha - hb) > 0x3c00000) return a + b;  /* x/y > 2**60 */
-  k = 0;
   if (l_unlikely(ha > 0x5f300000)) {     /* a>2**500, 2.5.15 optimisation */
     if (ha >= 0x7ff00000) {  /* Inf or NaN */
       uint32_t low;
@@ -12054,7 +12103,7 @@ LUALIB_API double sun_hypot3 (double y) {  /* 2.14.13, sqrt(1 - x^2) */
         return w;
     }
     /* scale a and b by 2**-600 */
-    ha -= 0x25800000; hb -= 0x25800000; k += 600;
+    ha -= 0x25800000; hb -= 0x25800000;
     SET_HIGH_WORD(a, ha);
     SET_HIGH_WORD(b, hb);
   }
@@ -12067,11 +12116,9 @@ LUALIB_API double sun_hypot3 (double y) {  /* 2.14.13, sqrt(1 - x^2) */
       SET_HIGH_WORD(t1, 0x7fd00000);  /* t1=2^1022 */
       b *= t1;
       a *= t1;
-      k -= 1022;
     } else {             /* scale a and b by 2^600 */
       ha += 0x25800000;  /* a *= 2^600 */
       hb += 0x25800000;  /* b *= 2^600 */
-      k -= 600;
       SET_HIGH_WORD(a, ha);
       SET_HIGH_WORD(b, hb);
     }
@@ -22728,6 +22775,7 @@ LUALIB_API uint32_t tools_strtouint32 (const char *src, size_t l, int *rc, uint3
 
 /* Converts a string src of length l to an array of uint32_t's; automatically word-aligns src. chunks
    is the number of word-aligned 4/8-byte chunks allocated. */
+
 #ifdef IS32BIT
 LUALIB_API uint32_t *tools_strtouint32s (const char *src, size_t l, size_t *chunks, int tobigendian) {  /* 2.17.2 */
   size_t c;

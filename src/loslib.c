@@ -3201,7 +3201,7 @@ static int os_getmac (lua_State *L) {  /* 2.39.3 */
           pAdapterInfo->Address[0], pAdapterInfo->Address[1],
           pAdapterInfo->Address[2], pAdapterInfo->Address[3],
           pAdapterInfo->Address[4], pAdapterInfo->Address[5]);
-        if (pAdapterInfo->IpAddressList.IpAddress.String &&  /* 7.5.15 security fix */
+        if (pAdapterInfo->IpAddressList.IpAddress.String[0] != '\0' &&  /* 7.5.15 security fix, 7.10.9 msys2 adaption */
             tools_streq(ip, pAdapterInfo->IpAddressList.IpAddress.String)) {
           lua_pushstring(L, mac_addr);
           rc = 1;
@@ -4050,7 +4050,8 @@ static char *findfsentry (long number) {
 #endif
 
 #ifdef _WIN32
-#ifndef NTFS_EXTENDED_VOLUME_DATA
+/* #ifndef NTFS_EXTENDED_VOLUME_DATA */
+#ifndef _WINIOCTL_
 typedef struct {
   ULONG ByteCount;
   USHORT MajorVersion;
@@ -7593,6 +7594,7 @@ static int os_sdlcpuinfo (lua_State *L) {  /* 5.5.9, UNDOC */
  * of the program was compiled to use SSE floating-point, but we can't
  * use SSE on older processors.
  */
+#ifdef ZZZ
 #if ((LONG_MAX == 2147483647L) && !defined(__APPLE__)) && ((defined(__i386__) || defined(__x86_64__)) && defined(__GNUC__) )
 
 #define getfl(x)    __asm volatile(".code32\npushfl\n\tpopl %0" : "=mr" (*(x)))
@@ -7625,6 +7627,64 @@ static int os_hassse (lua_State *L) {  /* 2.14.13 */
   return 2;
 }
 #endif
+#endif
+
+
+
+#if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
+
+#if defined(__x86_64__) || defined(_M_X64)
+/* Pure 64-bit macros using 64-bit variables */
+#define getfl(x)    __asm volatile("pushfq\n\tpopq %0" : "=r" (*(x)))
+#define setfl(x)    __asm volatile("pushq %0\n\tpopfq" : : "r" (x))
+#define cpuid_dx(x) __asm volatile("pushq %%rbx\n\tmovl $1, %%eax\n\t"  \
+                    "cpuid\n\tpopq %%rbx"          \
+                    : "=d" (*(x)) : : "eax", "ecx")
+#else
+/* Pure 32-bit macros using 32-bit variables */
+#define getfl(x)    __asm volatile("pushfl\n\tpopl %0" : "=r" (*(x)))
+#define setfl(x)    __asm volatile("pushl %0\n\tpopfl" : : "r" (x))
+#define cpuid_dx(x) __asm volatile("pushl %%ebx\n\tmovl $1, %%eax\n\t"  \
+                    "cpuid\n\tpopl %%ebx"          \
+                    : "=d" (*(x)) : : "eax", "ecx")
+#endif
+
+static int issse (uint32_t *dx) {
+  int dx_features;
+  *dx = -1;
+
+#if defined(__x86_64__) || defined(_M_X64)
+  /* 64-bit path: Must use 64-bit 'long long' for flags */
+  long long flag, nflag;
+  getfl(&flag);
+  nflag = flag ^ 0x200000LL;
+  setfl(nflag);
+  getfl(&nflag);
+#else
+  /* 32-bit path: Use standard 32-bit 'long' for flags */
+  long flag, nflag;
+  getfl(&flag);
+  nflag = flag ^ 0x200000L;
+  setfl(nflag);
+  getfl(&nflag);
+#endif
+
+  if (flag != nflag) {
+    cpuid_dx(&dx_features);
+    *dx = (uint32_t)dx_features;
+    if (dx_features & 0x2000000) return 1; /* SSE bit 25 */
+  }
+  return 0;
+}
+
+static int os_hassse (lua_State *L) {
+  uint32_t dx;
+  lua_pushboolean(L, issse(&dx));
+  lua_pushnumber(L, dx);
+  return 2;
+}
+#endif
+
 
 /*
 * lalarm.c
@@ -9666,6 +9726,7 @@ static int os_getcommandline (lua_State *L) {
   } else {  /* fallback */
     Charbuf buf;
     int i, local_argc = 0;
+    EXTERN_C LPWSTR* WINAPI CommandLineToArgvW(LPCWSTR lpCmdLine, int* pNumArgs);
     /* 1. Use the Windows shell API to cleanly parse the string into a wide argument array */
     LPWSTR *w_argv = CommandLineToArgvW(GetCommandLineW(), &local_argc);
     if (w_argv != NULL) {

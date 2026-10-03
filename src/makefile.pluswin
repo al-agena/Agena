@@ -11,8 +11,9 @@ LIB_DIR = ../lib
 
 # --- Flag Definitions ---
 # -Wtype-limits prints warnings about futile comparisons
-BASE_FLAGS = -pipe -fgnu89-inline -Wtype-limits -Wno-attributes -fno-omit-frame-pointer $(SSE_FLAGS)
-OFFS = -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast
+#BASE_FLAGS = -pipe -fgnu89-inline -Wtype-limits -Wno-attributes -fno-omit-frame-pointer $(SSE_FLAGS)
+BASE_FLAGS = -pipe -fgnu89-inline -Wtype-limits -Wno-attributes -fno-omit-frame-pointer
+OFFS = -Wint-to-pointer-cast -Wpointer-to-int-cast
 
 # Conditional flags configuration based on build type
 ifdef DEBUG_BUILD
@@ -28,6 +29,17 @@ else
   STRIP        = strip --strip-unneeded
 endif
 
+ifeq ($(MSYSTEM),UCRT64)
+  ASTRO_FLOAT_FLAGS = 
+else ifeq ($(MSYSTEM),MINGW64)
+  ASTRO_FLOAT_FLAGS = 
+else ifdef IS64BIT
+  ASTRO_FLOAT_FLAGS = 
+else
+  # Legacy 32-bit target falls back to strict 64-bit float emulation capping
+  ASTRO_FLOAT_FLAGS = -ffloat-store
+endif
+
 # Composite flags injected into rules
 COMMON_FLAGS = $(OPT_FLAGS) $(BASE_FLAGS)
 CFLAGS_DLL   = $(COMMON_FLAGS) $(LINK_G_FLAG) -I. -shared -Wl,--gc-sections
@@ -35,6 +47,41 @@ CFLAGS_OBJ   = $(COMMON_FLAGS) -c -DLUA_BUILD_AS_DLL -fcommon -Wno-inline
 DD_FLAGS     = -ffloat-store -fno-unsafe-math-optimizations -fno-associative-math -fno-builtin
 
 AG_LIBS = -L. -lagena
+
+ifeq ($(MSYSTEM),UCRT64)
+  NCURSES_INCDIR = -I/ucrt64/include/ncurses
+else ifeq ($(MSYSTEM),MINGW64)
+  NCURSES_INCDIR = -I/mingw64/include/ncurses
+else ifdef IS64BIT
+  NCURSES_INCDIR = -I/ucrt64/include/ncurses
+else
+  # Legacy 32-bit baseline (leaves include pointers clean or root-bound)
+  NCURSES_INCDIR = 
+endif
+
+# If compiling in a 64-bit MSYS2 shell, use the wide/dynamic library name.
+# Otherwise, fall back to the standard library name for legacy 32-bit toolchains.
+ifeq ($(MSYSTEM),UCRT64)
+  CURSES_LIB = -lncursesw
+else ifeq ($(MSYSTEM),MINGW64)
+  CURSES_LIB = -lncursesw
+else ifdef IS64BIT
+  CURSES_LIB = -lncursesw
+else
+  CURSES_LIB = -lncurses
+endif
+
+ifeq ($(MSYSTEM),UCRT64)
+  # Verweist direkt und absolut manipulationssicher auf die statische 64-Bit-Datei
+  MAPM_LINK = ../ports/mapm_4.9.5/libmapm.a
+else ifeq ($(MSYSTEM),MINGW64)
+  MAPM_LINK = ../ports/mapm_4.9.5/libmapm.a
+else ifdef IS64BIT
+  MAPM_LINK = ../ports/mapm_4.9.5/libmapm.a
+else
+  # Dein originales 32-Bit-Legacy-System bleibt vollkommen unangetastet
+  MAPM_LINK = -lmapm
+endif
 
 # --- Target Lists ---
 DLLS = abci.dll ads.dll astro.dll com.dll cordic.dll curses.dll ddhash.dll \
@@ -64,7 +111,8 @@ ads.dll: ads.o vecoff64.o
 
 astro.dll: astro.o agnt64.o sofa.o sdncal.o moon.o sunriset.o dcastro.o
 	@rm -f $@
-	$(CC) $(CFLAGS_DLL) -shared -static-libgcc -fpic -o $@ $^ $(AG_LIBS) -lkernel32
+#	$(CC) $(CFLAGS_DLL) -shared -static-libgcc -fpic -o $@ $^ $(AG_LIBS) -lkernel32
+	$(CC) $(CFLAGS_DLL) -shared -static-libgcc -fPIC -o $@ $^ $(AG_LIBS) -lkernel32
 	$(STRIP) $@
 	@mv -f $@ $(LIB_DIR)
 
@@ -82,7 +130,8 @@ cordic.dll: cordic.o
 
 curses.dll: curses.o
 	@rm -f $@
-	$(CC) $(CFLAGS_DLL) -o $@ $< -lncurses $(AG_LIBS)
+#	$(CC) $(CFLAGS_DLL) -o $@ $< -lncurses $(AG_LIBS)
+	$(CC) $(CFLAGS_DLL) -DNCURSES_DLL -o $@ $< $(CURSES_LIB) $(AG_LIBS)
 	$(STRIP) $@
 	@mv -f $@ $(LIB_DIR)
 
@@ -136,7 +185,7 @@ ival.dll: ival.o
 
 mapm.dll: mapm.c
 	@rm -f mapm.tmp
-	$(CC) $(CFLAGS_DLL) -o mapm.tmp $< -lmapm $(AG_LIBS)
+	$(CC) $(CFLAGS_DLL) -o mapm.tmp $< $(MAPM_LINK) $(AG_LIBS)
 	$(STRIP) mapm.tmp
 	@rm -f $@
 	@mv -f mapm.tmp $(LIB_DIR)/$@
@@ -149,7 +198,7 @@ minizip.dll: minizip.c miniz.o
 
 mpfr.dll: mpfr.c
 	@rm -f $@.tmp
-	$(CC) $(CFLAGS_DLL) -o $@.tmp $< -lmpfr -lgmp $(AG_LIBS)
+	$(CC) $(CFLAGS_DLL) -I../ports/mpfr-4.2.2/src -o $@.tmp $< -lmpfr -lgmp $(AG_LIBS)
 	$(STRIP) $@.tmp
 	@mv -f $@.tmp $(LIB_DIR)/$@
 
@@ -198,13 +247,13 @@ agnt64.o: agnt64.c
 	$(CC) $(CFLAGS_OBJ) -o $@ $<
 
 sofa.o: sofa.c
-	$(CC) $(CFLAGS_OBJ) -o $@ $<
+	$(CC) $(CFLAGS_OBJ) $(ASTRO_FLOAT_FLAGS) -o $@ $<
 
 sdncal.o: sdncal.c
 	$(CC) $(CFLAGS_OBJ) -o $@ $<
 
 ival.o: ival.c
-	$(CC) $(CFLAGS_OBJ) -o $@ $<
+	$(CC) $(CFLAGS_OBJ) -I../ports/ival/src -o $@ $<
 
 vecoff64.o: vecoff64.c
 	$(CC) $(CFLAGS_OBJ) -o $@ $<
@@ -213,13 +262,13 @@ ads.o: ads.c
 	$(CC) $(OFFS) $(CFLAGS_OBJ) -o $@ $<
 
 sunriset.o: sunriset.c
-	$(CC) $(CFLAGS_OBJ) -o $@ $<
+	$(CC) $(CFLAGS_OBJ) $(ASTRO_FLOAT_FLAGS) -o $@ $<
 
 moon.o: moon.c
-	$(CC) $(CFLAGS_OBJ) -o $@ $<
+	$(CC) $(CFLAGS_OBJ) $(ASTRO_FLOAT_FLAGS) -o $@ $<
 
 astro.o: astro.c
-	$(CC) $(CFLAGS_OBJ) -o $@ $<
+	$(CC) $(CFLAGS_OBJ) $(ASTRO_FLOAT_FLAGS) -o $@ $<
 
 miniz.o: miniz.c
 	$(CC) $(CFLAGS_OBJ) -o $@ $<
@@ -231,10 +280,10 @@ net.o: net.c
 	$(CC) $(CFLAGS_OBJ) -o $@ $<
 
 curses.o: curses.c
-	$(CC) $(COMMON_FLAGS) -DLUA_BUILD_AS_DLL -DHAVE_NCURSES_H -c -o $@ $<
+	$(CC) $(COMMON_FLAGS) $(NCURSES_INCDIR) -DNCURSES_DLL -DLUA_BUILD_AS_DLL -DHAVE_NCURSES_H -c -o $@ $<
 
 dcastro.o: dcastro.c
-	$(CC) $(CFLAGS_OBJ) -fno-fast-math -o $@ $<
+	$(CC) $(CFLAGS_OBJ) -fno-fast-math $(ASTRO_FLOAT_FLAGS) -o $@ $<
 
 # --- Targeted Clean ---
 clean:

@@ -458,6 +458,13 @@ static void cleanup () {
   }
 }
 
+/* 7.10.9 Windows 64-bit fix */
+static void signal_cleanup (int sig) {
+  (void)sig; 
+  cleanup();
+}
+
+
 static int lc_initscr (lua_State *L) {
   WINDOW *w;
   /* initialize curses */
@@ -478,7 +485,8 @@ static int lc_initscr (lua_State *L) {
   register_curses_constants(L);
   /* install cleanup handler to help in debugging and screen trashing */
   atexit(cleanup);
-  signal(SIGTERM, cleanup);  /* for CTRL+C, added 4.7.5 */
+  /* signal(SIGTERM, cleanup); */ /* for CTRL+C, added 4.7.5 */
+  signal(SIGTERM, signal_cleanup);
   return 1;
 }
 

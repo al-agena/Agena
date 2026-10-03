@@ -1165,7 +1165,11 @@ static int net_listen (lua_State *L) {
 static int net_accept (lua_State *L) {
   int blocking, keepalive, server, nargs;
   AGN_FAMILY family;
+#ifndef _WIN64
   socklen_t len;
+#else
+  int len;
+#endif
   STATUS *s;
   AGN_SOCKET sock, fd;
   AGN_PORT port, dummyport;
@@ -2022,7 +2026,11 @@ static int net_gethostname (lua_State *L) {
 static int net_address (lua_State *L) {
   int err;
   struct sockaddr_storage peer;
+#ifndef _WIN64
   socklen_t peer_len = sizeof(peer);
+#else
+  int peer_len = sizeof(peer);
+#endif
   char name[INET6_ADDRSTRLEN];
   char port[6];  /* 65535 = 5 bytes + \0 to terminate it */
   AGN_SOCKET sock;
@@ -2084,7 +2092,11 @@ static int net_remoteaddress (lua_State *L) {
   AGN_SOCKET sock;
   int err;
   struct sockaddr_storage peer;
+#ifndef _WIN64
   socklen_t peer_len = sizeof(peer);
+#else
+  int peer_len = sizeof(peer);
+#endif
   char name[INET6_ADDRSTRLEN];
   char port[6]; /* 65535 = 5 bytes + 0 to terminate it */
   sock = luaL_checkinteger(L, 1);

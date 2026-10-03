@@ -16,6 +16,8 @@
 PLAT= none
 
 CC= gcc
+export CC
+
 # -Wtype-limits is great to check for signed values compared to unsigned ones, -Wextra will be very verbose ...
 # CFLAGS= -Wall -Wtype-limits -Wno-unknown-pragmas $(MYCFLAGS)
 CFLAGS= -Wall -Wno-unknown-pragmas $(MYCFLAGS)
@@ -32,7 +34,7 @@ MYLDFLAGS=
 MYLIBS= -lz -lexpat -lmpfr -lpcre2-posix -lpcre2-8
 
 WINSYSLIBS= -lole32 -luuid -lgdi32 -lpowrprof -lnetapi32 -lkernel32 -lpsapi \
-            -lversion -lsetupapi -liphlpapi -lmpr -lws2_32 -lmswsock -lm
+            -lversion -lsetupapi -liphlpapi -lmpr -lws2_32 -lmswsock -lm -lshell32
 
 SOLSYSLIBS= -lm -lc -lreadline -lcurses -lkstat -lsocket -lnsl \
             -lpcre2-posix -lpcre2-8 -lz -lexpat -liconv -lrt \
@@ -51,7 +53,7 @@ DDMATHFLAGS= -fno-builtin -ffloat-store -fno-unsafe-math-optimizations
 
 # == END OF USER SETTINGS. NO NEED TO CHANGE ANYTHING BELOW THIS LINE =========
 
-PLATS= ansi Darwin generic linux macos macosx mingw mingwsse posix stretch raspi solaris
+PLATS= ansi Darwin generic linux macos macosx mingw mingwsse msys64 posix stretch raspi solaris
 
 LUA_A= libagena.a
 
@@ -193,10 +195,11 @@ Darwin macos macosx:
 		-framework CoreFoundation" \
 	MYLDFLAGS="-Wl,-force_cpusubtype_ALL -mmacosx-version-min=10.4"
 
-mingw:
+mingwold:
 	windres agena.rc -O coff -o agena.res
 	windres -I .. run.rc -O coff -o run.res
 	$(MAKE) "WINLUA_A=agena.dll" "WINLUA_T=agena.exe" \
+	"CC=$(CC)" \
 	"AR=$(CC) -shared -static-libgcc -o" \
 	"RANLIB=strip --strip-unneeded" \
 	"MYCFLAGS=-O3 -Wall -Wno-attributes -Wno-deprecated-declarations -fgnu89-inline \
@@ -205,6 +208,47 @@ mingw:
 	"LIBS=$(MYLIBS) $(WINSYSLIBS)" \
 	"MYLDFLAGS=-s -Wl,--large-address-aware" agena.exe
 	$(CC) -mwindows -static -static-libgcc -o run.exe -s -Wl,--large-address-aware run.c run.res
+
+check-memory: agena.exe
+	@# If it is a 32-bit machine, verify it has the 0x032f or 0x0020 flag active
+	@if objdump -p agena.exe | grep -q "32bit machine" && ! objdump -p agena.exe | grep -q "Characteristics 0x32f"; then \
+		echo "CRITICAL ERROR: agena.exe was built without Extended RAM support!"; \
+		rm -f agena.exe; \
+		exit 1; \
+	else \
+		echo "SUCCESS: agena.exe memory safety validation passed."; \
+	fi
+
+mingw:
+	windres agena.rc -O coff -o agena.res
+	windres -I .. run.rc -O coff -o run.res
+	$(MAKE) "WINLUA_A=agena.dll" "WINLUA_T=agena.exe" \
+	"CC=$(CC)" \
+	"AR=$(CC) -shared -static-libgcc -o" \
+	"RANLIB=strip --strip-unneeded" \
+	"MYCFLAGS=-O3 -Wall -Wno-attributes -Wno-deprecated-declarations -fgnu89-inline \
+		-DWIN32_LEAN_AND_MEAN -DLUA_BUILD_AS_DLL -D_FILE_OFFSET_BITS=64 -DPCRE2_CODE_UNIT_WIDTH=8" \
+	"MYLIBS=$(MYLIBS) agena.res" \
+	"LIBS=$(MYLIBS) $(WINSYSLIBS) -lshell32" \
+	"MYLDFLAGS=-s -Wl,--large-address-aware" agena.exe
+	$(CC) -mwindows -static -static-libgcc -o run.exe -s -Wl,--large-address-aware run.c run.res
+	$(MAKE) check-memory
+
+
+msys64:
+	windres agena.rc -O coff -o agena.res
+	windres -I .. run.rc -O coff -o run.res
+	$(MAKE) "WINLUA_A=agena.dll" "WINLUA_T=agena.exe" \
+	"CC=$(CC)" \
+	"AR=$(CC) -shared -static-libgcc -o" \
+	"RANLIB=strip --strip-unneeded" \
+	"MYCFLAGS=-O3 -Wall -Wno-attributes -Wno-deprecated-declarations -Wno-array-bounds -fgnu89-inline \
+		-DWIN32_LEAN_AND_MEAN -D_WIN64 -DLUA_BUILD_AS_DLL -D_FILE_OFFSET_BITS=64 -DPCRE2_CODE_UNIT_WIDTH=8" \
+	"MYLIBS=$(MYLIBS) agena.res" \
+	"LIBS=$(MYLIBS) $(WINSYSLIBS) -lshell32" \
+	"MYLDFLAGS=-s" agena.exe
+	$(CC) -mwindows -static -static-libgcc -o run.exe -s run.c run.res
+
 
 # Run this for analysis with Dr. Memory only. Change back to make mingw before deploying.
 drmem:
