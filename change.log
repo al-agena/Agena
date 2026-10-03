@@ -1,3 +1,9 @@
+7.10.8 Enceladus, October 02, 2026
+
+- The first working 64-Bit Windows edition of Agena has been uploaded. See the SourceForge Binaries/Agena 7.8.10 folder,
+  file agena-7.10.8-win64-portable.7z. The edition works on Windows 10 and 11 only.
+
+
 7.10.8 Enceladus, September 30, 2026
 
 - New `numarray.assign` allocates all numbers represented in a binary string to a numarray.
