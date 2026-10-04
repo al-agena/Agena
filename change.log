@@ -1,7 +1,8 @@
 7.10.8 Enceladus, October 02, 2026
 
-- The first working 64-Bit Windows edition of Agena has been uploaded. See the SourceForge Binaries/Agena 7.8.10 folder,
-  file agena-7.10.8-win64-portable.7z. The edition works on Windows 10 and 11 only.
+- The first working 64-Bit Windows edition of Agena has been uploaded. See the SourceForge Binaries/Agena 7.10.8 folder,
+  file agena-7.10.8-win64-portable.7z. The edition works fully on Windows 10 and 11. It also runs on Windows 8.1 but you
+  cannot use the `gdi` and `fractals` packages there.
 
 
 7.10.8 Enceladus, September 30, 2026
