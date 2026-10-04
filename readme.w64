@@ -1,0 +1,33 @@
+Installing and Running the Portable Agena Win64 Version
+-------------------------------------------------------
+
+If you want to use Agena on a removable drive or do not have admin rights to run the binary
+Windows installer, just install this portable release.
+
+In an NT shell (cmd.exe), create a folder named `agena` anywhere on your drive, change into this
+folder and decompress this ZIP file into it, preserving the subdirectory structure of the ZIP file, 
+which should now look like this (dates and file sizes may vary):
+
+04/10/2026  10:41    <DIR>          bin
+29/09/2026  13:01         1,260,722 change.log
+03/10/2026  19:04    <DIR>          data
+03/10/2026  19:04    <DIR>          doc
+03/10/2026  19:15    <DIR>          lib
+28/06/2026  11:54             2,118 licence
+02/09/2023  08:13             1,588 readme.w64
+30/07/2026  10:07               993 run.bat     <-- start-up batch file
+03/10/2026  16:29            15,872 run.exe     <-- alternative launcher
+03/10/2026  19:04    <DIR>          share       <-- includes icons
+
+Then create a desktop shortcut to the batch file `run.bat` or the binary launcher `run.exe` that
+reside at the root of the installation. Choose an icon located in the `share\icons` folder to
+beautify the shortcut. Recommendation: choose `agena256.ico`.
+
+Check the properties of the shortcut to be sure that the value in field "Start in" is the
+path to the root Agena folder, e.g. `C:\agena`, and not to `C:\agena\bin` or anything else.
+
+This 64-bit Windows edition works fully on Windows 10 and 11. On Windows 8.1 you cannot use the 
+`gdi` package, but otherwise Agena runs there flawlessly there, too. Windows 8 and earlier are
+not supported.
+
+That's it. Have fun !
