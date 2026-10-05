@@ -22,11 +22,11 @@ VIProductVersion "${VERSION}.0"
 VIAddVersionKey /LANG=2057 "ProductName" "${APPNAME} (${NICKNAME})"
 VIAddVersionKey /LANG=2057 "CompanyName" "${COMPANYNAME}"
 VIAddVersionKey /LANG=2057 "LegalCopyright" "Copyright © Alexander Walz"
-VIAddVersionKey /LANG=2057 "FileDescription" "${APPNAME} Interpreter for Windows"
+VIAddVersionKey /LANG=2057 "FileDescription" "${APPNAME} Interpreter for 64-bit Windows"
 VIAddVersionKey /LANG=2057 "ProductVersion" "${VERSION}"
 VIAddVersionKey /LANG=2057 "FileVersion" "${VERSION}.0"
 VIAddVersionKey /LANG=2057 "LegalTrademarks" "(n/a)"
-VIAddVersionKey /LANG=2057 "OriginalFilename" "agena-${VERSION}-win32-setup.exe"
+VIAddVersionKey /LANG=2057 "OriginalFilename" "agena-${VERSION}-win64-setup.exe"
 VIAddVersionKey /LANG=2057 "SpecialBuild" "${NICKNAME} Edition"
 VIAddVersionKey /LANG=2057 "Comments" "Release Nickname: ${NICKNAME}"
 
@@ -45,7 +45,7 @@ BrandingText "${APPNAME} ${VERSION} ${NICKNAME}"
 !ifdef OUTFILE
   OutFile "${OUTFILE}"
 !else
-  OutFile ..\..\agena-${VERSION}-win32-setup.exe
+  OutFile ..\..\agena-${VERSION}-win64-setup.exe
 !endif
 
 ;Request application privileges for Windows Vista
@@ -57,7 +57,7 @@ InstType "Full"
 InstType "Standard"
 ;InstType "Minimal"
 
-InstallDir $PROGRAMFILES\Agena
+InstallDir $PROGRAMFILES64\Agena
 InstallDirRegKey HKLM Software\AGENA ""
 
 RequestExecutionLevel admin
@@ -341,7 +341,7 @@ XPStyle off
 
 ;Pages
 !define MUI_WELCOMEPAGE_TITLE "Welcome to the$\r$\nAgena ${VERSION} Setup Wizard"
-!define MUI_WELCOMEPAGE_TEXT "This wizard will guide you through the installation of the$\r$\nAgena ${VERSION} ${NICKNAME} Interpreter.$\r$\n$\rAgena is an easy-to-learn procedural programming language designed to be used in scientific, educational, linguistic, network, and many other applications.$\r$\n$\rIts syntax looks like very simplified Algol 68 with elements taken from Lua, Maple and SQL.$\r$\n$\rThe implementation is based on the original Lua 5.1 and 5.4 sources written by Roberto Ierusalimschy, Luiz Henrique de Figueiredo, and Waldemar Celes.$\r$\n$\r$\n$_CLICK"
+!define MUI_WELCOMEPAGE_TEXT "This wizard will guide you through the installation of the $\r$\nAgena ${VERSION} ${NICKNAME} Interpreter, 64-bit.$\r$\n$\rAgena is an easy-to-learn procedural programming language designed to be used in scientific, educational, linguistic, network, and many other applications.$\r$\n$\rIts syntax looks like very simplified Algol 68 with elements taken from Lua, Maple and SQL.$\r$\n$\rThe implementation is based on the original Lua 5.1 and 5.4 sources written by Roberto Ierusalimschy, Luiz Henrique de Figueiredo, and Waldemar Celes.$\r$\n$\r$\n$_CLICK"
 
 ;LicenseForceSelection checkbox "I accept."
 
@@ -424,25 +424,16 @@ ${MementoSection} "Agena Core Files (required)" SecCore
   File ..\..\change.log
 
 ; General dependencies:
-  File ..\..\ports\gdwin32\bin\libgmp-10.dll
-  File ..\..\ports\gdwin32\bin\libmpfr-6.dll
-  File ..\..\ports\gdwin32\bin\libstdc++-6.dll
-  File ..\..\ports\gdwin32\bin\zlib1.dll
-; reported by Slobodan (gzip and gdi need this lib):
-  File ..\..\ports\gdwin32\bin\libgcc_s_dw2-1.dll
-  File ..\..\ports\gdwin32\bin\libmingwex-4.dll
-; needed by gzip & gdi:
-  File ..\..\ports\gdwin32\bin\libmingwex-0.dll
-; The following libiconv(-)2 copies are needed, especially by the `gdi` and `gzip` packages;
-; depending on the Windows version either one or the other is needed:
-  File ..\..\ports\gdwin32\bin\libiconv2.dll
-; libiconv-2.dll is needed by the `iconv` package
-  File ..\..\ports\gdwin32\bin\libiconv-2.dll
-; regex
-  File ..\..\ports\gdwin32\bin\libpcre2-8-0.dll
-  File ..\..\ports\gdwin32\bin\libpcre2-posix-3.dll
-; xml
-  File ..\..\ports\gdwin32\bin\libexpat-1.dll
+  File ..\..\ports\gdwin64\libexpat-1.dll
+  File ..\..\ports\gdwin64\libgcc_s_seh-1.dll
+  File ..\..\ports\gdwin64\libgmp-10.dll
+  File ..\..\ports\gdwin64\libiconv-2.dll
+  File ..\..\ports\gdwin64\libintl-8.dll
+  File ..\..\ports\gdwin64\libmpfr-6.dll
+  File ..\..\ports\gdwin64\libpcre2-8-0.dll
+  File ..\..\ports\gdwin64\libstdc++-6.dll
+  File ..\..\ports\gdwin64\libwinpthread-1.dll
+  File ..\..\ports\gdwin64\zlib1.dll
 
   SetOutPath $INSTDIR\lib
   File ..\..\lib\library.agn
@@ -452,13 +443,13 @@ ${MementoSection} "Agena Core Files (required)" SecCore
 ${MementoSectionEnd}
 
 
-${MementoSection} "AgenaEdit" SecAgenaEdit
-  SectionIn 1 2
-
-  SetOutPath $INSTDIR\bin
-  File ..\..\..\fltk-1.4.5\editor\agenaedit.exe
-
-${MementoSectionEnd}
+;${MementoSection} "AgenaEdit" SecAgenaEdit
+;  SectionIn 1 2
+;
+;  SetOutPath $INSTDIR\bin
+;  File ..\..\..\fltk-1.4.5\editor\agenaedit.exe
+;
+;${MementoSectionEnd}
 
 
 ${MementoSection} "Documentation" SecDoc
@@ -628,6 +619,9 @@ ${MementoSection} "mapm" SecPluginsMapm
 
   SectionIn 1
 
+  SetOutPath $INSTDIR\bin
+  File ..\..\ports\gdwin64\mapm.dll  
+
   SetOutPath $INSTDIR\lib
   File ..\..\lib\mapm.dll
   File ..\..\lib\mapm.agn
@@ -749,16 +743,43 @@ ${MementoSection} "gdi" SecPluginsGdi
   File ..\..\lib\gdi.dll
 
   SetOutPath $INSTDIR\bin
-  File ..\..\ports\gdwin32\bin\libfreetype-6.dll
-  File ..\..\ports\gdwin32\bin\libfontconfig-1.dll
-  File ..\..\ports\gdwin32\bin\libjpeg-10.dll
-  File ..\..\ports\gdwin32\bin\libpng16-16.dll
-  File ..\..\ports\gdwin32\bin\xpm4.dll
-  File ..\..\ports\gdwin32\bin\libgd.dll
-; In W2K and XP we need TIFF dependencies
-  File ..\..\ports\gdwin32\bin\libtiff-6.dll
-  File ..\..\ports\gdwin32\bin\libtiffxx-6.dll
-
+  File ..\..\ports\gdwin64\libaom.dll
+  File ..\..\ports\gdwin64\libavif-16.dll
+  File ..\..\ports\gdwin64\libbrotlicommon.dll
+  File ..\..\ports\gdwin64\libbrotlidec.dll
+  File ..\..\ports\gdwin64\libbrotlienc.dll
+  File ..\..\ports\gdwin64\libbz2-1.dll
+  File ..\..\ports\gdwin64\libcryptopp.dll
+  File ..\..\ports\gdwin64\libdav1d-7.dll
+  File ..\..\ports\gdwin64\libde265-0.dll
+  File ..\..\ports\gdwin64\libdeflate.dll
+  File ..\..\ports\gdwin64\libfontconfig-1.dll
+  File ..\..\ports\gdwin64\libfreetype-6.dll
+  File ..\..\ports\gdwin64\libgd.dll
+  File ..\..\ports\gdwin64\libglib-2.0-0.dll
+  File ..\..\ports\gdwin64\libgraphite2.dll
+  File ..\..\ports\gdwin64\libharfbuzz-0.dll
+  File ..\..\ports\gdwin64\libheif.dll
+  File ..\..\ports\gdwin64\libimagequant.dll
+  File ..\..\ports\gdwin64\libjbig-0.dll
+  File ..\..\ports\gdwin64\libjpeg-8.dll
+  File ..\..\ports\gdwin64\libkvazaar-7.dll
+  File ..\..\ports\gdwin64\libLerc.dll
+  File ..\..\ports\gdwin64\liblzma-5.dll
+  File ..\..\ports\gdwin64\libopenh264-7.dll
+  File ..\..\ports\gdwin64\libopenjp2-7.dll
+  File ..\..\ports\gdwin64\libopenjph-0.32.dll
+  File ..\..\ports\gdwin64\libpng16-16.dll
+  File ..\..\ports\gdwin64\librav1e.dll
+  File ..\..\ports\gdwin64\libsharpyuv-0.dll
+  File ..\..\ports\gdwin64\libSvtAv1Enc-4.dll
+  File ..\..\ports\gdwin64\libtiff-6.dll
+  File ..\..\ports\gdwin64\libwebp-7.dll
+  File ..\..\ports\gdwin64\libx264-165.dll
+  File ..\..\ports\gdwin64\libx265-217.dll
+  File ..\..\ports\gdwin64\libXpm-noX4.dll
+  File ..\..\ports\gdwin64\libyuv.dll
+  File ..\..\ports\gdwin64\libzstd.dll
 ${MementoSectionEnd}
 
 
@@ -771,17 +792,13 @@ ${MementoSection} "curses" SecPluginsCurses
   SectionIn 1
 
   SetOutPath $INSTDIR\lib
-; File ..\..\lib\curses.agn
+; File ..\..\lib\curses.agn  (is currently empty)
   File ..\..\lib\curses.dll
 
   SetOutPath $INSTDIR\bin
-; The following is needed by the curses package (tinfo is not needed):
-  File ..\..\ports\gdwin32\bin\libpanel6.dll
-  File ..\..\ports\gdwin32\bin\libncurses6.dll
-  File ..\..\ports\gdwin32\bin\libncurses++6.dll
-  File ..\..\ports\gdwin32\bin\libmenu6.dll
-  File ..\..\ports\gdwin32\bin\libform6.dll
-
+; The following is needed by the curses package:
+  File ..\..\ports\gdwin64\libncurses++w6.dll
+  File ..\..\ports\gdwin64\libncursesw6.dll
 ${MementoSectionEnd}
 
 
@@ -827,7 +844,7 @@ ${MementoSection} "usb" SecPluginsUsb
   ;File ..\..\lib\usb.agn
 
   SetOutPath $INSTDIR\bin
-  File ..\..\ports\libusb-1.0.18\libusb\.libs\libusb-1.0.dll
+  File ..\..\ports\gdwin64\libusb-1.0.dll
 
 ${MementoSectionEnd}
 
@@ -854,9 +871,9 @@ ${MementoSection} "gzip" SecPluginsGzip
   SetDetailsPrint listonly
 
   SectionIn 1
-
-  SetOutPath $INSTDIR\bin
-  File ..\..\ports\gdwin32\bin\zlib1.dll
+; Already installed with the general dependencies
+;  SetOutPath $INSTDIR\bin
+;  File ..\..\ports\gdwin64\bin\zlib1.dll
 
   SetOutPath $INSTDIR\lib
   File ..\..\lib\gzip.dll
@@ -965,6 +982,9 @@ ${MementoSection} "iconv" SecPluginsIconv
   File ..\..\lib\iconv.dll
   File ..\..\lib\iconv.agn
 
+; The following is needed by the iconv package:
+;  SetOutPath $INSTDIR\bin  (already installed with the general dependencies)
+
 ${MementoSectionEnd}
 
 
@@ -1011,8 +1031,10 @@ ${MementoSection} "double" SecPluginsDouble
 
 ${MementoSectionEnd}
 
-SectionGroupEnd
 
+;${MementoSectionDone}
+
+SectionGroupEnd
 
 SectionGroup "Misc" SecMisc
 
@@ -1258,6 +1280,7 @@ ${MementoSection} "Self-running Agena interpreter" SecMiscSrglue
   SectionIn 1
 
   SetOutPath $INSTDIR\bin
+
   File ..\..\ports\sragena-105\bin\sragena.exe
   File ..\..\ports\sragena-105\bin\srglue.exe
   File ..\..\ports\sragena-105\README.srglue
@@ -1314,7 +1337,7 @@ Section -post
     ;Create shortcuts
     CreateDirectory "$SMPROGRAMS\$StartMenuFolder"
     CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Agena.lnk" "$INSTDIR\bin\agena.exe" "" "$INSTDIR\share\icons\agena256.ico"
-    CreateShortCut "$SMPROGRAMS\$StartMenuFolder\AgenaEdit.lnk" "$INSTDIR\bin\agenaedit.exe" "" "$INSTDIR\share\icons\aedit256.ico"
+;    CreateShortCut "$SMPROGRAMS\$StartMenuFolder\AgenaEdit.lnk" "$INSTDIR\bin\agenaedit.exe" "" "$INSTDIR\share\icons\aedit256.ico"
     CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Primer.lnk" "$INSTDIR\doc\agena-primer.pdf"
     CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Reference.lnk" "$INSTDIR\doc\agena-reference.pdf"
     CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Crash Course.lnk" "$INSTDIR\doc\agena-crashcourse.pdf"
@@ -1339,7 +1362,7 @@ SectionEnd
 
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
   !insertmacro MUI_DESCRIPTION_TEXT ${SecCore} "The core files required to use Agena (interpreter and main Agena library)"
-  !insertmacro MUI_DESCRIPTION_TEXT ${SecAgenaEdit} "The Agena editor and runtime environment"
+;  !insertmacro MUI_DESCRIPTION_TEXT ${SecAgenaEdit} "The Agena editor and runtime environment"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecDoc} "The manual, language summary, and quick reference"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecEnv} "Permanently sets the environment variable AGENAPATH to your system (recommended)"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecEnvPath} "Appends Agena path to system PATH"
@@ -1626,8 +1649,8 @@ Section "Uninstall"
   SectionGetSize ${SecCore} $0
 
   ; If you want to add other sections to the total:
-  SectionGetSize ${SecAgenaEdit} $1
-  IntOp $0 $0 + $1
+;  SectionGetSize ${SecAgenaEdit} $1
+;  IntOp $0 $0 + $1
   SectionGetSize ${SecDoc} $1
   IntOp $0 $0 + $1
 
