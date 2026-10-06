@@ -5,7 +5,7 @@ If you want to use Agena on a removable drive or do not have admin rights to run
 Windows installer, just install this portable release.
 
 In an NT shell (cmd.exe), create a folder named `agena` anywhere on your drive, change into this
-folder and decompress this ZIP file into it, preserving the subdirectory structure of the ZIP file, 
+folder and decompress this ZIP file into it, preserving the subdirectory structure of the ZIP file,
 which should now look like this (dates and file sizes may vary):
 
 04/10/2026  10:41    <DIR>          bin
@@ -26,8 +26,8 @@ beautify the shortcut. Recommendation: choose `agena256.ico`.
 Check the properties of the shortcut to be sure that the value in field "Start in" is the
 path to the root Agena folder, e.g. `C:\agena`, and not to `C:\agena\bin` or anything else.
 
-This 64-bit Windows edition works fully on Windows 10 and 11. On Windows 8.1 you cannot use the 
-`gdi` package, but otherwise Agena runs there flawlessly there, too. Windows 8 and earlier are
-not supported.
+This 64-bit Windows edition works fully on Windows 10 and 11. On Windows 8.1 you cannot use the
+`gdi` package, but otherwise Agena runs flawlessly there, too. Windows 8 and earlier are not 
+supported.
 
 That's it. Have fun !
