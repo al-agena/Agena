@@ -1,12 +1,20 @@
+7.10.9 Enceladus, October 06, 2026
+
+- `keyfile.open` did not open files in read mode when given 'r' or 'read' as a second argument, also sometimes causing 
+  problems with `astro.locate`. This has been fixed.
+
+- The `astro` location database index file has been reduced in size by 15 %, or 1.1 MBytes.
+
+
 7.10.8 Enceladus, October 05, 2026
 
 - The first working 64-Bit Windows edition of Agena has been uploaded. See the SourceForge Binaries/Agena 7.10.8 folder,
   files agena-7.10.8-win64-portable.7z and agena-7.10.8-win64-setup.exe. The edition works fully on Windows 10 and 11.
   It also runs on Windows 8.1 but you cannot use the `gdi` and `fractals` packages there.
 
-  Arithmetic, text and table processing stress tests show that compared to the 32-bit Windows edition, the 64-bit release 
-  is around twice as fast with real arithmetic and basic Calculus, 30 % faster with simple Linear Algebra, and 25 % to 
-  40 % faster with string search-and-replace-based operations. Table read and write operations have become at least twice 
+  Arithmetic, text and table processing stress tests show that compared to the 32-bit Windows edition, the 64-bit release
+  is around twice as fast with real arithmetic and basic Calculus, 30 % faster with simple Linear Algebra, and 25 % to
+  40 % faster with string search-and-replace-based operations. Table read and write operations have become at least twice
   as fast. In addition, you can use vastly more memory.
 
 
