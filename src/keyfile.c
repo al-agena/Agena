@@ -80,11 +80,11 @@ static int keyfile_new (lua_State *L) {
    See also: `keyfile.new`, `keyfile.close`. */
 static int keyfile_open (lua_State *L) {
   int en, nargs, mode;
+  nargs = lua_gettop(L);  /* 7.10.9 fix, newfile() obviously changes the stack */
   pblKeyFile_t **hnd = newfile(L);
   char *filename = (char *)agn_checkstring(L, 1);
-  nargs = lua_gettop(L);
   mode = 1;
-  if (nargs == 2 && agn_isstring(L, 2)) {  /* read-only mode ?  */
+  if (nargs > 1 && agn_isstring(L, 2)) {  /* read-only mode ?  */
     const char *s = agn_tostring(L, 2);
     if (tools_streqx(s, "read", "r", NULL)) mode = 0;
   }
