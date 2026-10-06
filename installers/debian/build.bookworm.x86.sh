@@ -2,7 +2,7 @@
 
 # 1. Configuration
 set -e
-export AGENAVER="7.10.7"
+export AGENAVER="7.10.9"
 export BUILD_USER="alex"
 export AGENAHOME="/home/$BUILD_USER/agena"
 
@@ -77,7 +77,7 @@ echo "Packing assets..."
 rsync -a --exclude='cities' "$AGENAHOME/data/" "$AGENATARGET_DATA/"
 
 # 4. Payload / Share content
-echo "Packing shared assets (icons, schemes, scripting)..."
+echo "Packing shared assets (icons, schemes, scripting, colour maps)..."
 [ -d "$AGENAHOME/share/fractint" ] && cp -rp "$AGENAHOME/share/fractint/"* "$AGENATARGET_SHARE/fractint/"
 [ -d "$AGENAHOME/share/icons" ] && cp -rp "$AGENAHOME/share/icons/"* "$AGENATARGET_SHARE/icons/"
 [ -d "$AGENAHOME/share/schemes" ] && cp -rp "$AGENAHOME/share/schemes/"* "$AGENATARGET_SHARE/schemes/"
