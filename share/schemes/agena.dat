@@ -2440,6 +2440,7 @@ bytes.swapupper
 bytes.tobig
 bytes.tobinary
 bytes.tobytes
+bytes.tochars
 bytes.tolittle
 bytes.tonumber
 bytes.unpack

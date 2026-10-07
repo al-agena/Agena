@@ -824,6 +824,7 @@
       <KEYWORD3>bytes.tobig</KEYWORD3>
       <KEYWORD3>bytes.tobinary</KEYWORD3>
       <KEYWORD3>bytes.tobytes</KEYWORD3>
+      <KEYWORD3>bytes.tochars</KEYWORD3>
       <KEYWORD3>bytes.tolittle</KEYWORD3>
       <KEYWORD3>bytes.tonumber</KEYWORD3>
       <KEYWORD3>bytes.trailzeros</KEYWORD3>

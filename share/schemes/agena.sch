@@ -160,7 +160,7 @@ object TPersHolder
             'getunbiased,getwords,graytobin,interweave,inttofpb,isint32,leadzeros,leastsigbit,mask32,mod32,mostsigbit,mul32,muladd32,mulmod32,' +
             'nand32,nextbit,nor32,not32,numhigh,numlow,numto32,numwords,onebits,optbytes,or32,pack,packsize,parity32,parity8,peek,powmod32,' +
             'replace32,reverse,rotate32,setdouble,sethigh,setlow,setnumhigh,setnumlow,setnumwords,setwords,shift32,sub32,swap,swaplower,' +
-            'swapupper,tobinary,tobig,tobytes,tolittle,tonumber,trailzeros,unpack,xnor32'
+            'swapupper,tobinary,tobig,tobytes,tochars,tolittle,tonumber,trailzeros,unpack,xnor32'
         end
         item
           FontID = 7
