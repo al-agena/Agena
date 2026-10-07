@@ -3,8 +3,8 @@
 ;-----------------------------------------------------------------------------------------
 Unicode True
 !define APPNAME "Agena"
-!define VERSION "7.10.9"
-!define NICKNAME "Enceladus"
+!define VERSION "7.11.0"
+!define NICKNAME "Despina"
 !define COMPANYNAME "Alexander Walz"
 Name "${APPNAME} ${VERSION}"
 OutFile "..\..\agena-${VERSION}-win32-portable.exe"
