@@ -224,10 +224,10 @@ skycrane.stopwatch := proc() is  # 24.07.2012 or earlier
       fi;
       writeline('Press any key to stop the stop watch ...\n')
       t := time();
-      write('Elapsed time: ' & strings.repeat(' ', 11) & 'seconds' & strings.repeat('\b', 18));
+      write('Elapsed time: ' & ' ' * 11 & 'seconds' & '\b' * 18);
       while io.anykey() = false do
          write(strings.format('%10.2f', time(t) - t));
-         write(strings.repeat('\b', 10))
+         write('\b' * 10)
       od;
       writeline('\n');
       writeline('Press `q` to quit, any other key to start again.\n');

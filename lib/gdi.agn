@@ -676,10 +676,10 @@ gdi.plotfn := proc(fn, ?) is
          posstr := strings.format('x=%+011.06f y=%+011.06f', x/xspan + a, y/yspan + c);
          sposstr := size posstr;
          write(posstr);
-         write(strings.repeat('\b', sposstr));
+         write('\b' * sposstr);
          if state && 0x0400 = 0x0400 or io.anykey() then  # right mouse button or any key pressed
-            write(strings.repeat(' ', sposstr+10));
-            write(strings.repeat('\b', sposstr));
+            write(' ' * (sposstr+10));
+            write('\b' * sposstr);
             break
          fi
       od
@@ -780,10 +780,10 @@ gdi.plotfn2d := proc(fn :: procedure, ?) is
          posstr := strings.format('x=%+011.06f y=%+011.06f', x/xspan + a, y/yspan + c);
          sposstr := size posstr;
          write(posstr);
-         write(strings.repeat('\b', sposstr));
+         write('\b' * sposstr);
          if state && 0x0400 = 0x0400 or io.anykey() then  # right mouse button or any key pressed
-            write(strings.repeat(' ', sposstr+10));
-            write(strings.repeat('\b', sposstr));
+            write(' '  * (sposstr+10));
+            write('\b' * sposstr);
             break
          fi
       od
@@ -1042,10 +1042,10 @@ gdi.plot := proc(pts :: PLOT, ?) is
          posstr := strings.format('x=%+011.06f y=%+011.06f', x/xspan + a, y/yspan + c);
          sposstr := size posstr;
          write(posstr);
-         write(strings.repeat('\b', sposstr));
+         write('\b' * sposstr);
          if state && 0x0400 = 0x0400 or io.anykey() then  # right mouse button or any key pressed
-            write(strings.repeat(' ', sposstr + 10));
-            write(strings.repeat('\b', sposstr));
+            write(' '  * (sposstr + 10));
+            write('\b' * sposstr);
             break
          fi
       od

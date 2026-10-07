@@ -2993,12 +2993,12 @@ utils.aux.encodexml := proc(x :: table, t, indent, c, tag) is
       u ? insert '<', i, '>' into t;  # changed 2.14.0
       if j :: table then
          if isall(tables.indices(j), string) then  # 3.15.4/4.6.2 change
-            insert '\n', strings.repeat(' ', c + indent) into t;
+            insert '\n', ' '*(c + indent) into t;
             t := utils.aux.encodexml(j, t, indent, c + indent)
          else  # XML object occurs multiple times
             t := utils.aux.encodexml(j, t, indent, c, i)
          fi;
-         insert '\n', strings.repeat(' ', c) into t
+         insert '\n', ' ' * c into t
       else
          case type(j)
             of number, boolean then
@@ -3009,9 +3009,9 @@ utils.aux.encodexml := proc(x :: table, t, indent, c, tag) is
                insert j into t
          esac
       fi;
-      u ? insert '</', i, '>', '\n', strings.repeat(' ', c) into t;  # changed 2.14.0
+      u ? insert '</', i, '>', '\n', ' ' * c into t;  # changed 2.14.0
       assigned(tag) and n < s ?   # changed 2.14.0
-         insert '</', tag, '>', '\n', strings.repeat(' ', c), '<', tag, '>' into t;
+         insert '</', tag, '>', '\n', ' ' * c, '<', tag, '>' into t;
    od;
    to 2 do pop top from t od;  # pop last two entries (newline and spaces)
    return t
@@ -3461,9 +3461,9 @@ environ.aux.printlongtable := proc(o, escape) is
             local key;
             memfile.append(m, message);
             key := io.getkey();
-            memfile.append(m, strings.repeat('\b', smessage));
-            memfile.append(m, strings.repeat(' ', smessage));
-            memfile.append(m, strings.repeat('\b', smessage));
+            memfile.append(m, '\b' * smessage);
+            memfile.append(m, ' '  * smessage);
+            memfile.append(m, '\b' * smessage);
             break when |key| in {27, 81, 113}
          fi
       fi

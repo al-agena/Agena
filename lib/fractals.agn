@@ -735,7 +735,7 @@ fractals.draw := proc(fn :: procedure, ?) is
          posstr := strings.format('x=%+011.06f y=%+011.06f', x/xspan + a, y/yspan + c);
          sposstr := size posstr;
          write(posstr);
-         write(strings.repeat('\b', sposstr));
+         write('\b' * sposstr);
          break when state && 0x0400 = 0x0400 or io.anykey()  # right mouse button pressed ? 0x0400 = 0d1024
       od
    fi;
