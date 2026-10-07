@@ -127,21 +127,21 @@ static int bytes_tobytes (lua_State *L) {  /* 2.6.1, extended 2.9.0; rewritten 2
   union ldshape d;
   lua_Number x;
   int s, i, tolittle;
-  const int E[] = { sizeof(int32_t), sizeof(int64_t), sizeof(lua_Number), sizeof(float), sizeof(uint16_t), SIZEOFLDBL, sizeof(agn_Complex)};
+  const int E[] = { sizeof(int32_t), sizeof(int64_t), sizeof(lua_Number), sizeof(float), sizeof(uint16_t), SIZEOFLDBL, 2*sizeof(lua_Number)};
   getanynumber(L, d, 1, "bytes.tobytes");
   if (isints(L, 1))
     s = -(int)sizeof(int64_t);
   else if (isdlong(L, 1))
     s = SIZEOFLDBL;
   else if (lua_iscomplex(L, 1))
-    s = sizeof(agn_Complex);
+    s = 2*sizeof(lua_Number);
   else
     s = luaL_optint(L, 2, sizeof(lua_Number));
   tolittle = agnL_optboolean(L, 3, 1);  /* new 2.17.4 */
   (void)tolittle;  /* not used on Little Endian systems */
   if (!tools_isintenum(abs(s), E, sizeof(E)/sizeof(*E)))  /* 2.38.3 fix */
     luaL_error(L, "Error in " LUA_QS ": second argument must either be %d, +/-%d, %d, %d or %d.",
-      "bytes.tobytes", sizeof(uint16_t), sizeof(int32_t), sizeof(lua_Number), SIZEOFLDBL, sizeof(agn_Complex));
+      "bytes.tobytes", sizeof(uint16_t), sizeof(int32_t), sizeof(lua_Number), SIZEOFLDBL, 2*sizeof(lua_Number));
   agn_createseq(L, abs(s));  /* 7.10.4 fix */
   if (s == -8) s = 10008;  /* 7.10.4 */
   if (s == -4) s = 10004;  /* 2.25.5, to prevent compiler warnings in Debian Bullseye */
@@ -240,7 +240,7 @@ static int bytes_tobytes (lua_State *L) {  /* 2.6.1, extended 2.9.0; rewritten 2
 #else
       re = d.z[0]; im = d.z[1];
 #endif
-      s = sizeof(agn_Complex);
+      s = 2*sizeof(lua_Number);
       #if BYTE_ORDER == BIG_ENDIAN
       if (tolittle) { tools_swapint64_t(&re); tools_swapint64_t(&im); }
       #endif
@@ -249,7 +249,7 @@ static int bytes_tobytes (lua_State *L) {  /* 2.6.1, extended 2.9.0; rewritten 2
         agn_seqsetinumber(L, -1, i + 1, src[i]);
       }
       src = (unsigned char *)&im;
-      for (; i < 2*sizeof(lua_Number); i++) {
+      for (; i < s; i++) {
         agn_seqsetinumber(L, -1, i + 1, src[i - sizeof(lua_Number)]);
       }
       break;
@@ -259,6 +259,135 @@ static int bytes_tobytes (lua_State *L) {  /* 2.6.1, extended 2.9.0; rewritten 2
   }
   return 1;
 }
+
+
+/* > strings.tonumber(bytes.tochars(Pi)):
+3.1415926535898 */
+static int bytes_tochars (lua_State *L) {  /* 7.10.10, based on bytes_tobytes */
+  union ldshape d;
+  lua_Number x;
+  int s, i, tolittle;
+  const int E[] = { sizeof(int32_t), sizeof(int64_t), sizeof(lua_Number), sizeof(float), sizeof(uint16_t), SIZEOFLDBL, 2*sizeof(lua_Number)};
+  getanynumber(L, d, 1, "bytes.tochars");
+  if (isints(L, 1))
+    s = -(int)sizeof(int64_t);
+  else if (isdlong(L, 1))
+    s = SIZEOFLDBL;
+  else if (lua_iscomplex(L, 1))
+    s = 2*sizeof(lua_Number);
+  else
+    s = luaL_optint(L, 2, sizeof(lua_Number));
+  tolittle = agnL_optboolean(L, 3, 1);
+  (void)tolittle;  /* not used on Little Endian systems */
+  if (!tools_isintenum(abs(s), E, sizeof(E)/sizeof(*E)))
+    luaL_error(L, "Error in " LUA_QS ": second argument must either be %d, +/-%d, %d, %d or %d.",
+      "bytes.tochars", sizeof(uint16_t), sizeof(int32_t), sizeof(lua_Number), SIZEOFLDBL, 2*sizeof(lua_Number));
+  if (s == -8) s = 10008;
+  if (s == -4) s = 10004;  /* to prevent compiler warnings in Debian Bullseye */
+  if (s == -2) s = 10002;  /* to prevent compiler warnings in Debian Bullseye */
+  if (lua_iscomplex(L, 1) && s == (int)sizeof(agn_Complex)) {
+    s = 10016;
+  }
+  switch (s) {
+    case sizeof(lua_Number): {
+      /* using tools_double2uint does not work GCC 4.5.2, but not in GCC 4.8.1 */
+#if BYTE_ORDER == BIG_ENDIAN
+      if (tolittle) x = tools_tolittleendian(x);
+#endif
+      x = d.d;
+      unsigned char *src = (unsigned char *)&x;
+      lua_pushlstring(L, (const char *)src, s);
+      break;
+    }
+    case sizeof(uint16_t): {
+      uint16_t y = d.d;
+      #if BYTE_ORDER == BIG_ENDIAN
+      if (tolittle) tools_swapuint16_t(&y);
+      #endif
+      unsigned char *src = (unsigned char *)&y;
+      lua_pushlstring(L, (const char *)src, s);
+      break;
+    }
+    case sizeof(uint32_t): {
+      uint32_t y = d.d;
+      #if BYTE_ORDER == BIG_ENDIAN
+      if (tolittle) tools_swapuint32_t(&y);
+      #endif
+      unsigned char *src = (unsigned char *)&y;
+      lua_pushlstring(L, (const char *)src, s);
+      break;
+    }
+#ifndef __ARMCPU
+    case SIZEOFLDBL: {
+      #if BYTE_ORDER == BIG_ENDIAN
+      char str[SIZEOFLDBL];
+      for (i=0; i < SIZEOFLDBL; i++) {
+        str[i] = d.c[SIZEOFLDBL - i - 1];
+      }
+      lua_pushlstring(L, (const char *)str, SIZEOFLDBL);
+      #else
+      lua_pushlstring(L, (const char *)d.c, SIZEOFLDBL);
+      #endif
+      break;
+    }
+#endif
+    case 10002: {
+      int16_t y = d.d;
+      #if BYTE_ORDER == BIG_ENDIAN
+      if (tolittle) tools_swapint16_t(&y);
+      #endif
+      unsigned char *src = (unsigned char *)&y;
+      lua_pushlstring(L, (const char *)src, sizeof(int16_t));
+      break;
+    }
+    case 10004: {
+      int32_t y = d.d;
+      #if BYTE_ORDER == BIG_ENDIAN
+      if (tolittle) tools_swapint32_t(&y);
+      #endif
+      unsigned char *src = (unsigned char *)&y;
+      lua_pushlstring(L, (const char *)src, sizeof(int32_t));
+      break;
+    }
+    case 10008: {
+      int64_t y = d.i64;
+      #if BYTE_ORDER == BIG_ENDIAN
+      if (tolittle) tools_swapint64_t(&y);
+      #endif
+      unsigned char *src = (unsigned char *)&y;
+      lua_pushlstring(L, (const char *)src, sizeof(int64_t));
+      break;
+    }
+    case 10016: {
+      lua_Number re, im;
+      unsigned char *src;
+      s = 2*sizeof(lua_Number);
+      char str[s];
+#ifndef PROPCMPLX
+      re = creal(d.z); im = cimag(d.z);
+#else
+      re = d.z[0]; im = d.z[1];
+#endif
+      #if BYTE_ORDER == BIG_ENDIAN
+      if (tolittle) { tools_swapint64_t(&re); tools_swapint64_t(&im); }
+      #endif
+      src = (unsigned char *)&re;
+      for (i=0; i < sizeof(lua_Number); i++) {
+        str[i] = src[i];
+      }
+      src = (unsigned char *)&im;
+      for (; i < s; i++) {
+        str[i] = src[i - sizeof(lua_Number)];
+      }
+      lua_pushlstring(L, (const char *)str, s);
+      break;
+    }
+    default:
+      lua_assert(0);
+  }
+  return 1;
+}
+
 
 /* Takes a sequence r of numbers representing bytes and converts it into an Agena number. Regardless of your platform,
    the order of bytes in r is assumed to be Little Endian.
@@ -2343,6 +2472,7 @@ static const luaL_Reg byteslib[] = {
   {"tobig", bytes_tobig},                  /* added on April 12, 2019 */
   {"tobinary", bytes_tobinary},            /* added on December 21, 2015 */
   {"tobytes", bytes_tobytes},              /* added on May 24, 2015 */
+  {"tochars", bytes_tochars},              /* added on October 06, 2026 */
   {"tolittle", bytes_tolittle},            /* added on April 12, 2019 */
   {"tonumber", bytes_tonumber},            /* added on May 25, 2015 */
   {"trailzeros", bytes_trailzeros},        /* added on April 21, 2019 */

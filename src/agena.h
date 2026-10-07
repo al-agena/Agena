@@ -30,9 +30,9 @@
 #ifndef agena_h
 #define agena_h
 
-#define AGENA_VERSION     "agena 7.10"
-#define AGENA_EDITION     "7.10.9"
-#define AGENA_MOTTO       "enceladus"
+#define AGENA_VERSION     "agena 7.11"
+#define AGENA_EDITION     "7.11.0"
+#define AGENA_MOTTO       "despina"
 #define AGENA_NAME        "agena"
 #define AGENA_LOGO        ">>"
 #define AGENA_RELEASE     AGENA_NAME " " AGENA_LOGO " " AGENA_EDITION

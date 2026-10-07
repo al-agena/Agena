@@ -2293,14 +2293,14 @@ static const struct {
    {6, 6}, {6, 6}, {7, 7}, {7, 7}, {7, 7},  /* `+', `-', `*', `/', `%' */
    {10, 9}, {10, 9},                /* `^`, `**`, both are right-associative, i.e. x^y^z = x^(y^z) */
    {7, 7}, {5, 4},                  /* `\` (added 0.5.4), `&` (concat, right associative) */
-   {3, 3}, {3, 3},                  /* inequality  and equality */
+   {3, 3}, {3, 3},                  /* <> inequality  and = equality */
    {3, 3}, {3, 3}, {3, 3}, {3, 3},  /* order */
    {2, 2}, {1, 1},                  /* logical and / or, in this order */
    {4, 4}, {4, 4}, {4, 4},          /* in, subset, xsubset; added 0.7.1 & 0.5.4, 0.9.1 */
    {4, 4}, {4, 4}, {4, 4},          /* union, minus, intersect operators; added 0.6.0 */
    {6, 6}, {5, 4}, {8, 8}, {8, 8},  /* split, pair constr, complex !, cartesian constr !! */
    {3, 3}, {3, 3}, {3, 3}, {1, 1},  /* `==` , `~=`, `~<>`, xor */
-   {4, 4}, {7, 7}, {6, 6}, {6, 6},  /* atendof, band, bor, bxor */
+   {4, 4}, {7, 7}, {4, 4}, {4, 4},  /* atendof, &&, ||, ^^ */
    {7, 7}, {7, 7}, {3, 3}, {3, 3},  /* <<, >>, ::, :- */
    {7, 7}, {7, 7}, {7, 7}, {7, 7}, {7, 7},  /* *%, /%, +% , -%, %% */
    {5, 4}, {5, 4}, {5, 4}, {5, 4},  /* @, $, $$, $$$ */

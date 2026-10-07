@@ -6620,6 +6620,146 @@ static int str_issplit (lua_State *L) {
 }
 
 
+/* Metamethods */
+
+static int mt_mul (lua_State *L) {  /* new 7.11.0 */
+  luaL_checkany(L, 2);
+  luaL_checkstack(L, 2, "not enough stack space");
+  lua_pushcfunction(L, str_repeat);
+  if (agn_isstring(L, 1) && agn_isnumber(L, 2)) {
+    lua_pushvalue(L, 1); lua_pushvalue(L, 2);
+  } else if (agn_isnumber(L, 1) && agn_isstring(L, 2)) {
+    lua_pushvalue(L, 2); lua_pushvalue(L, 1);
+  } else {
+    luaL_error(L, "Error in " LUA_QS ": string and number expected.", "*");
+  }
+  lua_call(L, 2, 1);
+  return 1;
+}
+
+
+static int mt_mod (lua_State *L) {  /* new 7.11.0 */
+  size_t l, i;
+  luaL_checktype(L, 1, LUA_TSTRING);
+  if (lua_istable(L, 2)) {
+    l = agn_asize(L, 2);
+    if (l < 1)
+      luaL_error(L, "Error in " LUA_QS ": table is empty.", "%");
+    luaL_checkstack(L, l + 2, "not enough stack space");
+    lua_pushcfunction(L, str_format);
+    lua_pushvalue(L, 1);
+    for (i=1; i <= l; i++) {
+      lua_geti(L, 2, i);
+    }
+    lua_call(L, l + 1, 1);
+  } else if (agn_isinteger(L, 2)) {
+    const char *s = lua_tolstring(L, 1, &l);
+    size_t start = tools_posrelat(-lua_tointeger(L, 2), l);
+    if (start <= l)
+      lua_pushlstring(L, s + start - 1, (l - start) + 1);
+    else
+      lua_pushliteral(L, "");
+  } else {
+    luaL_error(L, "Error in " LUA_QS ": table or positive integer expected for right operand.", "%");
+  }
+  return 1;
+}
+
+
+static int mt_intdiv (lua_State *L) {  /* new 7.11.0 */
+  luaL_checktype(L, 1, LUA_TSTRING);
+  if (agn_isinteger(L, 2)) {
+    size_t l;
+    const char *s = lua_tolstring(L, 1, &l);
+    size_t end = tools_posrelat(lua_tointeger(L, 2), l);
+    if (1 <= end)
+      lua_pushlstring(L, s, end);
+    else
+      lua_pushliteral(L, "");
+  } else {
+    luaL_error(L, "Error in " LUA_QS ": positive integer expected for right operand.", "\\");
+  }
+  return 1;
+}
+
+
+static int mt_div (lua_State *L) {  /* new 7.11.0 */
+  luaL_checktype(L, 1, LUA_TSTRING);
+  if (agn_isstring(L, 2)) {  /* created by Gemini AI */
+    size_t len1, len2;
+    const char *s1 = lua_tolstring(L, 1, &len1);
+    const char *s2 = lua_tolstring(L, 2, &len2);
+    /* Edge case: If either string is empty, return the other string */
+    if (len1*len2 == 0) {
+      lua_pushvalue(L, 1 + (len1 == 0));
+      return 1;
+    }
+    /* Track if the right string originally intended to be a trailing directory */
+    int right_ends_with_slash = (s2[len2 - 1] == '/');
+    /* Clean up the left string: trim all trailing slashes */
+    while (len1 > 0 && s1[len1 - 1] == '/') len1--;
+    /* Clean up the right string: skip all leading slashes */
+    size_t start2 = 0;
+    while (start2 < len2 && s2[start2] == '/') start2++;
+    size_t clean_len2 = len2 - start2;
+    luaL_Buffer b;
+    luaL_buffinit(L, &b);
+    /* 1. Append the sanitized left path */
+    if (len1 > 0) {
+      luaL_addlstring(&b, s1, len1);
+    }
+    /* 2. Add exactly one separating slash if both sides have text */
+    if (len1 > 0 && clean_len2 > 0) {
+      luaL_addchar(&b, '/');
+    }
+    /* 3. Append the remaining right path */
+    if (clean_len2 > 0) {
+      luaL_addlstring(&b, s2 + start2, clean_len2);
+    }
+    /* 4. If the right string was purely slashes (e.g. "///"), 
+          or explicitly ended in a slash, ensure a single final slash exists */
+    if (right_ends_with_slash && len1 == 0 && clean_len2 == 0) {
+      /* If both parts were stripped to nothing, output a single root slash "/" */
+      luaL_addchar(&b, '/');
+    }
+    luaL_pushresult(&b);
+  } else {
+    luaL_error(L, "Error in " LUA_QS ": string expected for right operand.", "/");
+  }
+  return 1;
+}
+
+
+static int mt_bor (lua_State *L) {  /* new 7.11.0 */
+  luaL_checktype(L, 1, LUA_TSTRING);
+  if (lua_ispair(L, 2)) {
+    luaL_checkstack(L, 4, "not enough stack space");
+    lua_pushcfunction(L, str_gsub);
+    lua_pushvalue(L, 1);
+    agn_pairgetiall(L, 2);
+    lua_call(L, 3, 1);
+  } else {
+    luaL_error(L, "Error in " LUA_QS ": pair expected for right operand.", "||");
+  }
+  return 1;
+}
+
+
+static int mt_sub (lua_State *L) {  /* new 7.11.0 */
+  luaL_checktype(L, 1, LUA_TSTRING);
+  if (lua_isstring(L, 2)) {
+    luaL_checkstack(L, 3, "not enough stack space");
+    lua_pushcfunction(L, str_remove);
+    lua_pushvalue(L, 1);
+    lua_pushvalue(L, 2);
+    lua_call(L, 2, 1);
+  } else {
+    luaL_error(L, "Error in " LUA_QS ": string expected for right operand.", "-");
+  }
+  return 1;
+}
+
+
 static const luaL_Reg strlib[] = {
   /* standard strings library functions */
   {"a64", str_a64},                       /* added on August 03, 2018 */
@@ -6775,12 +6915,28 @@ static const luaL_Reg strlib[] = {
 
 static void createmetatable (lua_State *L) {
   lua_createtable(L, 0, 1);  /* create metatable for strings */
-  lua_pushliteral(L, "");  /* dummy string */
+  lua_pushliteral(L, "");  /* dummy string, for reference */
   lua_pushvalue(L, -2);
   lua_setmetatable(L, -2);  /* set string metatable */
   agn_poptop(L);  /* pop dummy string */
   lua_pushvalue(L, -2);  /* string library... */
   lua_setfield(L, -2, "__index");  /* ...is the __index metamethod */
+  lua_pushcfunction(L, mt_mul);
+  lua_setfield(L, -2, "__mul");
+  lua_pushcfunction(L, mt_mod);
+  lua_setfield(L, -2, "__mod");
+  lua_pushcfunction(L, mt_intdiv);
+  lua_setfield(L, -2, "__intdiv");
+  lua_pushcfunction(L, mt_div);
+  lua_setfield(L, -2, "__div");
+  lua_pushcfunction(L, str_ljustify);
+  lua_setfield(L, -2, "__bshr");
+  lua_pushcfunction(L, str_rjustify);
+  lua_setfield(L, -2, "__bshl");
+  lua_pushcfunction(L, mt_bor);
+  lua_setfield(L, -2, "__bor");
+  lua_pushcfunction(L, mt_sub);
+  lua_setfield(L, -2, "__sub");
   agn_poptop(L);  /* pop metatable */
 }
 

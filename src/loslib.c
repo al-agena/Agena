@@ -7587,50 +7587,9 @@ static int os_sdlcpuinfo (lua_State *L) {  /* 5.5.9, UNDOC */
   return 1;
 }
 
-/* Taken from Bionic libm/i387/fenv.c, MIT licence
- *
- * Test for SSE support on this processor.  We need to do this because
- * we need to use ldmxcsr/stmxcsr to get correct results if any part
- * of the program was compiled to use SSE floating-point, but we can't
- * use SSE on older processors.
- */
-#ifdef ZZZ
-#if ((LONG_MAX == 2147483647L) && !defined(__APPLE__)) && ((defined(__i386__) || defined(__x86_64__)) && defined(__GNUC__) )
 
-#define getfl(x)    __asm volatile(".code32\npushfl\n\tpopl %0" : "=mr" (*(x)))
-#define setfl(x)    __asm volatile(".code32\npushl %0\n\tpopfl" : : "g" (x))
-#define cpuid_dx(x) __asm volatile(".code32\npushl %%ebx\n\tmovl $1, %%eax\n\t"  \
-                    "cpuid\n\tpopl %%ebx"          \
-                    : "=d" (*(x)) : : "eax", "ecx")
-
-static int issse (uint32_t *dx) {
-  int flag, nflag, dx_features;
-  /* am I a 486? */
-  *dx = -1;
-  getfl(&flag);
-  nflag = flag ^ 0x200000;
-  setfl(nflag);
-  getfl(&nflag);
-  if (flag != nflag) {
-    /* not a 486, so CPUID should work. */
-    cpuid_dx(&dx_features);
-    *dx = (uint32_t)dx_features;
-    if (dx_features & 0x2000000) return 1;
-  }
-  return 0;
-}
-
-static int os_hassse (lua_State *L) {  /* 2.14.13 */
-  uint32_t dx;
-  lua_pushboolean(L, issse(&dx));
-  lua_pushnumber(L, dx);
-  return 2;
-}
-#endif
-#endif
-
-
-
+/* The following has been proposed by Gemini AI, 7.10.9. The former single implementation did not
+   compile on 64-bit Windows. */
 #if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
 
 #if defined(__x86_64__) || defined(_M_X64)
@@ -7652,7 +7611,6 @@ static int os_hassse (lua_State *L) {  /* 2.14.13 */
 static int issse (uint32_t *dx) {
   int dx_features;
   *dx = -1;
-
 #if defined(__x86_64__) || defined(_M_X64)
   /* 64-bit path: Must use 64-bit 'long long' for flags */
   long long flag, nflag;
@@ -7668,7 +7626,6 @@ static int issse (uint32_t *dx) {
   setfl(nflag);
   getfl(&nflag);
 #endif
-
   if (flag != nflag) {
     cpuid_dx(&dx_features);
     *dx = (uint32_t)dx_features;
@@ -10150,7 +10107,7 @@ static const luaL_Reg syslib[] = {
   {"getthreadseed", os_getthreadseed}, /* September 21, 2025 */
   {"getwinsysdirs", os_getwinsysdirs}, /* August 30, 2023 */
   {"hasnetwork", os_hasnetwork},       /* added December 29, 2014 */
-#if ((LONG_MAX == 2147483647L) && !defined(__APPLE__)) && ((defined(__i386__) || defined(__x86_64__)) && defined(__GNUC__) )
+#if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
   {"hassse",     os_hassse},           /* 2.14.13, May 04, 2019 */
 #endif
   {"inode",      os_inode},            /* 2.21.5, January 17, 2023 */
