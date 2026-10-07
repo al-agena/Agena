@@ -1,21 +1,99 @@
+7.11.0 Despina, October 07, 2026
+
+- The precedence of the `||` (bitwise or) and `^^` (bitwise xor) operators has been reduced from 6 to 4, causing
+  them to bind less tightly. You may have to change your code by bracketing affected expressions, but it may not
+  be necessary at all.
+
+- Introduced a metamethod shortcut for the `strings.repeat` function by overloading the `*` operator:
+
+  > 20 * 'L', 'M' * 10:
+  LLLLLLLLLLLLLLLLLLLL    MMMMMMMMMM
+
+- Likewise, the `%` operator interfaces to `strings.format` when given a table as the right operand:
+
+  > '%s=%.2f' % ['Agena', 7.11]:
+  Agena=7.11
+
+  If the right operand is a positive integer n, then the last n characters in a string will be returned:
+
+  > 'going' % 3:
+  ing
+
+- The `\` integer division operator, when applied on a string, will return its first n characters:
+
+  > 'going' \ 2:
+  go
+
+- The division operator `/`, when applied to strings, will concat both operands with a slash. There is some logic
+  built in to remove leading and trailing slashes.
+
+  > 'folder' / 'filename':
+  folder/filename
+
+  > 'folder' / '/filename':
+  folder/filename
+
+- The bitshift operators now work on strings; they left-pad or right-pad strings by adding leading or trailing
+  whitespace, respectively.
+
+  Add padding to the left (pushes text right) to make up a string with a total length of 10:
+
+  > 'folder' << 10:
+      folder
+
+  Add padding to the right (pushes text left) by appending four white spaces:
+
+  > 'folder' >> 10:
+  folder    
+
+- The bitwise or operator `||` now accepts strings and replaces a pattern with a replacement string. It is an interface
+  to `strings.gsub` so it supports pattern-matching. Examples:
+
+  > '3.1415' << 10 || ' ':'0':
+  00003.1415
+
+  > 'agena.a' || '.a$':'.h':
+  agena.h
+
+- Likewise, the subtraction operator `-` removes substrings and supports pattern matching, too, by interfacing with
+  `strings.remove`:
+
+  > 'agena.a' - '.a$':
+  agena
+
+- The new function `bytes.tochars` converts a numeric value to a `Little Endian` string of bytes. It works exactly like
+  `bytes.tobytes` - which returns a sequence of bytes instead of a string - so you you have full control whether the
+  resulting string represents a C double, a C 16 or 32-bit signed or unsigned integer, C long double or a C complex double.
+
+  Example: Convert Pi to a C double string and back:
+
+  > strings.tonumber(bytes.tochars(Pi)):
+  3.1415926535898
+
+  Convert 256 to an unsigned 16-bit integer string and back again.
+
+  > strings.tonumber(bytes.tochars(256, 2)):
+  256
+
+
 7.10.9 Enceladus, October 06, 2026
 
-- `keyfile.open` did not open files in read mode when given 'r' or 'read' as a second argument, also sometimes causing 
-  problems with `astro.locate`. This has been fixed.
+- `keyfile.open` did not open files in read mode when given 'r' or 'read' as a second argument, also sometimes causing
+  problems with `astro.locate` and more generally with files that reside in folders with elevated permissions. This has
+  been fixed.
 
 - The `astro` location database index file has been reduced in size by 15 %, or 1.1 MBytes.
 
 
 7.10.8 Enceladus, October 05, 2026
 
-- The first working 64-Bit Windows edition of Agena has been uploaded. See the SourceForge Binaries/Agena 7.10.8 folder,
-  files agena-7.10.8-win64-portable.7z and agena-7.10.8-win64-setup.exe. The edition works fully on Windows 10 and 11.
+- The first working 64-bit Windows edition of Agena has been uploaded. The edition works fully on Windows 10 and 11.
   It also runs on Windows 8.1 but you cannot use the `gdi` and `fractals` packages there.
 
   Arithmetic, text and table processing stress tests show that compared to the 32-bit Windows edition, the 64-bit release
-  is around twice as fast with real arithmetic and basic Calculus, 30 % faster with simple Linear Algebra, and 25 % to
-  40 % faster with string search-and-replace-based operations. Table read and write operations have become at least twice
-  as fast. In addition, you can use vastly more memory.
+  is around twice as fast with real and complex arithmetic, basic Calculus and Statistics, 20 % faster with simple
+  Linear Algebra, and around 30 % faster with string search-and-replace-based operations. Table read and write operations
+  have become at least twice as fast. In addition, you can use vastly more memory.
 
 
 7.10.8 Enceladus, September 30, 2026
