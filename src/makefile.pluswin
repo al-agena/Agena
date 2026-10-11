@@ -29,18 +29,7 @@ else
   STRIP        = strip --strip-unneeded
 endif
 
-#ifeq ($(MSYSTEM),UCRT64)
-#  ASTRO_FLOAT_FLAGS = -ffloat-store
-#else ifeq ($(MSYSTEM),MINGW64)
-#  ASTRO_FLOAT_FLAGS = -ffloat-store
-#else ifdef IS64BIT
-#  ASTRO_FLOAT_FLAGS = -ffloat-store
-#else
-#  # Legacy 32-bit target falls back to strict 64-bit float emulation capping
-#  ASTRO_FLOAT_FLAGS = -ffloat-store
-#endif
-
-ASTRO_FLOAT_FLAGS = 
+ASTRO_FLOAT_FLAGS =
 
 # Composite flags injected into rules
 COMMON_FLAGS = $(OPT_FLAGS) $(BASE_FLAGS)
@@ -86,10 +75,10 @@ else
 endif
 
 # --- Target Lists ---
-DLLS = abci.dll ads.dll astro.dll com.dll cordic.dll curses.dll ddhash.dll \
-	double.dll fastmath.dll fractals.dll gmp.dll gzip.dll iconv.dll ival.dll \
-	mapm.dll minizip.dll mpfr.dll net.dll skycrane.dll strhash.dll strmap.dll \
-	testlib.dll zx.dll
+DLLS = abci.dll ads.dll aspell.dll astro.dll com.dll cordic.dll curses.dll \
+	ddhash.dll double.dll fastmath.dll fractals.dll gmp.dll gzip.dll iconv.dll \
+	ival.dll mapm.dll minizip.dll mpfr.dll net.dll skycrane.dll strhash.dll \
+	strmap.dll testlib.dll zx.dll
 
 OBJS = abci.o ads.o agnt64.o astro.o cordic.o curses.o dcastro.o ival.o \
 	miniz.o moon.o net.o network.o sdncal.o sofa.o sunriset.o vecoff64.o
@@ -110,13 +99,20 @@ ads.dll: ads.o vecoff64.o
 	$(CC) $(CFLAGS_DLL) -o $@ $^ $(AG_LIBS)
 	$(STRIP) $@
 	@mv -f $@ $(LIB_DIR)
+	rm -f $^
+
+aspell.dll: aspell.c
+	@rm -f $@.tmp
+	$(CC) $(CFLAGS_DLL) -o $@.tmp $< libaspell.a -lstdc++ -lmsvcrt $(AG_LIBS)
+	$(STRIP) $@.tmp
+	@mv -f $@.tmp $(LIB_DIR)/$@
 
 astro.dll: astro.o agnt64.o sofa.o sdncal.o moon.o sunriset.o dcastro.o
 	@rm -f $@
-#	$(CC) $(CFLAGS_DLL) -shared -static-libgcc -fpic -o $@ $^ $(AG_LIBS) -lkernel32
 	$(CC) $(CFLAGS_DLL) -shared -static-libgcc -fPIC -o $@ $^ $(AG_LIBS) -lkernel32
 	$(STRIP) $@
 	@mv -f $@ $(LIB_DIR)
+	rm -f $^
 
 com.dll: com.c luasys.c charbuf.c
 	@rm -f $@
@@ -129,13 +125,14 @@ cordic.dll: cordic.o
 	$(CC) $(CFLAGS_DLL) -o $@ $^ $(AG_LIBS)
 	$(STRIP) $@
 	@mv -f $@ $(LIB_DIR)
+	rm -f $<
 
 curses.dll: curses.o
 	@rm -f $@
-#	$(CC) $(CFLAGS_DLL) -o $@ $< -lncurses $(AG_LIBS)
 	$(CC) $(CFLAGS_DLL) -DNCURSES_DLL -o $@ $< $(CURSES_LIB) $(AG_LIBS)
 	$(STRIP) $@
 	@mv -f $@ $(LIB_DIR)
+	rm -f $<
 
 ddhash.dll: ddhash.c
 	@rm -f $@
@@ -184,6 +181,7 @@ ival.dll: ival.o
 	$(CC) $(CFLAGS_DLL) -o $@ $< ../ports/ival/src/fi_lib.a $(AG_LIBS)
 	$(STRIP) $@
 	@mv -f $@ $(LIB_DIR)
+	rm -f $<
 
 mapm.dll: mapm.c
 	@rm -f mapm.tmp
@@ -197,6 +195,7 @@ minizip.dll: minizip.c miniz.o
 	$(CC) $(CFLAGS_DLL) -o $@ $^ $(AG_LIBS)
 	$(STRIP) $@
 	@mv -f $@ $(LIB_DIR)
+	rm -f miniz.o
 
 mpfr.dll: mpfr.c
 	@rm -f $@.tmp
@@ -209,6 +208,7 @@ net.dll: net.o network.o
 	$(CC) $(CFLAGS_DLL) -o $@ $^ -lwsock32 -lwininet -lmswsock -lWs2_32 $(AG_LIBS)
 	$(STRIP) $@
 	@mv -f $@ $(LIB_DIR)
+	rm -f $^
 
 strhash.dll: strhash.c
 	@rm -f $@

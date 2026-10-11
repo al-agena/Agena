@@ -2189,8 +2189,11 @@ static int agnB_readlib (lua_State *L) {
       if (fn == NULL) {
         luaL_error(L, "Error in " LUA_QS ": memory allocation failed.", procname);
       }
-      agnL_debuginfo3(debug, "   Checking C library file ", fn, ".\n");
-      libopener = fastloader_C(L, (const char*)fn, libname, &clibsuccess, 0);  /* pushes nothing */
+      agnL_debuginfo3(debug, "   Searching C library file ", fn, ".\n");
+      if (tools_exists(fn)) {
+        agnL_debuginfo3(debug, "   File ", fn, tools_exists(fn) ? " found.\n" : " not found.\n");
+      }
+      libopener = fastloader_C(L, (const char*)fn, libname, &clibsuccess, debug);  /* pushes nothing */
       if (printdllerror && clibsuccess < 0) {  /* 0.29.0, 7.3.5 change */
         if (clibsuccess == -1)
           fprintf(stderr, "Warning in " LUA_QS ", package file " LUA_QS " corrupt.\n", procname, fn);

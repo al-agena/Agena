@@ -330,7 +330,7 @@ static const char *mkfuncname (lua_State *L, const char *modname) {
    -2 : call to luaopen_<pkgname>() function failed
 
    The function returns the function name of the library opener as a string, or NULL on failure. */
-const char *fastloader_C (lua_State *L, const char *filename, const char *packagename, int *success, int printerror) {
+const char *__fastloader_C (lua_State *L, const char *filename, const char *packagename, int *success, int printerror) {
   const char *funcname = NULL;
   *success = 0;  /* file not found */
   if (readable(filename)) {
@@ -360,7 +360,46 @@ const char *fastloader_C (lua_State *L, const char *filename, const char *packag
   return funcname;
 }
 
+
+const char *fastloader_C (lua_State *L, const char *filename, const char *packagename, int *success, int printerror) {
+  const char *funcname = NULL;
+  *success = 0;  /* file not found */
+  if (readable(filename)) {
+    int n1, n2;
+    n1 = lua_gettop(L);
+    funcname = mkfuncname(L, packagename);  /* creates luaopen_<pkgname> string */
+    /* STAGE 1: Dynamic Loading / Linking Verification */
+    if (ll_loadfunc(L, filename, funcname) != 0) {  
+      *success = -1;  /* file corrupt */
+      if (printerror) {
+        const char *err_msg = lua_tostring(L, -1);
+        printf("\n   OS linker failed to load %s.\n", filename);
+        printf("   %s\n", err_msg ? err_msg : "Unknown OS error");
+        /* loaderror(L, filename); */
+      }
+    } else {
+      /* STAGE 2: Module Execution Tracking */
+      if (lua_pcall(L, 0, 0, 0) != 0) {
+        *success = -2;  /* initialisation failed */
+        if (printerror) {
+          const char *err_msg = lua_tostring(L, -1);
+          printf("\n   DLL loaded, but luaopen_%s crashed during execution.\n", packagename);
+          printf("   %s\n", err_msg ? err_msg : "segmentation fault /mMemory violation");
+          /* loaderror(L, filename); */
+        }
+      } else {
+        *success = 1;
+        agn_setreadlibbed(L, packagename);
+      }
+    }
+    n2 = lua_gettop(L);
+    if (n2 > n1) lua_pop(L, n2 - n1);  /* restore stack to its previous state */
+  }
+  return funcname;
+}
+
 static int pkg_loadclib (lua_State *L) {  /* changed 1.5.0, 1.6.0 Valgrind */
+printf("pkg_loadclib\n");
   int success;
   #if !defined(__OS2__) && !defined(LUA_ANSI)  /* 0.27.1 patch */
   const char *s, *dirpath;

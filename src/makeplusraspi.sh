@@ -9,7 +9,7 @@ export MYFLAGS="-fgnu89-inline -fPIC"
 export EXPORTTO="../lib"
 
 # delete *.o files not deleted by make clean
-for i in abci.o ads.o astro.o charbuf.o com.o cordic.o curses.o \
+for i in abci.o ads.o aspell.o astro.o charbuf.o com.o cordic.o curses.o \
     dcastro.o double.o fastmath.o fractals.o gmp.o iconv.o interp.o \
     luasys.o miniz.o minizip.o moon.o mpfr.o net.o phq.o skycrane.o \
     sqlite.o sqlite3.o sunriset.o testlib.o zx.o strhash.o strmap.o \
@@ -30,8 +30,18 @@ printf "Compiling ADS ... "
 gcc -O2 $MYFLAGS -fpic -c -o vecoff64.o vecoff64.c
 gcc -O2 $MYFLAGS -fpic -c -o ads.o ads.c
 gcc $OPTIONS -fpic -o ads.so ads.o vecoff64.o
+rm -f ads.o vecoff64.o
 strip ads.so
 mv -f ads.so $EXPORTTO
+printf "done.\n"
+
+printf "Compiling aspell ... "
+ASPELL_INCLUDES="-I/usr/local/include -I../src"
+ASPELL_LIBS="-Wl,-Bstatic -L/usr/local/lib -laspell -Wl,-Bdynamic -lstdc++ -lm"
+gcc $MYFLAGS $ASPELL_INCLUDES -c -o aspell.o aspell.c
+gcc -shared $MYFLAGS -o aspell.so aspell.o $ASPELL_LIBS
+rm -f aspell.o
+mv -f aspell.so $EXPORTTO
 printf "done.\n"
 
 printf "Compiling astro ... "
@@ -40,6 +50,7 @@ gcc -O2 $MYFLAGS -fpic -c -o sunriset.o sunriset.c
 gcc -O2 $MYFLAGS -fpic -c -o moon.o moon.c
 gcc -O2 $MYFLAGS -fpic -c -o dcastro.o dcastro.c
 gcc $OPTIONS -fpic -o astro.so astro.o sunriset.o moon.o sofa.o dcastro.o
+rm -f astro.o sunriset.o moon.o dcastro.o
 strip astro.so
 mv -f astro.so $EXPORTTO
 printf "done.\n"
@@ -49,6 +60,7 @@ gcc -O2 -DPLUS $MYFLAGS -fpic -c -o charbuf.o charbuf.c
 gcc -O2 $MYFLAGS -fpic -c -o luasys.o luasys.c
 gcc -O2 $MYFLAGS -fpic -c -o com.o com.c
 gcc $OPTIONS -fpic -o com.so com.o charbuf.o luasys.o
+rm -f com.o charbuf.o luasys.o
 strip com.so
 mv -f com.so $EXPORTTO
 printf "done.\n"
@@ -120,8 +132,6 @@ mv -f mpfr.so $EXPORTTO
 printf "done.\n"
 
 printf "Compiling net ... "
-#gcc $OPTIONS -c network.c -o network.o
-#gcc $OPTIONS -shared -fPIC -o net.so net.c network.o
 gcc $OPTIONS -shared -fPIC -o net.so net.c
 strip net.so
 mv -f net.so $EXPORTTO

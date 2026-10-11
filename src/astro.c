@@ -7,6 +7,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>   /* for strcasecmp, strncasecmp */
 #include <time.h>
 
 #define astro_c
@@ -1243,10 +1244,33 @@ static int astro_persiandate (lua_State *L) {
 }
 
 /* Returns the Farsi name of integer month. 7.3.0 */
+#ifdef DONOTCOMPILEME
 static int astro_pmonth (lua_State *L) {
   int month = agn_checkinteger(L, 1);
   if (month < 1 || month > 12) {
     luaL_error(L, "Error in " LUA_QS ": invalid month given.", "astro.pmonth");
+  }
+  lua_pushstring(L, PERSIAN_MONTHS[month - 1]);
+  return 1;
+}
+#endif
+
+/* Returns the Farsi name of an integer month, or the integer index of a string name. 7.3.0 */
+static int astro_pmonth (lua_State *L) {
+  if (agn_isstring(L, 1)) {
+    int i;
+    const char *name = lua_tostring(L, 1);
+    for (i=0; i < 12; i++) {
+      if (strcasecmp(name, PERSIAN_MONTHS[i]) == 0) {
+        lua_pushinteger(L, i + 1);
+        return 1;
+      }
+    }
+    return luaL_error(L, "Error in " LUA_QS ": invalid Persian month name '%s'.", "astro.pmonth", name);
+  }
+  int month = agn_checkinteger(L, 1);
+  if (month < 1 || month > 12) {
+    return luaL_error(L, "Error in " LUA_QS ": invalid month index %d (must be 1 to 12).", "astro.pmonth", month);
   }
   lua_pushstring(L, PERSIAN_MONTHS[month - 1]);
   return 1;
@@ -1259,6 +1283,26 @@ static int astro_pmonth (lua_State *L) {
    integer in the range [1, 31]. 7.3.0 */
 static int astro_pweekday (lua_State *L) {
   int nargs = lua_gettop(L);
+  if (agn_isstring(L, 1)) {
+    int i;
+    const char *name = lua_tostring(L, 1);
+    /* Check Weekdays first (returns 1 to 7) */
+    for (i=0; i < 7; i++) {
+      if (strcasecmp(name, PERSIAN_WEEKDAYS[i]) == 0) {
+        lua_pushinteger(L, i + 1);
+        return 1;
+      }
+    }
+    /* Check Zoroastrian Month Days next (returns 1 to 31) */
+    for (i=0; i < 31; i++) {
+      if (strcasecmp(name, PERSIAN_DAY_NAMES[i]) == 0) {
+        lua_pushinteger(L, i + 1);
+        return 1;
+      }
+    }
+    /* Named entry not found anywhere */
+    return luaL_error(L, "Error in " LUA_QS ": invalid Persian day or weekday name '%s'.", "astro.pweekday", name);
+  }
   int weekday = agn_checkinteger(L, 1);
   if (nargs == 1) {
     if (weekday < 1 || weekday > 7)

@@ -6620,7 +6620,7 @@ static int str_issplit (lua_State *L) {
 }
 
 
-/* Metamethods */
+/* *** Metamethods ************************************************************* */
 
 static int mt_mul (lua_State *L) {  /* new 7.11.0 */
   luaL_checkany(L, 2);
@@ -6672,7 +6672,7 @@ static int mt_intdiv (lua_State *L) {  /* new 7.11.0 */
     size_t l;
     const char *s = lua_tolstring(L, 1, &l);
     size_t end = tools_posrelat(lua_tointeger(L, 2), l);
-    if (1 <= end)
+    if (l && 1 <= end)  /* 7.11.1 change */
       lua_pushlstring(L, s, end);
     else
       lua_pushliteral(L, "");
@@ -6716,7 +6716,7 @@ static int mt_div (lua_State *L) {  /* new 7.11.0 */
     if (clean_len2 > 0) {
       luaL_addlstring(&b, s2 + start2, clean_len2);
     }
-    /* 4. If the right string was purely slashes (e.g. "///"), 
+    /* 4. If the right string was purely slashes (e.g. "///"),
           or explicitly ended in a slash, ensure a single final slash exists */
     if (right_ends_with_slash && len1 == 0 && clean_len2 == 0) {
       /* If both parts were stripped to nothing, output a single root slash "/" */
@@ -6758,6 +6758,19 @@ static int mt_sub (lua_State *L) {  /* new 7.11.0 */
   }
   return 1;
 }
+
+
+static const luaL_Reg strmetals[] = {
+  {"__mul",    mt_mul},
+  {"__mod",    mt_mod},
+  {"__intdiv", mt_intdiv},
+  {"__div",    mt_div},
+  {"__bshr",   str_ljustify},
+  {"__bshl",   str_rjustify},
+  {"__bor",    mt_bor},
+  {"__sub",    mt_sub},
+  {NULL, NULL}
+};
 
 
 static const luaL_Reg strlib[] = {
@@ -6914,32 +6927,18 @@ static const luaL_Reg strlib[] = {
 
 
 static void createmetatable (lua_State *L) {
-  lua_createtable(L, 0, 1);  /* create metatable for strings */
-  lua_pushliteral(L, "");  /* dummy string, for reference */
-  lua_pushvalue(L, -2);
-  lua_setmetatable(L, -2);  /* set string metatable */
-  agn_poptop(L);  /* pop dummy string */
-  lua_pushvalue(L, -2);  /* string library... */
-  lua_setfield(L, -2, "__index");  /* ...is the __index metamethod */
-  lua_pushcfunction(L, mt_mul);
-  lua_setfield(L, -2, "__mul");
-  lua_pushcfunction(L, mt_mod);
-  lua_setfield(L, -2, "__mod");
-  lua_pushcfunction(L, mt_intdiv);
-  lua_setfield(L, -2, "__intdiv");
-  lua_pushcfunction(L, mt_div);
-  lua_setfield(L, -2, "__div");
-  lua_pushcfunction(L, str_ljustify);
-  lua_setfield(L, -2, "__bshr");
-  lua_pushcfunction(L, str_rjustify);
-  lua_setfield(L, -2, "__bshl");
-  lua_pushcfunction(L, mt_bor);
-  lua_setfield(L, -2, "__bor");
-  lua_pushcfunction(L, mt_sub);
-  lua_setfield(L, -2, "__sub");
-  agn_poptop(L);  /* pop metatable */
+  lua_createtable(L, 0, 9);        /* Allocate space for __index + 8 operators */
+  /* Register all metamethod operators at once */
+  luaL_register(L, NULL, strmetals); 
+  /* Set the string library table as the __index */
+  lua_pushvalue(L, -2);            /* Copy string library table to top */
+  lua_setfield(L, -2, "__index");  /* Metatable.__index = strlib */
+  /* Apply the metatable to all strings globally */
+  lua_pushliteral(L, "");          /* Push dummy string */
+  lua_pushvalue(L, -2);            /* Copy metatable to top */
+  lua_setmetatable(L, -2);         /* Set string metatable */
+  lua_pop(L, 2);                   /* Pop dummy string and metatable */
 }
-
 
 /*
 ** Open string library

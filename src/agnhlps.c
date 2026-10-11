@@ -30,6 +30,7 @@
 
 #ifdef __APPLE__
 #include <mach/mach_time.h>
+#include <mach-o/dyld.h>  /* for _NSGetExecutablePath */
 #endif
 #include <float.h>      /* for sincos, rem_pio2, DBL_MAX_EXP */
 #include <sys/timeb.h>  /* ftime, for milliseconds */
@@ -93,6 +94,8 @@
 #include <io.h>         /* for _flush_disk_cache */
 #include <sys/ioctl.h>  /* for ioctl */
 #include <dpmi.h>       /* for get_dos_ticks */
+#include <crt0.h>       /* for __crt0_argv */
+//extern char * __crt0_argv;
 #endif
 
 #include "agncfg.h"    /* read in endianness */
@@ -5158,31 +5161,6 @@ on April 08, 2009 - 0.13.4; updated 1.7.9, 07.09.2012. */
 #ifdef _WIN32
 /* for Windows 7 or later, https://stackoverflow.com/questions/32115255/c-how-to-detect-windows-10, posted by Michael Haephrati;
    returns 6 for Windows 8.1, but 10 for Windows 10. */
-#ifdef ZZZ
-LUALIB_API int getSysOpType (int *minorVersion, int *BuildNumber, int *PlatformId, int *ProductType, double *winver, uint8_t *SPmaj, uint8_t *SPmin) {
-  int ret = 0;
-  NTSTATUS(WINAPI *RtlGetVersion)(LPOSVERSIONINFOEXW);
-  OSVERSIONINFOEXW osInfo = {0};  /* 7.7.11 invalid read fix */
-  *(FARPROC*)&RtlGetVersion = GetProcAddress(GetModuleHandleA("ntdll"), "RtlGetVersion");
-  *minorVersion = *BuildNumber = *PlatformId = *ProductType = *SPmaj = *SPmin = -1;
-  if (RtlGetVersion != NULL) {
-    osInfo.dwOSVersionInfoSize = sizeof(osInfo);
-    RtlGetVersion(&osInfo);
-    ret = osInfo.dwMajorVersion;
-    *minorVersion = osInfo.dwMinorVersion;
-    *BuildNumber  = osInfo.dwBuildNumber;
-    *PlatformId   = osInfo.dwPlatformId;
-    *ProductType  = osInfo.wProductType;
-    *SPmaj        = osInfo.wServicePackMajor;
-    *SPmin        = osInfo.wServicePackMinor;
-    *winver       = ret + 0.1*(*minorVersion);
-    if (*winver == 10 && *BuildNumber >= 22000) *winver = 11;  /* 2.39.1 */
-  } else
-    *winver = 0.0;
-  return ret;
-}
-#endif
-
 LUALIB_API int getSysOpType (int *minorVersion, int *BuildNumber, int *PlatformId, int *ProductType, double *winver, uint8_t *SPmaj, uint8_t *SPmin) {
   int ret = 0;
   /* 1. Define a local type signature for the function pointer */
@@ -5320,14 +5298,21 @@ LUALIB_API int getWindowsVersion (struct WinVer *winver) {
 /* Get full path of running application, 2.16.1.
    FREE it !  Note that free() according to the C standard just quits when pointer is NULL.
    See Internet article: "executable - Absolute path to currently executing program - Unix & Linux Stack Exchange" */
-LUALIB_API char *getModuleFileName (void) {
-  char *apath = NULL;  /* 7.8.1 fix */
-#if defined(_WIN32)
-  int winversion;
-  struct WinVer winver = {0};  /* 7.7.11 invalid read fix */
-  winversion = getWindowsVersion(&winver);
-  if (winversion < MS_WIN2K && winversion != MS_WINNT4) return NULL;  /* not(NT4, W2K or later) ? , 2.17.2 extension */
+
+#if defined(_WIN32) || defined(__OS2__) || defined(__DJGPP__)  /* new 7.11.1 */
+static char *standardisepath (char *path) {
+  if (path == NULL) return NULL;
+  int i;
+  char *p = path;
+  for (i = 0; *p; i++) {
+    path[i] = (*p == '\\') ? '/' : tolower((unsigned char)*p);
+    p++;
+  }
+  return path;
+}
 #endif
+
+LUALIB_API char *getModuleFileName (void) {
 #if defined(__OS2__)  /* 2.39.12 */
   PPIB ppib;
   char path[MAX_PATH];
@@ -5339,27 +5324,56 @@ LUALIB_API char *getModuleFileName (void) {
     rc = DosQueryModuleName(ppib->pib_hmte, sizeof(path), path);
     if (rc == NO_ERROR) {
       /* *strrchr(path, '\\') = 0; */ /* we do not truncate name part including last backslash */
-      int i;
-      char *p = path;
-      for (i=0; *p; i++) {  /* at least in ArcaOS, we get a path in capital letters and with backslashes, so: */
-        path[i] = (*p == '\\') ? '/' : tolower(*p);
-        p++;
-      }
-      return tools_strdup(path);
+      return tools_strdup(standardisepath(path));
     }
   }
-#else
-  apath = tools_stralloc(MAX_PATH);  /* 2.16.5 */
-  if (apath == NULL) return NULL;
+  return NULL;
 #endif
 #if defined(_WIN32)
-  if (GetModuleFileName(NULL, apath, MAX_PATH)) return apath;
+  int winversion;
+  struct WinVer winver = {0};  /* 7.7.11 invalid read fix */
+  winversion = getWindowsVersion(&winver);
+  if (winversion < MS_WIN2K && winversion != MS_WINNT4) return NULL;  /* not(NT4, W2K or later) ? , 2.17.2 extension */
+#endif
+  char *apath = tools_stralloc(MAX_PATH);  /* 2.16.5 */
+  if (apath == NULL) return NULL;
+#if defined(_WIN32)
+  if (GetModuleFileName(NULL, apath, MAX_PATH)) {
+    return (apath[0] != '\0' && apath[1] == ':') ? standardisepath(apath) : apath;
+  }
 #elif defined(__linux__)
   int nchar;
   nchar = readlink("/proc/self/exe", apath, MAX_PATH - 1);  /* 7.7.11 fix suggested by Gemini AI */
   if (nchar >= 0) {
     apath[nchar] = '\0';
     return apath;
+  }
+#elif defined(__sun) && defined(__SVR4)  /* new 7.11.1 */
+  const char *execname = getexecname();
+  if (execname) {
+    char resolved[MAX_PATH] = { 0 };
+    if (realpath(execname, resolved) != NULL) {
+      strncpy(apath, resolved, MAX_PATH - 1);
+      apath[MAX_PATH - 1] = '\0';
+      return apath;
+    }
+  }
+#elif defined (__APPLE__)  /* new 7.11.1 */
+  uint32_t size = MAX_PATH;
+  if (_NSGetExecutablePath(apath, &size) == 0) {
+    char resolved[MAX_PATH] = { 0 };
+    if (realpath(apath, resolved) != NULL) {
+      strncpy(apath, resolved, MAX_PATH - 1);
+      apath[MAX_PATH - 1] = '\0';
+      return apath;
+    }
+  }
+#elif defined(__DJGPP__)  /* new 7.11.1 */
+  /* DJGPP: __crt0_argv[0] contains the absolute path to the executable */
+  if (__crt0_argv != NULL && __crt0_argv[0] != NULL) {
+    strncpy(apath, __crt0_argv[0], MAX_PATH - 1);
+    apath[MAX_PATH - 1] = '\0';
+    return standardisepath(apath);
   }
 #endif
   xfree(apath);  /* Clean up if API calls failed, 7.7.11 */
@@ -10769,8 +10783,6 @@ LUALIB_API int tools_jd2cdate (double x, int *iy, int *im, int *id, double *fd, 
   *sec = sun_fmod(secsperday, 60);  /* preserves fractional seconds */
   return (sun_floor(x - 0.5) == 60 + 2415018) ? -2 : 0;
 }
-#endif
-
 
 /* Optimised by Gemini AI 7.8.8, cleansed */
 LUALIB_API int tools_jd2cdate (double x, int *iy, int *im, int *id, double *fd, int *deg, int *min, double *sec) {
@@ -10787,6 +10799,39 @@ LUALIB_API int tools_jd2cdate (double x, int *iy, int *im, int *id, double *fd, 
   *sec = sun_fmod(rem_seconds, 60.0);
   /* Clean up floating-point edge cases (e.g., 59.99999999999999 wrapping to 60) */
   if (*sec >= 60.0) {
+    *sec = 0.0;
+    *min += 1;
+    if (*min >= 60) {
+      *min = 0;
+      *deg += 1;
+    }
+  }
+  /* -2: Feb 29, 1900 */
+  return (sun_floor(x - 0.5) == 60 + 2415018) ? -2 : 0;
+}
+#endif
+
+
+/* Optimised by Gemini AI 7.8.8, cleansed & stabilized 7.11.1 */
+LUALIB_API int tools_jd2cdate (double x, int *iy, int *im, int *id, double *fd, int *deg, int *min, double *sec) {
+  long long int degrees, minutes;
+  double secsperday;
+  /* fd = decimal fractional day */
+  if (iauJd2cal(x, 0, iy, im, id, fd) == -1) return -1;
+  /* Convert fractional day to seconds and add a tiny half-millisecond buffer to absorb double-precision rounding bleed */
+  secsperday = (24.0 * 3600.0 * (*fd)) + 0.0005;
+  degrees = (long long int)sun_floor(secsperday / 3600.0);
+  double rem_seconds = sun_fmod(secsperday, 3600.0);
+  minutes = (long long int)sun_floor(rem_seconds / 60.0);
+  *deg = (int)degrees;
+  *min = (int)minutes;
+  *sec = sun_fmod(rem_seconds, 60.0);
+  /* Remove the buffer from the final seconds representation so exact zeros don't drift */
+  *sec -= 0.0005;
+  if (*sec < 0.0) *sec = 0.0;
+  /* Clean up floating-point edge cases (e.g., 59.999999... wrapping to 60)
+     Using a 1e-6 tolerance check ensures that 59.99999+ triggers the rollover safely */
+  if (*sec >= (60.0 - 1e-6)) {
     *sec = 0.0;
     *min += 1;
     if (*min >= 60) {
