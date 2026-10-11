@@ -1,3 +1,42 @@
+7.11.1 Despina, October 11, 2026
+
+- The new `aspell` package provides an interface to the GNU Aspell 0.60 spell check library. Example:
+
+  > import aspell
+
+  > d := aspell.new('en_US');
+
+  > d@@check('Chattanuga'):
+  false
+
+  > d@@suggest('Chattanuga'):
+  [Chattanooga, Chaitanya, Chatting, Chattanooga's, Charting, Chautauqua]
+
+  > d@@close();  
+
+  The package is available on Windows, Solaris, Linux and macOS.
+
+- In Windows, `os.getmodulefilename` will always return paths with forward slashes, not backslashes, and with
+  lower-case letters, as long as the interpreter executable is located on the local system. 
+  
+  The function now also is fully supported on macOS, Solaris and DOS.
+
+- You can now pass a Persian month name, a string such as 'Dey' or 'dey', to `astro.pmonth`. The function will 
+  return the corresponding month number, an integer in [1, 12], in this case.
+  
+  Likewise, `astro.pweekday` returns the day number for a Persian weekday (1 to 7, Saturday-indexed) or a 
+  Zoroastrian month day (1 to 31).
+
+- The new function `astro.p2cd` converts a Persian date and time to the corresponding Gregorian calendar date.
+
+- Reduced round-off errors in an underlying function that converts Julian Date to Gregorian calendar date,
+  benefitting `astro.cdate`, `astro.pdate`, `os.esd`, `os.lsd` and `os.usd`.
+
+- Debug information printed at the console when dynamic-link libraries failed to load has been improved a bit.
+
+- The size of the binaries has been reduced a tiny bit on Windows, Linux, macOS and Solaris.
+
+
 7.11.0 Despina, October 07, 2026
 
 - The precedence of the `||` (bitwise or) and `^^` (bitwise xor) operators has been reduced from 6 to 4, causing
@@ -44,7 +83,7 @@
   Add padding to the right (pushes text left) by appending four white spaces:
 
   > 'folder' >> 10:
-  folder    
+  folder
 
 - The bitwise or operator `||` now accepts strings and replaces a pattern with a replacement string. It is an interface
   to `strings.gsub` so it supports pattern-matching. Examples:
@@ -52,7 +91,7 @@
   > '3.1415' << 10 || ' ':'0':
   00003.1415
 
-  > 'agena.a' || '.a$':'.h':
+  > 'agena.a' || 'a$':'h':
   agena.h
 
 - Likewise, the subtraction operator `-` removes substrings and supports pattern matching, too, by interfacing with
