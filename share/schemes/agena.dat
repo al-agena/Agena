@@ -161,6 +161,7 @@ astro.lunarlibration
 astro.moon
 astro.moonphase
 astro.moonriseset
+astro.p2cd
 astro.p2jd
 astro.pdate
 astro.peak
@@ -3614,3 +3615,10 @@ binpack.uchar
 binpack.uint16
 binpack.uint32
 binpack.unpack
+aspell.check
+aspell.close
+aspell.config
+aspell.new
+aspell.path
+aspell.suggest
+

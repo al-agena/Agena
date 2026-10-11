@@ -308,6 +308,12 @@ object TPersHolder
         end
         item
           FontID = 7
+          Name = 'aspell'
+          Keywords =
+            'aspell,check,close,config,new,path,suggest'
+        end
+        item
+          FontID = 7
           Name = 'io'
           Keywords =
             'io,anykey,clearerror,close,eof,ferror,filepos,filesize,getclip,getkey,infile,input,isfdesc,isopen,lines,lock,' +
@@ -475,7 +481,7 @@ object TPersHolder
           Keywords =
             'astro,a2af,a2tf,autumn,cal2jd,cdate,coords,cweek,cweekmonsun,d2tf,dectodms,dmstodec,gethourangle,gethourangle,hdate,hebrew2jd,' +
             'illumination,isdst,isleapyear,isvaliddate,isvalidtime,jdate,lastcweek,locate,lunareclipse,lunarlibration,moon,moonphase,' +
-            'moonriseset,pdate,peak,persian2jd,pmonth,searchaltitude,searchhourangle,searchlunarapsis,searchmoonphase,searchplanetapsis,' +
+            'moonriseset,p2cd,p2jd,pdate,peak,persian2jd,pmonth,searchaltitude,searchhourangle,searchlunarapsis,searchmoonphase,searchplanetapsis,' +
             'searchriseset,seasons,shabbat,siderial,solareclipse,spring,summer,sun,sunriseset,taiutc,tf2d,winter'
         end
         item

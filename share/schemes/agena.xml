@@ -1882,6 +1882,7 @@
       <KEYWORD3>astro.moon</KEYWORD3>
       <KEYWORD3>astro.moonphase</KEYWORD3>
       <KEYWORD3>astro.moonriseset</KEYWORD3>
+      <KEYWORD3>astro.p2cd</KEYWORD3>
       <KEYWORD3>astro.p2jd</KEYWORD3>
       <KEYWORD3>astro.pdate</KEYWORD3>
       <KEYWORD3>astro.peak</KEYWORD3>
@@ -3596,6 +3597,12 @@
       <KEYWORD3>binpack.uint16</KEYWORD3>
       <KEYWORD3>binpack.uint32</KEYWORD3>
       <KEYWORD3>binpack.unpack</KEYWORD3>
+      <KEYWORD3>aspell.check</KEYWORD3>
+      <KEYWORD3>aspell.close</KEYWORD3>
+      <KEYWORD3>aspell.config</KEYWORD3>
+      <KEYWORD3>aspell.new</KEYWORD3>
+      <KEYWORD3>aspell.path</KEYWORD3>
+      <KEYWORD3>aspell.suggest</KEYWORD3>
     </KEYWORDS>
   </RULES>
 </MODE>
