@@ -2,7 +2,7 @@
 
 # 1. Configuration
 set -e
-export AGENAVER="7.11.0"
+export AGENAVER="7.11.1"
 export BUILD_USER="alex"
 export AGENAHOME="/home/$BUILD_USER/agena"
 
@@ -24,6 +24,7 @@ sudo rm -rf "$AGENATARGET_ROOT/usr"
 mkdir -p "$AGENATARGET_BIN"
 mkdir -p "$AGENATARGET_LIB"
 mkdir -p "$AGENATARGET_DATA"
+mkdir -p "$AGENATARGET_DATA/aspell"
 mkdir -p "$AGENATARGET_DOC"
 mkdir -p "$AGENATARGET_SHARE/fractint"
 mkdir -p "$AGENATARGET_SHARE/icons"
@@ -51,7 +52,7 @@ for libfile in abci.so abci.agn iconv.agn iconv.so ads.agn ads.so agenaini.spl \
   gzip.so ival.so ival.agn kiss.agn library.agn maple.agn mapm.agn mapm.so \
   minizip.so gmp.agn gmp.so mpfr.agn mpfr.so net.agn net.so skycrane.agn \
   skycrane.so sqlite.so tar.agn telex.agn testlib.so unimath.agn zx.so \
-  strhash.so strmap.so;
+  strhash.so strmap.so aspell.so aspell.agn;
 do
   if [ -f "$AGENAHOME/lib/$libfile" ]; then
     cp -p "$AGENAHOME/lib/$libfile" "$AGENATARGET_LIB/"
@@ -77,7 +78,7 @@ echo "Packing assets..."
 rsync -a --exclude='cities' "$AGENAHOME/data/" "$AGENATARGET_DATA/"
 
 # 4. Payload / Share content
-echo "Packing shared assets (icons, schemes, scripting, colour maps)..."
+echo "Packing shared assets (icons, schemes, scripting, maps, dicts)..."
 [ -d "$AGENAHOME/share/fractint" ] && cp -rp "$AGENAHOME/share/fractint/"* "$AGENATARGET_SHARE/fractint/"
 [ -d "$AGENAHOME/share/icons" ] && cp -rp "$AGENAHOME/share/icons/"* "$AGENATARGET_SHARE/icons/"
 [ -d "$AGENAHOME/share/schemes" ] && cp -rp "$AGENAHOME/share/schemes/"* "$AGENATARGET_SHARE/schemes/"
@@ -122,6 +123,7 @@ ln -s "/usr/agena/sragena"   "$AGENATARGET_ROOT/usr/bin/sragena"
 # 6. Final Packaging Security Setup
 echo "Finalizing package permissions..."
 chmod -R 755 "$AGENATARGET_ROOT/usr"
+chmod -R 777 "$AGENATARGET_ROOT/usr/agena/data"
 
 echo "Building Debian Package..."
 cd "$MAINTARGETDIR"
