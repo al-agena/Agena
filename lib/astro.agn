@@ -5,7 +5,7 @@ package.checkclib('astro');  # has C dynamic link library been found ?
 create table astro.aux;
 
 astro.initstring :=
-   'astro package v2.0.2 as of October 05, 2026\n';
+   'astro package v2.1.0 as of October 10, 2026\n';
 
 # Provides an easier-to-use interface to 3344`astro.sunriseset`. Longitudes and latitudes can be given in form
 # of two tables containing degrees (a number), minutes  (a number), seconds (a number), and the orientation
@@ -459,6 +459,37 @@ end;
 # astro.locate("'s Gravenmoer"):
 # astro.locate('Houma'):
 # astro.locate('Lódz'):
+
+
+/* Converts the Persian year, month, day and optionally hour, minute, second, representing
+   local Shiraz time, to the corresponding Gregorian date, UTC. year, day, h, m, s are
+   supposed to be numbers. month may be a month number or the name of a Persian month,
+   a string. h, m, s default to zero.
+   The function is written in Agena and included in the lib/astro.agn library file.
+
+   > import astro;
+
+   > astro.p2cd(1405, 7, 18, 21, 8, 9.5):
+   2026    10      10      0.73483217600733        17      38      9.5000070333481
+
+   > astro.p2cd(1405, 'Mehr', 18):
+   2026    10      9       0.85416666651145        20      29      59.999986588955 */
+astro.p2cd := proc(year, month, day, h, m, s) is
+  if year :: table then
+     year, month, day, h, m, s := op(year)
+  fi;
+  if year -: integer or month -: {posint, string} or day -: posint then
+     error('Error in `astro.p2cd`: date is invalid.')
+  fi;
+  if month :: string then
+     month := astro.pmonth(month)
+  fi;
+  h, m, s := h or 0, m or 0, s or 0;
+  if h -: nonnegint or m -: nonnegint or s -: number then
+     error('Error in `astro.p2cd`: time is invalid.')
+  fi;
+  return astro.cdate(astro.p2jd(year, month, day, h, m, s))
+end;
 
 
 ##############################################################################################
