@@ -23,6 +23,7 @@ mkdir -p $MAINTARGETDIR/agena/usr
 mkdir -p $MAINTARGETDIR/agena/usr/agena
 mkdir -p $MAINTARGETDIR/agena/usr/agena/lib
 mkdir -p $MAINTARGETDIR/agena/usr/agena/data
+mkdir -p $MAINTARGETDIR/agena/usr/agena/data/aspell
 mkdir -p $MAINTARGETDIR/agena/usr/agena/share
 mkdir -p $MAINTARGETDIR/agena/usr/agena/share/fractint
 mkdir -p $MAINTARGETDIR/agena/usr/agena/share/icons
@@ -61,6 +62,7 @@ cp $AGENAHOME/data/cities.dbf $AGENATARGET_USR/agena/data
 cp $AGENAHOME/data/cities.txt $AGENATARGET_USR/agena/data
 cp $AGENAHOME/data/country.csv $AGENATARGET_USR/agena/data
 cp $AGENAHOME/data/timezone.csv $AGENATARGET_USR/agena/data
+cp -R $AGENAHOME/data/aspell/ $AGENATARGET_USR/agena/data/aspell
 
 # Library files
 cp $AGENAHOME/lib/abci.agn $AGENATARGET_USR/agena/lib
@@ -69,6 +71,8 @@ cp $AGENAHOME/lib/ads.agn $AGENATARGET_USR/agena/lib
 cp $AGENAHOME/lib/ads.so $AGENATARGET_USR/agena/lib
 cp $AGENAHOME/lib/agenaini.spl $AGENATARGET_USR/agena/lib
 cp $AGENAHOME/lib/ansi.agn $AGENATARGET_USR/agena/lib
+cp $AGENAHOME/lib/aspell.agn $AGENATARGET_USR/agena/lib
+cp $AGENAHOME/lib/aspell.so $AGENATARGET_USR/agena/lib
 cp $AGENAHOME/lib/astro.agn $AGENATARGET_USR/agena/lib
 cp $AGENAHOME/lib/astro.so $AGENATARGET_USR/agena/lib
 cp $AGENAHOME/lib/com.so $AGENATARGET_USR/agena/lib
