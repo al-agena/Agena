@@ -2,7 +2,7 @@
 # ! build Agena in /home/proglang/agena !
 Summary: Agena Programming Language
 Name: agena
-Version: 7.11.0
+Version: 7.11.1
 Release: 1
 # change Release number in build.sh file, as well.
 #Source0: %{name}-%{version}-src.tar.gz
@@ -83,6 +83,8 @@ cp /home/proglang/agena/lib/ads.agn $RPM_BUILD_ROOT/usr/agena/lib
 cp /home/proglang/agena/lib/ads.so $RPM_BUILD_ROOT/usr/agena/lib
 cp /home/proglang/agena/lib/agenaini.spl $RPM_BUILD_ROOT/usr/agena/lib
 cp /home/proglang/agena/lib/ansi.agn $RPM_BUILD_ROOT/usr/agena/lib
+cp /home/proglang/agena/lib/aspell.agn $RPM_BUILD_ROOT/usr/agena/lib
+cp /home/proglang/agena/lib/aspell.so $RPM_BUILD_ROOT/usr/agena/lib
 cp /home/proglang/agena/lib/astro.agn $RPM_BUILD_ROOT/usr/agena/lib
 cp /home/proglang/agena/lib/astro.so $RPM_BUILD_ROOT/usr/agena/lib
 cp /home/proglang/agena/lib/com.so $RPM_BUILD_ROOT/usr/agena/lib
@@ -346,6 +348,8 @@ rm -rf $RPM_BUILD_ROOT
 /usr/agena/lib/ads.so
 /usr/agena/lib/agenaini.spl
 /usr/agena/lib/ansi.agn
+/usr/agena/lib/aspell.agn
+/usr/agena/lib/aspell.so
 /usr/agena/lib/astro.agn
 /usr/agena/lib/astro.so
 /usr/agena/lib/com.so
