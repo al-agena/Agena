@@ -19,3 +19,8 @@ named `agena-0.14.0-sol10-x86-local`:
 > pkgtrans -s /var/spool/pkg /export/home/proglang/agena/agena-0.14.0-sol10-x86-local SMCagena
 
 You may compress this file with gzip or other utilities.
+
+To create new entries in a prototype file, you can use this:
+
+pkgproto /export/home/proglang/agena/dir/subdir=agena/dir/subdir >> mysubdirprototype
+
