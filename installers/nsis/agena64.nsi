@@ -9,7 +9,7 @@ Unicode True
 !ifndef VERSION
   !define VER_MAJOR '7'
   !define VER_MINOR '11'
-  !define VER_REVISION '0'
+  !define VER_REVISION '1'
   !define NICKNAME "Despina"
   !define VERSION '${VER_MAJOR}.${VER_MINOR}.${VER_REVISION}'
 !endif
@@ -530,6 +530,25 @@ ${MementoSection} "Desktop Shortcut" SecShortcuts
 ${MementoSectionEnd}
 
 SectionGroup "plus Packages" SecPluginsPlugins
+
+
+${MementoSection} "aspell" SecPluginsAspell
+
+  SetDetailsPrint both
+  DetailPrint "Installing plus package aspell ..."
+  SetDetailsPrint listonly
+
+  SectionIn 1
+
+  SetOutPath $INSTDIR\lib
+  File ..\..\lib\aspell.dll
+  File ..\..\lib\aspell.agn
+
+  SetOutPath "$INSTDIR\data\aspell64"
+  File "..\..\data\aspell64\*.*"
+
+${MementoSectionEnd}
+
 
 
 ${MementoSection} "astro" SecPluginsAstro
@@ -1368,6 +1387,7 @@ SectionEnd
   !insertmacro MUI_DESCRIPTION_TEXT ${SecEnvPath} "Appends Agena path to system PATH"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecShortcuts} "Adds Agena icon to your desktop for easy access"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsPlugins} "Additonal libraries"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsAspell} "GNU Aspell 0.60 spell checker"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsAstro} "Astronomical time and date package"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsCordic} "CORDIC (COordinate Rotation DIgital Computer) numeric package"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsKiss} "Fast Fourier Transform package (KissFFT)"
