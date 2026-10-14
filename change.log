@@ -1,3 +1,34 @@
+7.11.1 Despina, October 14, 2026
+
+- The Agena 32- and 64-bit Windows editions, the 64-bit Linux edition and the macOS and Solaris 10 32-bit editions
+  now come with the Aspell dictionaries: Afrikaans, Arabic, Czech, Danish, Dutch, English, Farsi, Finish, French,
+  Frisian, Low German, German, Greek, Hebrew, Hindi, Hungarian, Icelandic, Indonesian, Italian, Kurdish, Latin,
+  Malayalam, Norwegian Bokmal, Punjabi, Brazilian Portuguese, Polish, Punjabi, Romanian, Russian, Serbian, Spanish,
+  Swedish, Turkish, Uzbek, Yiddish, Zulu.
+
+  If you need another dictionary, please drop me a line in the Agena SourceForge Forum.
+
+- The Agena OS/2 edition also supports the `aspell` binding, and it comes with an Italian dictionary, along with 
+  all the others:
+
+  > import aspell
+
+  > it := aspell.new('it')
+
+  > aspell.suggest(it, 'finalmente'):
+  [finalmente, finale, fanale]
+
+
+7.11.1 Despina, October 12, 2026
+
+- The Agena 64-bit Windows and Linux editions now come with the languages: Afrikaans, Arabic, Czech, Danish, Dutch,
+  English, Farsi, Finish, French, Low German, German, Hebrew, Hindi, Hungarian, Icelandic, Indonesian, Italian,
+  Kurdish, Latin, Malayalam, Norwegian Bokmal, Punjabi, Brazilian Portuguese, Polish, Punjabi, Romanian, Russian,
+  Serbiam, Spanish, Swedish, Turkish, Uzbek, Yiddish, Zulu.
+
+  If you need another dictionary, please drop me a line in the Agena SourceForge Forum.
+
+
 7.11.1 Despina, October 11, 2026
 
 - The new `aspell` package provides an interface to the GNU Aspell 0.60 spell check library. Example:
@@ -12,19 +43,19 @@
   > d@@suggest('Chattanuga'):
   [Chattanooga, Chaitanya, Chatting, Chattanooga's, Charting, Chautauqua]
 
-  > d@@close();  
+  > d@@close();
 
   The package is available on Windows, Solaris, Linux and macOS.
 
 - In Windows, `os.getmodulefilename` will always return paths with forward slashes, not backslashes, and with
-  lower-case letters, as long as the interpreter executable is located on the local system. 
-  
+  lower-case letters, as long as the interpreter executable is located on the local system.
+
   The function now also is fully supported on macOS, Solaris and DOS.
 
-- You can now pass a Persian month name, a string such as 'Dey' or 'dey', to `astro.pmonth`. The function will 
+- You can now pass a Persian month name, a string such as 'Dey' or 'dey', to `astro.pmonth`. The function will
   return the corresponding month number, an integer in [1, 12], in this case.
-  
-  Likewise, `astro.pweekday` returns the day number for a Persian weekday (1 to 7, Saturday-indexed) or a 
+
+  Likewise, `astro.pweekday` returns the day number for a Persian weekday (1 to 7, Saturday-indexed) or a
   Zoroastrian month day (1 to 31).
 
 - The new function `astro.p2cd` converts a Persian date and time to the corresponding Gregorian calendar date.
@@ -35,6 +66,8 @@
 - Debug information printed at the console when dynamic-link libraries failed to load has been improved a bit.
 
 - The size of the binaries has been reduced a tiny bit on Windows, Linux, macOS and Solaris.
+
+- Fixed an issue in the Windows 64-bit version where external packages could fail to initialize.
 
 
 7.11.0 Despina, October 07, 2026
