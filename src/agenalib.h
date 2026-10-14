@@ -289,6 +289,9 @@ LUALIB_API int (luaopen_curses) (lua_State *L);    /* 4.7.5 addition */
 
 #if defined(__OS2__)
 
+#define AGENA_ASPELLLIBNAME "aspell"
+LUALIB_API int (luaopen_aspell) (lua_State *L);
+
 #define AGENA_NETLIBNAME "net"
 LUALIB_API int (luaopen_net) (lua_State *L);
 

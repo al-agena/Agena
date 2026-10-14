@@ -106,6 +106,7 @@ static const luaL_Reg lualibs[] = {
   {AGENA_SQLITELIBNAME, luaopen_sqlite},      /* 5.2.1 */
 #endif
 #if defined(__OS2__)
+  {AGENA_ASPELLLIBNAME, luaopen_aspell},      /* 7.11.1 ArcaOS */
   {AGENA_GDILIBNAME, luaopen_gdi},            /* 2.21.11 ArcaOS */
   {AGENA_NETLIBNAME, luaopen_net},            /* 2.21.11 ArcaOS */
 #endif

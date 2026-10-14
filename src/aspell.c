@@ -112,8 +112,8 @@ static void sanitize_base_dir (char *base_dir, int check_backslash) {
   *last_slash = '\0'; /* Strip executable file name -> leaves "/usr/bin" */
 #if defined(__unix__) || defined(__APPLE__)
   /* 2. Check explicitly for standard Unix installation layouts */
-  if (strcmp(base_dir, "/usr/local/bin") == 0 || 
-      strcmp(base_dir, "/usr/bin") == 0 || 
+  if (strcmp(base_dir, "/usr/local/bin") == 0 ||
+      strcmp(base_dir, "/usr/bin") == 0 ||
       strcmp(base_dir, "/usr/sfw/bin") == 0) {
     strcpy(base_dir, "/usr/agena"); /* Rewrite base directly to /usr/agena */
     return;
@@ -122,7 +122,7 @@ static void sanitize_base_dir (char *base_dir, int check_backslash) {
 #if defined(__SOLARIS)
   /* 3. Handle Solaris 64-bit architecture subdirectories (amd64 / sparcv9) */
   char *arch_dir = strrchr(base_dir, '/');
-  if (arch_dir && (strcmp(arch_dir + 1, "amd64") == 0 || 
+  if (arch_dir && (strcmp(arch_dir + 1, "amd64") == 0 ||
                    strcmp(arch_dir + 1, "sparcv9") == 0)) {
     *arch_dir = '\0'; /* Strip the architecture layer */
   }
@@ -137,6 +137,17 @@ static void sanitize_base_dir (char *base_dir, int check_backslash) {
                   strcmp(sub_dir + 1, "src") == 0)) {
     *sub_dir = '\0'; /* Step out one level to the application root */
   }
+#ifdef __OS2__
+  /* In OS/2, some binary aspell libraries found on Hobbes may have big problems with a path 
+     preceded by a drive letter and colon, then internally replicating it thrice, and we do 
+     not want this. */
+  if (strlen(base_dir) > 2 && 
+      isalpha(uchar(base_dir[0])) && 
+      base_dir[1] == ':' && 
+      (base_dir[2] == '/' || base_dir[2] == '\\')) {
+    memmove(base_dir, base_dir + 2, strlen(base_dir + 2) + 1);
+  }
+#endif
 }
 
 /* aspell.new(lang) -> speller or (nil, err_msg) */
@@ -154,7 +165,8 @@ static int l_aspell_new (lua_State *L) {
     /* Use the custom path explicitly from our static variable */
     aspell_config_replace(config, "data-dir", custom_dict_path);
     aspell_config_replace(config, "dict-dir", custom_dict_path);
-    strncpy(abs_aspell_dir, custom_dict_path, sizeof(abs_aspell_dir) - 1);
+    /* strncpy(abs_aspell_dir, custom_dict_path, sizeof(abs_aspell_dir) - 1); */
+    snprintf(abs_aspell_dir, sizeof(abs_aspell_dir), "%s", custom_dict_path);
   } else {
     /* Your standard fallback setup goes here */
     char *base_dir = getModuleFileName();
@@ -176,7 +188,7 @@ static int l_aspell_new (lua_State *L) {
     lua_pushnil(L);
     char debug_msg[4096];
     snprintf(debug_msg, sizeof(debug_msg), "%s\b, search path is: %.*s",
-         aspell_error_message(possible_err), 
+         aspell_error_message(possible_err),
          (int)(sizeof(debug_msg) - 256), abs_aspell_dir);
     lua_pushstring(L, debug_msg);
     delete_aspell_can_have_error(possible_err);

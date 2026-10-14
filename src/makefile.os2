@@ -62,7 +62,7 @@ CORE_O= lapi.o lcode.o ldebug.o ldo.o ldump.o lfunc.o lgc.o llex.o lmem.o lobjec
 	lparser.o lstate.o lstring.o ltable.o ltm.o lundump.o lvm.o lzio.o lset.o lseq.o lreg.o \
 	lpair.o
 LIB_O=  agnxlib.o lbaselib.o ldblib.o liolib.o lmathlib.o loslib.o ltablib.o lrtable.o agnt64.o \
-	lstrlib.o utils.o units.o loadlib.o linit.o curses.o stats.o combinat.o numtheory.o ads.o \
+	lstrlib.o utils.o units.o loadlib.o linit.o curses.o stats.o combinat.o numtheory.o ads.o aspell.o \
 	agnhlps.o bags.o lookup.o cephes.o calc.o linalg.o binio.o mapm.o xbase.o sqlite.o lenviron.o \
 	sofa.o interp.o moon.o sunriset.o sdncal.o astro.o skycrane.o gzip.o llist.o cordic.o net.o \
 	lreglib.o xml.o hashes.o numarray.o registry.o zx.o stack.o intvec.o dblvec.o vecoff64.o bloom.o \
@@ -110,7 +110,7 @@ $(LUA_A): $(CORE_O) $(LIB_O)
 	$(RANLIB) $@
 
 $(LUA_T): $(LUA_O) $(LUA_A)
-	$(CC) -o $@ $(MYLDFLAGS) $(LUA_O) $(LUA_A) $(OS2SYSLIBS)
+	$(CC) -o $@ $(MYLDFLAGS) $(LUA_O) $(LUA_A) aspell.a $(OS2SYSLIBS)
 
 $(LUAC_T): $(LUAC_O) $(LUA_A)
 	$(CC) -o $@ $(MYLDFLAGS) $(LUAC_O) $(LUA_A) $(OS2SYSLIBS)
@@ -141,9 +141,10 @@ none:
 	@echo "   $(PLATS)"
 
 os2:
-	$(MAKE) all PLAT=os2 MYCFLAGS="-O2 -static-libgcc $(OS2DFLAGS)"
+#	$(MAKE) all PLAT=os2 MYCFLAGS="-O2 -static-libgcc $(OS2DFLAGS)"
+	$(MAKE) all PLAT=os2 MYCFLAGS="-O2 -static-libgcc"
 #	1. Build the DLL with all logic, the -s option strips the file
-	$(CC) -shared $(OS2ZFLAGS) -o agena.dll *.o -L. $(OS2SYSLIBS) -s
+	$(CC) -shared $(OS2ZFLAGS) -o agena.dll *.o aspell.a -L. $(OS2SYSLIBS) -s
 #	2. Build the EXE linking ONLY to the DLL
 	$(CC) -o agena.exe agena.o -L. agena.dll $(OS2SYSLIBS) -s
 
@@ -320,5 +321,6 @@ strmap.o:	strmap.c agena.h agnxlib.h agenalib.h agnhlps.h khash.h
 intmap.o:	intmap.c agena.h agnxlib.h agenalib.h agnhlps.h khash.h
 uintmap.o:	uintmap.c agena.h agnxlib.h agenalib.h agnhlps.h khash.h
 dblmap.o:	dblmap.c agena.h agnxlib.h agenalib.h agnhlps.h khash.h
+aspell.o:	aspell.c agena.h agnxlib.h agenalib.h agnhlps.h aspell.h
 
 # (end of Makefile)
