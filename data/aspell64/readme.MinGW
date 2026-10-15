@@ -1,0 +1,5 @@
+# How to compile aspell dictionaries on MSYS2:
+
+./configure
+make
+make install
