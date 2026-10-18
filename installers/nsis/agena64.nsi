@@ -9,7 +9,7 @@ Unicode True
 !ifndef VERSION
   !define VER_MAJOR '7'
   !define VER_MINOR '11'
-  !define VER_REVISION '1'
+  !define VER_REVISION '2'
   !define NICKNAME "Despina"
   !define VERSION '${VER_MAJOR}.${VER_MINOR}.${VER_REVISION}'
 !endif
@@ -424,6 +424,7 @@ ${MementoSection} "Agena Core Files (required)" SecCore
   File ..\..\change.log
 
 ; General dependencies:
+  File ..\..\ports\gdwin64\libdl.dll
   File ..\..\ports\gdwin64\libexpat-1.dll
   File ..\..\ports\gdwin64\libgcc_s_seh-1.dll
   File ..\..\ports\gdwin64\libgmp-10.dll
@@ -547,8 +548,10 @@ ${MementoSection} "aspell" SecPluginsAspell
   SetOutPath "$INSTDIR\data\aspell64"
   File "..\..\data\aspell64\*.*"
 
-${MementoSectionEnd}
+  SetOutPath $INSTDIR\bin
+  File ..\..\ports\gdwin64\libaspell-15.dll
 
+${MementoSectionEnd}
 
 
 ${MementoSection} "astro" SecPluginsAstro
