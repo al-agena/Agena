@@ -19,7 +19,8 @@ Portions Copyright 1994-2026 Lua.org, PUC-Rio. All rights reserved.
 ------------------------------------------------------------------------------------
 
 Agena binaries include or symbolically link to code published under the GNU Library
-General Public License, version 2, or higher.
+General Public License, version 2, or higher. Aspell dictionaries are subject to 
+GPL 2, too.
 
 ------------------------------------------------------------------------------------
 
