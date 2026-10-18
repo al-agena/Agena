@@ -278,7 +278,32 @@ mingwsse:
 posix:
 	$(MAKE) all MYCFLAGS=-DLUA_USE_POSIX
 
+
+# For GCC 9.5.0, 12% slower [sic!] than the version compiled with "solarisold", but code will be sharable
+# among multiple instances.
 solaris:
+	$(MAKE) all \
+		MYCFLAGS="-O3 -Wno-attributes -fgnu89-inline -DLUA_USE_POSIX -DLUA_USE_DLOPEN \
+			-D__EXTENSIONS__ -DLUA_USE_READLINE -fPIC" \
+		MYLIBS="-ldl $(SOLSYSLIBS)"
+	strip $(LUA_T)
+	$(CC) -shared -o libagena.so -h libagena.so -O3 -fPIC -ldl $(SOLSYSLIBS) *.o
+	strip libagena.so
+
+# Hybrid target: Fast like "solarisold", standard compliance like "solaris".
+# The OS will be forced to make a private copy of the entire library in RAM for every single process using it,
+# so the code cannot be shared. Almost as fast as "solarisold".
+solarishybrid:
+	$(MAKE) all \
+		MYCFLAGS="-O3 -Wno-attributes -fgnu89-inline -DLUA_USE_POSIX -DLUA_USE_DLOPEN \
+			-D__EXTENSIONS__ -DLUA_USE_READLINE" \
+		MYLIBS="-ldl $(SOLSYSLIBS)"
+	strip $(LUA_T)
+	$(CC) -shared -o libagena.so -h libagena.so -O3 -mimpure-text -lm -lc $(SOLSYSLIBS) *.o
+	strip libagena.so
+
+# Old GCC 6.3.0 statement
+solarisold:
 	$(MAKE) all \
 		MYCFLAGS="-O3 -Wno-attributes -fgnu89-inline -DLUA_USE_POSIX -DLUA_USE_DLOPEN \
 			-D__EXTENSIONS__ -DLUA_USE_READLINE" \
