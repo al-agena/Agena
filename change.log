@@ -1,39 +1,47 @@
-7.11.1 Despina, October 14, 2026
+7.11.2 Despina, October 18, 2026
+
+- Overhauled package initialization to eliminate virtual stack pollution across all extensions. This also fixes an
+  issue where the `binio` package completely blocked automatic object garbage collection.
+
+- Upgraded `calc.polyfit` to use Gaussian elimination with partial row pivoting, thus avoiding potential numerical
+  instability and critical division-by-zero risks on singular or symmetrical matrices.
+
+- Added a '__tostring' metamethod to improve pretty-printing of `ads` file handles.
+
+- The `restart` statement sometimes did not correctly clean up userdata objects stored to package tables, deleting
+  the garbage collection metamethods before, thus crashing the interpreter. This has been fixed. Affected packages
+  were at least `ival` and `gmp`. The statement now also should fully restores package metamethods.
+
+- Chapter 9.12 now lists all the Aspell dictionaries shipped with some installers and how to invoke them by giving
+  the respective abbreviations.
 
 - The Agena 32- and 64-bit Windows editions, the 64-bit Linux edition and the macOS and Solaris 10 32-bit editions
   now come with the Aspell dictionaries: Afrikaans, Arabic, Czech, Danish, Dutch, English, Farsi, Finish, French,
   Frisian, Low German, German, Greek, Hebrew, Hindi, Hungarian, Icelandic, Indonesian, Italian, Kurdish, Latin,
-  Malayalam, Norwegian Bokmal, Punjabi, Brazilian Portuguese, Polish, Punjabi, Romanian, Russian, Serbian, Spanish,
-  Swedish, Turkish, Uzbek, Yiddish, Zulu.
+  Malayalam, Norwegian Bokmal, Norwegian Nynorsk, Punjabi, Brazilian Portuguese, Polish, Punjabi, Romanian, Russian,
+  Serbian, Spanish, Swedish, Turkish, Uzbek, Yiddish, Zulu.
 
-  If you need another dictionary, please drop me a line in the Agena SourceForge Forum.
+- The Agena OS/2 edition now also supports the `aspell` binding, and it comes with an Italian dictionary, along
+  with all the others:
 
-- The Agena OS/2 edition also supports the `aspell` binding, and it comes with an Italian dictionary, along with 
-  all the others:
+  > import aspell;
 
-  > import aspell
-
-  > it := aspell.new('it')
+  > it := aspell.new('it');
 
   > aspell.suggest(it, 'finalmente'):
   [finalmente, finale, fanale]
 
+- In Solaris, the `aspell` package can now find dictionary files.
 
-7.11.1 Despina, October 12, 2026
-
-- The Agena 64-bit Windows and Linux editions now come with the languages: Afrikaans, Arabic, Czech, Danish, Dutch,
-  English, Farsi, Finish, French, Low German, German, Hebrew, Hindi, Hungarian, Icelandic, Indonesian, Italian,
-  Kurdish, Latin, Malayalam, Norwegian Bokmal, Punjabi, Brazilian Portuguese, Polish, Punjabi, Romanian, Russian,
-  Serbiam, Spanish, Swedish, Turkish, Uzbek, Yiddish, Zulu.
-
-  If you need another dictionary, please drop me a line in the Agena SourceForge Forum.
+- When importing external libraries with the `alias` attribute, debugging information is no longer printed at the
+  prompt.
 
 
 7.11.1 Despina, October 11, 2026
 
 - The new `aspell` package provides an interface to the GNU Aspell 0.60 spell check library. Example:
 
-  > import aspell
+  > import aspell;
 
   > d := aspell.new('en_US');
 
