@@ -2,7 +2,7 @@
 # ! build Agena in /home/proglang/agena !
 Summary: Agena Programming Language
 Name: agena
-Version: 7.11.1
+Version: 7.11.2
 Release: 1
 # change Release number in build.sh file, as well.
 #Source0: %{name}-%{version}-src.tar.gz
@@ -40,6 +40,7 @@ rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/usr/agena
 mkdir -p $RPM_BUILD_ROOT/usr/agena/lib
 mkdir -p $RPM_BUILD_ROOT/usr/agena/data
+mkdir -p $RPM_BUILD_ROOT/usr/agena/data/aspell
 mkdir -p $RPM_BUILD_ROOT/usr/agena/doc
 mkdir -p $RPM_BUILD_ROOT/usr/agena/share
 mkdir -p $RPM_BUILD_ROOT/usr/agena/share/fractint
@@ -75,6 +76,7 @@ cp /home/proglang/agena/data/cities.dbf $RPM_BUILD_ROOT/usr/agena/data
 cp /home/proglang/agena/data/cities.txt $RPM_BUILD_ROOT/usr/agena/data
 cp /home/proglang/agena/data/country.csv $RPM_BUILD_ROOT/usr/agena/data
 cp /home/proglang/agena/data/timezone.csv $RPM_BUILD_ROOT/usr/agena/data
+cp -r /home/proglang/agena/data/aspell/. $RPM_BUILD_ROOT/usr/agena/data/aspell
 
 # Libraries
 cp /home/proglang/agena/lib/abci.agn $RPM_BUILD_ROOT/usr/agena/lib
@@ -306,13 +308,13 @@ cp /home/proglang/agena/src/libagena.a $RPM_BUILD_ROOT/usr/local/lib
 cp /home/proglang/agena/src/libagena.so $RPM_BUILD_ROOT/usr/local/lib
 cp /home/proglang/agena/src/licence $RPM_BUILD_ROOT/usr/agena
 # Srglue/Sragena
-cp /home/proglang/agena/ports/sragena-104/src/srglue $RPM_BUILD_ROOT/usr/local/bin
-cp /home/proglang/agena/ports/sragena-104/src/sragena $RPM_BUILD_ROOT/usr/local/bin
-cp /home/proglang/agena/ports/sragena-104/README.srglue $RPM_BUILD_ROOT/usr/agena
+#cp /home/proglang/agena/ports/sragena-105/src/srglue $RPM_BUILD_ROOT/usr/local/bin
+#cp /home/proglang/agena/ports/sragena-105/src/sragena $RPM_BUILD_ROOT/usr/local/bin
+#cp /home/proglang/agena/ports/sragena-105/README.srglue $RPM_BUILD_ROOT/usr/agena
 chmod -R 755 $RPM_BUILD_ROOT/usr/agena
 chmod 755 $RPM_BUILD_ROOT/usr/local/bin/agena
-chmod 755 $RPM_BUILD_ROOT/usr/local/bin/srglue
-chmod 755 $RPM_BUILD_ROOT/usr/local/bin/sragena
+#chmod 755 $RPM_BUILD_ROOT/usr/local/bin/srglue
+#chmod 755 $RPM_BUILD_ROOT/usr/local/bin/sragena
 chmod 755 $RPM_BUILD_ROOT/usr/local/lib/libagena.a
 chmod 755 $RPM_BUILD_ROOT/usr/local/lib/libagena.so
 chmod 755 $RPM_BUILD_ROOT/usr/lib/pkgconfig/agena.pc
@@ -326,7 +328,7 @@ rm -rf $RPM_BUILD_ROOT
 # do not remove agena.ini file, so do not delete /usr/agena/lib subdirectory completely
 /usr/agena/change.log
 /usr/agena/licence
-/usr/agena/README.srglue
+#/usr/agena/README.srglue
 /usr/agena/data/langreg.csv
 /usr/agena/data/viking2.csv
 /usr/agena/data/viking2.txt
@@ -395,8 +397,8 @@ rm -rf $RPM_BUILD_ROOT
 /usr/local/lib/libagena.so
 /usr/lib/pkgconfig/agena.pc
 /usr/local/bin/agena
-/usr/local/bin/srglue
-/usr/local/bin/sragena
+#/usr/local/bin/srglue
+#/usr/local/bin/sragena
 #/usr/local/bin/agenaedit
 #%doc /usr/local/info/agena.info
 #%doc %attr(0444,root,root) /usr/local/man/man1/indent.1
