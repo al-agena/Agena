@@ -722,6 +722,18 @@ static int mt_tostring (lua_State *L) {
 }
 
 
+static const struct luaL_Reg keyfile_meta[] = {
+  {"__gc",            mt_gc},
+  {"__tostring",      mt_tostring},
+  {"__size",          mt_size},
+  {"__empty",         mt_empty},
+  {"__filled",        mt_filled},
+  {"__in",            mt_in},
+  {"__notin",         mt_notin},
+  {NULL, NULL}
+};
+
+
 static const luaL_Reg keyfile[] = {
   {"allkeys",         keyfile_allkeys},
   {"close",           keyfile_close},
@@ -742,30 +754,17 @@ static const luaL_Reg keyfile[] = {
 };
 
 
-LUALIB_API int luaopen_keyfile (lua_State *L) {
-  /* Metatable for OOP file handle objects */
+static void createmeta (lua_State *L) {  /* new 7.11.2 */
   luaL_newmetatable(L, AGENA_KEYFILELIBNAME);
-  /* Set metatable.__index = metatable */
   lua_pushvalue(L, -1);
   lua_setfield(L, -2, "__index");
-  /* Register the functions directly into the metatable as OOP methods */
-  luaL_register(L, NULL, keyfile);
-  /* Register the special garbage collection destructor into the metatable */
-  lua_pushcfunction(L, mt_gc);
-  lua_setfield(L, -2, "__gc");
-  lua_pushcfunction(L, mt_tostring);
-  lua_setfield(L, -2, "__tostring");
-  lua_pushcfunction(L, mt_size);
-  lua_setfield(L, -2, "__size");
-  lua_pushcfunction(L, mt_empty);
-  lua_setfield(L, -2, "__empty");
-  lua_pushcfunction(L, mt_filled);
-  lua_setfield(L, -2, "__filled");
-  lua_pushcfunction(L, mt_in);
-  lua_setfield(L, -2, "__in");
-  lua_pushcfunction(L, mt_notin);
-  lua_setfield(L, -2, "__notin");
-  /* Create the procedural global package table (e.g., global 'ads') */
+  luaL_register(L, NULL, keyfile);                 
+  luaL_register(L, NULL, keyfile_meta);            
+}
+
+LUALIB_API int luaopen_keyfile (lua_State *L) {
+  createmeta(L);
+  lua_pop(L, 1);  /* 7.11.2 fix */
   luaL_register(L, AGENA_KEYFILELIBNAME, keyfile);
   return 1;
 }

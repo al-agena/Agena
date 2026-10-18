@@ -29,7 +29,7 @@ PLAT= none
 # ncurses can only be compiled along with ltinfo. First pass -lncurses and immediately thereafter -ltinfo, not vice versa !
 # See: https://stackoverflow.com/questions/3514852/statically-link-ncurses-to-program
 OS2SYSLIBS= -lm -lmapm -lz -lreadline -lncurses -ltinfo -lhistory -liconv -lexpat -lmpfr -lgmp -lg2 -lgd -lsqlite3 \
-	-lpcre2-posix -lpcre2-8 -lfi_lib -lsocket
+	-lpcre2-posix -lpcre2-8 -lfi_lib -lsocket -pthread
 OS2ZFLAGS= -Zdll -Zomf -Zmt
 OS2DFLAGS= -DLUA_BUILD_AS_DLL -D_FILE_OFFSET_BITS=64 -D_DIRENT_HAVE_D_TYPE -DPCRE2_CODE_UNIT_WIDTH=8 -D__ST_MT_ERRNO__ \
 	-DLUA_USE_LINUX -DINCL_BASE -DHAVE_NCURSES_H -DSTDC_HEADERS -DHAVE_STDLIB_H
@@ -110,7 +110,7 @@ $(LUA_A): $(CORE_O) $(LIB_O)
 	$(RANLIB) $@
 
 $(LUA_T): $(LUA_O) $(LUA_A)
-	$(CC) -o $@ $(MYLDFLAGS) $(LUA_O) $(LUA_A) aspell.a $(OS2SYSLIBS)
+	$(CC) -o $@ $(MYLDFLAGS) $(LUA_O) $(LUA_A) aspell.a $(OS2SYSLIBS) -lstdc++ -lpthread
 
 $(LUAC_T): $(LUAC_O) $(LUA_A)
 	$(CC) -o $@ $(MYLDFLAGS) $(LUAC_O) $(LUA_A) $(OS2SYSLIBS)
@@ -141,10 +141,9 @@ none:
 	@echo "   $(PLATS)"
 
 os2:
-#	$(MAKE) all PLAT=os2 MYCFLAGS="-O2 -static-libgcc $(OS2DFLAGS)"
-	$(MAKE) all PLAT=os2 MYCFLAGS="-O2 -static-libgcc"
+	$(MAKE) all PLAT=os2 MYCFLAGS="-O2 -static-libgcc $(OS2DFLAGS)"
 #	1. Build the DLL with all logic, the -s option strips the file
-	$(CC) -shared $(OS2ZFLAGS) -o agena.dll *.o aspell.a -L. $(OS2SYSLIBS) -s
+	$(CC) -shared $(OS2ZFLAGS) -o agena.dll *.o aspell.a -L. $(OS2SYSLIBS) -lstdc++ -lpthread -s
 #	2. Build the EXE linking ONLY to the DLL
 	$(CC) -o agena.exe agena.o -L. agena.dll $(OS2SYSLIBS) -s
 
@@ -321,6 +320,6 @@ strmap.o:	strmap.c agena.h agnxlib.h agenalib.h agnhlps.h khash.h
 intmap.o:	intmap.c agena.h agnxlib.h agenalib.h agnhlps.h khash.h
 uintmap.o:	uintmap.c agena.h agnxlib.h agenalib.h agnhlps.h khash.h
 dblmap.o:	dblmap.c agena.h agnxlib.h agenalib.h agnhlps.h khash.h
-aspell.o:	aspell.c agena.h agnxlib.h agenalib.h agnhlps.h aspell.h
+aspell.o:	aspell.c agena.h agnxlib.h agenalib.h agnhlps.h
 
 # (end of Makefile)

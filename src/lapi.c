@@ -2022,7 +2022,7 @@ LUA_API void lua_setfield (lua_State *L, int idx, const char *k) {
 }
 
 
-LUA_API void agn_rawsetfield (lua_State *L, int idx, const char *k) {  /* 2.12.1, do not invoke metamethods */
+LUA_API void agn_rawsetfield (lua_State *L, int idx, const char *k) {  /* 2.12.1, does not invoke metamethods */
   StkId t;
   Table *h;
   TString *str;
@@ -2039,7 +2039,7 @@ LUA_API void agn_rawsetfield (lua_State *L, int idx, const char *k) {  /* 2.12.1
 }
 
 
-LUA_API void agn_deletefield (lua_State *L, int idx, const char *k) {  /* 2.31.8, do not invoke metamethods */
+LUA_API void agn_deletefield (lua_State *L, int idx, const char *k) {  /* 2.31.8, does not invoke metamethods */
   StkId t;
   Table *h;
   TString *str;
@@ -2058,7 +2058,7 @@ LUA_API void agn_deletefield (lua_State *L, int idx, const char *k) {  /* 2.31.8
 }
 
 
-LUA_API void agn_rawgetfield (lua_State *L, int idx, const char *k) {  /* 2.12.1, do not invoke metamethods */
+LUA_API void agn_rawgetfield (lua_State *L, int idx, const char *k) {  /* 2.12.1, does not invoke metamethods */
   StkId t;
   TString *str;
   lua_lock(L);
@@ -6288,7 +6288,7 @@ LUA_API int agn_getstorage (lua_State *L, int idx) {  /* 2.33.1 */
 }
 
 
-/* sets the name of a readlibbed package to the registry, leaves nothing on the stack */
+/* sets the name of a readlibbed package to the registry, leaves the stack unchanged */
 LUA_API int agn_setreadlibbed (lua_State *L, const char *libname) {  /* rewritten 2.9.1 */
   int rc = 0;
   lua_lock(L);

@@ -333,6 +333,7 @@ static void createmeta (lua_State *L) {
 LUALIB_API int luaopen_lifo (lua_State *L) {
   /* metamethods for lifo stacks */
   createmeta(L);
+  lua_pop(L, 1);  /* 7.11.2 fix */
   /* register library */
   luaL_register(L, AGENA_LIFOLIBNAME, lifolib);
   return 1;

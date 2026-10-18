@@ -707,8 +707,8 @@ static int runargs (lua_State *L, char **argv, int n) {
 
 
 /* 0.22.1: sets a true copy of the structure at stack index idx into the registry, with key `b'. Changed Agena 1.0.3 */
-
 static int savestate (lua_State *L, const char *a, const char *b) {
+  luaL_checkstack(L, 20, "stack overflow in savestate");  /* may be more than enough, but anyway ... 7.11.2 fix */
   lua_newtable(L);
   lua_getfield(L, LUA_GLOBALSINDEX, a);  /* get _G on stack */
   lua_pushnil(L);
@@ -717,6 +717,9 @@ static int savestate (lua_State *L, const char *a, const char *b) {
     lua_pushvalue(L, -2);  /* value */
     if (lua_istable(L, -1)) {
       lua_newtable(L);
+      if (lua_getmetatable(L, -2)) {  /* 7.11.2 fix: If the original table has a metatable... */
+        lua_setmetatable(L, -2);      /* Assign it instantly to newly cloned table */
+      }
       lua_pushnil(L);
       while (lua_next(L, -3) != 0) {  /* copy table */
         lua_pushvalue(L, -2);  /* key */
@@ -742,7 +745,7 @@ static int savestate (lua_State *L, const char *a, const char *b) {
 static void print_licence (void) {
   fprintf(stderr,
     "agena Copyright 2006-2026 by Alexander Walz. All rights reserved.\n\n"
-    "Portions Copyright 1994-2025 Lua.org, PUC-Rio. All rights reserved.\n\n"
+    "Portions Copyright 1994-2026 Lua.org, PUC-Rio. All rights reserved.\n\n"
     "Please see the Agena manual (doc/agena.pdf) and the `licence` file for all\n"
     "credits and licences.\n\n"
     "--------------------------------------------------------------------------\n\n"
@@ -765,7 +768,8 @@ static void print_licence (void) {
     "TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE\n"
     "SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n\n"
     "--------------------------------------------------------------------------\n\n"
-    "The Agena binaries are licenced under the terms of the GPL v2 licence:\n\n"
+    "The Agena binaries and Aspell dictionaries are licenced under the terms\n"
+    "of the GPL v2 licence:\n\n"
     "This programme is free software; you can redistribute it and/or modify\n"
     "it under the terms of the GNU General Public Licence as published by\n"
     "the Free Software Foundation; either version 2 of the Licence, or\n"

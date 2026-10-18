@@ -2287,6 +2287,21 @@ static int mt_gc (lua_State *L) {
   return 0;
 }
 
+
+static int mt_tostring (lua_State *L) {  /* 7.11.2 */
+  int hnd = checkads(L, 1);
+  lua_pushfstring(L, AGENA_ADSLIBNAME "(%d)", hnd);
+  return 1;
+}
+
+
+static const struct luaL_Reg ads_lib[] = {
+  {"__gc",       mt_gc},
+  {"__tostring", mt_tostring},
+  {NULL, NULL}
+};
+
+
 static const luaL_Reg ads[] = {
   {"attrib", ads_attrib},                /* May 06, 2007 */
   {"clean", ads_clean},                  /* July 06, 2007 */
@@ -2321,21 +2336,21 @@ static const luaL_Reg ads[] = {
 
 
 /*
-** Open base library
+** Open ads library
 */
 
-LUALIB_API int luaopen_ads (lua_State *L) {
-  /* Metatable for OOP file handle objects */
+static void createmeta (lua_State *L) {  /* 7.11.2 simplification */
   luaL_newmetatable(L, AGENA_ADSLIBNAME);
-  /* Set metatable.__index = metatable */
   lua_pushvalue(L, -1);
   lua_setfield(L, -2, "__index");
-  /* Register the functions directly into the metatable as OOP methods */
-  luaL_register(L, NULL, ads);
-  /* Register the special garbage collection destructor into the metatable */
-  lua_pushcfunction(L, mt_gc);
-  lua_setfield(L, -2, "__gc");
-  /* Create the procedural global package table (e.g., global 'ads') */
+  /* Bulk-register both OOP methods and metamethods straight into the metatable */
+  luaL_register(L, NULL, ads);                 
+  luaL_register(L, NULL, ads_lib);            
+}
+
+LUALIB_API int luaopen_ads (lua_State *L) {
+  createmeta(L);
+  lua_pop(L, 1);  /* 7.11.2 fix */
   luaL_register(L, AGENA_ADSLIBNAME, ads);
   /* Create 'openfiles' tracking table */
   lua_newtable(L);

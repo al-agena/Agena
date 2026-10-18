@@ -263,6 +263,15 @@ static int mt_filled (lua_State *L) {  /* 2.18.0 */
 }
 
 
+static const struct luaL_Reg bags_lib [] = {
+  {"__size",   bags_getsize},
+  {"__empty",  mt_empty},
+  {"__filled", mt_filled},
+  /* pretty printing is implemented via lib/bags.agn */
+  {NULL, NULL}
+};
+
+
 static const luaL_Reg bagslib[] = {
   {"attrib",   bags_attrib},          /* August 14, 2012 */
   {"bagtoset", bags_bagtoset},        /* July 27, 2012 */
@@ -284,19 +293,13 @@ static void createmeta (lua_State *L) {
   lua_pushvalue(L, -1);  /* push metatable */
   lua_setfield(L, -2, "__index");  /* metatable.__index = metatable */
   luaL_register(L, NULL, bagslib);  /* methods */
+  luaL_register(L, NULL, bags_lib);
 }
 
 LUALIB_API int luaopen_bags (lua_State *L) {
   /* metamethods */
   createmeta(L);
-  /* register library */
-  lua_pushcfunction(L, bags_getsize);
-  lua_setfield(L, -2, "__size");
-  lua_pushcfunction(L, mt_empty);
-  lua_setfield(L, -2, "__empty");
-  lua_pushcfunction(L, mt_filled);
-  lua_setfield(L, -2, "__filled");
-  lua_pop(L, 1);
+  lua_pop(L, 1);  /* 7.11.2 fix */
   luaL_register(L, AGENA_BAGSLIBNAME, bagslib);
   return 1;
 }

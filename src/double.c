@@ -92,6 +92,18 @@ static int double_tonumber (lua_State *L) {
 }
 
 
+static const struct {
+  const char *name;
+  int value;
+} fp_constants[] = {
+  {"fp_nan",       FP_NAN},
+  {"fp_infinite",  FP_INFINITE},
+  {"fp_subnormal", FP_SUBNORMAL},
+  {"fp_zero",      FP_ZERO},
+  {"fp_normal",    FP_NORMAL},
+  {NULL, 0}
+};
+
 static const struct luaL_Reg double_lib [] = {  /* metamethods for userdata `n` */
   {"__gc",         dmt_gc},        /* do not forget garbage collection */
   {NULL, NULL}
@@ -109,19 +121,15 @@ static const luaL_Reg doublelib[] = {
 ** Open double library
 */
 LUALIB_API int luaopen_double (lua_State *L) {
+  int i;
   luaL_newmetatable(L, "doublevalue");   /* metatable for double userdata, adds it to the registry with key 'doublevalue' */
   luaL_register(L, NULL, double_lib);    /* assign C metamethods to this metatable */
+  lua_pop(L, 1);  /* 7.11.2 fix */
   luaL_register(L, AGENA_DOUBLELIBNAME, doublelib);
-  lua_pushinteger(L, FP_NAN);
-  lua_setfield(L, -2, "fp_nan");         /* for FP_NAN */
-  lua_pushinteger(L, FP_INFINITE);
-  lua_setfield(L, -2, "fp_infinite");    /* for FP_INFINITE */
-  lua_pushinteger(L, FP_SUBNORMAL);
-  lua_setfield(L, -2, "fp_subnormal");   /* for FP_SUBNORMAL */
-  lua_pushinteger(L, FP_ZERO);
-  lua_setfield(L, -2, "fp_zero");        /* for FP_ZERO */
-  lua_pushinteger(L, FP_NORMAL);
-  lua_setfield(L, -2, "fp_normal");      /* for FP_NORMAL */
+  for (i = 0; fp_constants[i].name != NULL; i++) {
+    lua_pushinteger(L, fp_constants[i].value);
+    lua_setfield(L, -2, fp_constants[i].name);
+  }
   createdouble(L, DBL_MIN);              /* minimum positive _normalised_ value */
   lua_setfield(L, -2, "MinDouble");
   return 1;

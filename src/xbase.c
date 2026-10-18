@@ -3149,6 +3149,12 @@ static int xbase_gc (lua_State *L) {  /* rewritten 2.31.9 */
 }
 
 
+static const struct luaL_Reg xbase_lib[] = {
+  {"__gc",         xbase_gc},
+  {"__tostring",   xbase_tostring},
+  {NULL, NULL}
+};
+
 static const luaL_Reg xbase[] = {
   {"attrib",       xbase_attrib},        /* 05.06.2010 */
   {"close",        xbase_close},         /* 05.06.2010 */
@@ -3199,14 +3205,11 @@ static void createmeta (lua_State *L) {
   lua_pushvalue(L, -1);               /* push metatable */
   lua_setfield(L, -2, "__index");     /* metatable.__index = metatable */
   luaL_register(L, NULL, xbase);  /* methods */
+  luaL_register(L, NULL, xbase_lib);  /* 7.11.2 simplification */
 }
 
 LUALIB_API int luaopen_xbase (lua_State *L) {
   createmeta(L);
-  lua_pushcfunction(L, xbase_gc);
-  lua_setfield(L, -2, "__gc");
-  lua_pushcfunction(L, xbase_tostring);
-  lua_setfield(L, -2, "__tostring");
   lua_pop(L, 1);
   luaL_register(L, AGENA_XBASELIBNAME, xbase);
   lua_newtable(L);

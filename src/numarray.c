@@ -6769,6 +6769,7 @@ static void createmeta (lua_State *L) {
 
 LUALIB_API int luaopen_numarray (lua_State *L) {
   createmeta(L);
+  lua_pop(L, 1);  /* 7.11.2 fix */
   luaL_register(L, AGENA_NUMARRAYLIBNAME, numarraylib);
   return 1;
 }

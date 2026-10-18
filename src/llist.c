@@ -2175,43 +2175,36 @@ static const luaL_Reg dlistlib[] = {
 
 
 /*
-** Open llist library
+** Open llist library, revised 7.11.2 to avoid theoretical stack corruption
 */
 LUALIB_API int luaopen_llist (lua_State *L) {
   /* metamethods for linked lists */
   luaL_newmetatable(L, "llist");
   luaL_register(L, NULL, llist_llistlib);
+  lua_pop(L, 1);  /* 7.11.2 fix */
   /* metamethod for the nodes (for `llist.iterate`) */
   luaL_newmetatable(L, "llistnode");
   luaL_register(L, NULL, llist_llistnodelib);
-  /* register library */
-  luaL_register(L, AGENA_LLISTLIBNAME, llistlib);
-  /* initialise ULIST package */
-  luaL_newmetatable(L, "ulist");
-  luaL_register(L, NULL, ulist_ulistlib);
-  /* register library */
-  luaL_register(L, AGENA_ULISTLIBNAME, ulistlib);
-  /* see llist.agn file for insertion of `ulist' into Agena's registry _READLIBBED set so that
-     after a restart, `ulist' can be initialised again */
-  /* initialise DLIST package */
-  luaL_newmetatable(L, "dlist");
-  luaL_register(L, NULL, dlist_dlistlib);
+  lua_pop(L, 1);  /* 7.11.2 fix */
   /* metamethod for the nodes (for `dlist.iterate`) */
   luaL_newmetatable(L, "dlistnode");
   luaL_register(L, NULL, dlist_dlistnodelib);
-  /* register library */
+  lua_pop(L, 1);  /* 7.11.2 fix */
+  /* initialise ULIST package */
+  luaL_newmetatable(L, "ulist");
+  luaL_register(L, NULL, ulist_ulistlib);
+  lua_pop(L, 1);  /* 7.11.2 fix */
+  /* initialise DLIST package */
+  luaL_newmetatable(L, "dlist");
+  luaL_register(L, NULL, dlist_dlistlib);
+  lua_pop(L, 1);  /* 7.11.2 fix */
+  /* register library components */
+  luaL_register(L, AGENA_ULISTLIBNAME, ulistlib);
+  lua_pop(L, 1);
   luaL_register(L, AGENA_DLISTLIBNAME, dlistlib);
-  /* In all "DLL versions" of Agena, register additional package tables dlist and ulist so that they can be deleted from
-     the environment when restarting Agena. Otherwise their _metatables_ could not be re-initialised again. In DOS and OS/2,
-     leave them untouched since they cannot be recreated during restart as they have been defined in the C and not the
-     Agena code. This is equal to:
-     if not(os.isdos() or os.isos2() or os.isansi()) then
-        insert 'dlist', 'ulist' into debug.getregistry()._READLIBBED
-     end; */
-#if !(defined(__DJGPP__) || defined(__OS2__) || defined(LUA_ANSI))  /* 2.31.10 */
-  agn_setreadlibbed(L, "dlist");
-  agn_setreadlibbed(L, "ulist");
-#endif
+  lua_pop(L, 1);
+  /* register `main library component "llist"`, return it */
+  luaL_register(L, AGENA_LLISTLIBNAME, llistlib);
   return 1;
 }
 

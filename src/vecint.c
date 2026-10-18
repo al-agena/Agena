@@ -164,6 +164,7 @@ LUALIB_API int luaopen_vecint (lua_State *L) {
   /* metamethods */
   luaL_newmetatable(L, "vecint");
   luaL_register(L, NULL, vecint_fieldlib);
+  lua_pop(L, 1);  /* 7.11.2 fix */
   /* register library */
   luaL_register(L, AGENA_VECINTLIBNAME, vecintlib);
   return 1;

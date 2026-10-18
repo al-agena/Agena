@@ -162,6 +162,33 @@ static int environ_collectgarbage (lua_State *L) {
 }
 
 
+/* Make sure userdata assigned to package tables is correctly and immediately deleted from memory before
+   their __gc metamethods are being deleted. Build with Gemini AI, 7.11.2 */
+static void package_cleanse (lua_State *L, const char *pkgname) {
+  /* 1. Get package.loaded */
+  lua_getglobal(L, "package");
+  if (!lua_istable(L, -1)) {
+    lua_pop(L, 1);
+    return;
+  }
+  lua_getfield(L, -1, "loaded");  /* Stack index -1 (loaded) */
+  if (!lua_istable(L, -1)) {
+    lua_pop(L, 2);
+    return;
+  }
+  /* 2. Sever the reference safely by removing pkg_name from from package.loaded without 
+        touching any metamethods */
+  lua_pushstring(L, pkgname);
+  lua_pushnil(L);
+  lua_rawset(L, -3);
+  lua_pop(L, 2);
+  /* 3. Force a double GC cycle right here.
+        The first call runs the __gc metamethods on the orphaned userdata objects.
+        The second call actually sweeps up and frees the memory. */
+  lua_gc(L, LUA_GCCOLLECT, 0);
+  lua_gc(L, LUA_GCCOLLECT, 0); 
+}    
+
 int environ_restart (lua_State *L) {  /* added 0.4.0 */
   const char *path, *obj;
   int islibname, resetlibname, type;
@@ -186,7 +213,30 @@ int environ_restart (lua_State *L) {  /* added 0.4.0 */
     agn_poptop(L);  /* pop value */
   }
   lua_gc(L, LUA_GCCOLLECT, 0);
-  /* third, delete readlib'bed packages from package.loaded; 0.26.0, changed 2.9.1 */
+  /* third, delete all global vars except libname, swapped order with Step 4, 7.11.2 */
+  lua_getfield(L, LUA_GLOBALSINDEX, "_G");  /* check if _G._G is still there */
+  if (!lua_istable(L, -1)) {  /* Agena 1.7.1 fix */
+    fprintf(stderr, "Warning in " LUA_QS  ": " LUA_QS " is missing or not a table, no restart possible.\n", "restart", "_G");
+    fflush(stderr);
+    agn_poptop(L);
+    return 0;
+  }
+  agn_poptop(L);
+  /* now actually delete values from _G */
+  lua_pushnil(L);
+  while (lua_next(L, LUA_GLOBALSINDEX) != 0) {  /* 4.6.5 tweak */
+    if (agn_isstring(L, -2)) {
+      obj = lua_tostring(L, -2);
+      islibname = tools_streqx(obj, "libname", "mainlibname", NULL);
+      if ((!tools_streqx(obj, "_G", "_environonexit", NULL) && !islibname) || (resetlibname && islibname)) {
+        if (lua_istable(L, -1) && !luaL_isstandardlib(L, obj)) { package_cleanse(L, obj); }
+        agn_deletefield(L, LUA_GLOBALSINDEX, obj);
+      }
+    }
+    agn_poptop(L);  /* pop value */
+  }
+  lua_gc(L, LUA_GCCOLLECT, 0);
+  /* fourth, delete readlib'bed packages from package.loaded; 0.26.0, changed 2.9.1 */
   lua_getfield(L, LUA_REGISTRYINDEX, "_READLIBBED");
   if (lua_isset(L, -1)) {
     lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
@@ -216,32 +266,13 @@ int environ_restart (lua_State *L) {  /* added 0.4.0 */
     agn_poptop(L);  /* pop registry field `_LOADED' */
   }
   agn_poptop(L); /* delete registry field `_READLIBBED' */
-  /* fourth, save environ.onexit function, 2.7.0 */
+  lua_gc(L, LUA_GCCOLLECT, 0);
+  /* fifth, save environ.onexit function, 2.7.0 */
   type = agnL_gettablefield(L, "environ", "onexit", NULL, 0);
-  if (type != LUA_TFUNCTION)
+  if (type != LUA_TFUNCTION) {
     agn_poptop(L);  /* pop whatever */
-  else  /* assign environ.onexit to temporary name */
+  } else {  /* assign environ.onexit to temporary name */
     lua_setfield(L, LUA_GLOBALSINDEX, "_environonexit");  /* and pop function */
-  /* fifth, delete all global vars except libname */
-  lua_getfield(L, LUA_GLOBALSINDEX, "_G");  /* check if _G._G is still there */
-  if (!lua_istable(L, -1)) {  /* Agena 1.7.1 fix */
-    fprintf(stderr, "Warning in " LUA_QS  ": " LUA_QS " is missing or not a table, no restart possible.\n", "restart", "_G");
-    fflush(stderr);
-    agn_poptop(L);
-    return 0;
-  }
-  agn_poptop(L);
-  /* now actually delete values from _G */
-  lua_pushnil(L);
-  while (lua_next(L, LUA_GLOBALSINDEX) != 0) {  /* 4.6.5 tweak */
-    if (agn_isstring(L, -2)) {
-      obj = lua_tostring(L, -2);
-      islibname = tools_streqx(obj, "libname", "mainlibname", NULL);
-      if ((!tools_streqx(obj, "_G", "_environonexit", NULL) && !islibname) || (resetlibname && islibname)) {
-        agn_deletefield(L, LUA_GLOBALSINDEX, obj);
-      }
-    }
-    agn_poptop(L);  /* pop value */
   }
   /* sixth, reset stacks, patched 2.12.0 RC 2 */
   L->currentstack = LUA_DEFAULTSTACK;

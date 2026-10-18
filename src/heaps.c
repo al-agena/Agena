@@ -942,22 +942,11 @@ static void createmeta (lua_State *L) {
 }
 
 LUALIB_API int luaopen_heaps (lua_State *L) {  /* we use a different opening function in DOS & OS/2 */
-  /* register library */
-  luaL_register(L, AGENA_HEAPSLIBNAME, avllib);
   /* metamethods for AVL trees */
   createmeta(L);
-  /* In all "DLL versions" of Agena, register additional package tables avl, skew and binary so that they can be deleted from
-     the environment when restarting Agena. Otherwise their _metatables_ could not be re-initialised again. In DOS and OS/2,
-     leave them untouched since they cannot be recreated during restart as they have been defined in the C and not the
-     Agena code. This is equal to:
-     if not(os.isdos() or os.isos2() or os.isansi()) then
-        insert 'avl', 'skew', 'binary' into debug.getregistry()._READLIBBED
-     end; */
-#if !(defined(__DJGPP__) || defined(__OS2__) || defined(LUA_ANSI))  /* 2.31.10 */
-  agn_setreadlibbed(L, "avl");
-  agn_setreadlibbed(L, "skew");
-  agn_setreadlibbed(L, "binary");
-#endif
+  lua_pop(L, 1);  /* 7.11.2 fix */
+  /* register library */
+  luaL_register(L, AGENA_HEAPSLIBNAME, avllib);
   return 1;
 }
 

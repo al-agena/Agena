@@ -4609,8 +4609,10 @@ LUALIB_API int luaopen_mapm (lua_State *L) {
   if (nopened++ == 0) atexit(clearmapm);  /* only register once, 3.6.1 */
   luaL_newmetatable(L, MAPMXTYPE);      /* metatable for userdata, adds it to the registry with key 'mapm' */
   luaL_register(L, NULL, mapm_lib);     /* assign C metamethods to this metatable */
+  lua_pop(L, 1);   /* 7.11.2 fix */
   luaL_newmetatable(L, MAPMCTYPE);      /* metatable for long userdata, adds it to the registry with key 'mapm' */
   luaL_register(L, NULL, mapm_clib);    /* assign C metamethods to this metatable */
+  lua_pop(L, 1);   /* 7.11.2 fix */
   luaL_register(L, AGENA_MAPMLIBNAME, mapmlib);  /* leaves the package table on the top of the stack */
   lua_pushliteral(L, "version");
   lua_pushliteral(L, MYVERSION);

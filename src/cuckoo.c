@@ -533,6 +533,7 @@ static void createmeta (lua_State *L) {
 LUALIB_API int luaopen_cuckoo (lua_State *L) {
   /* metamethods */
   createmeta(L);
+  lua_pop(L, 1);  /* 7.11.2 fix */
   /* register library */
   luaL_register(L, AGENA_CUCKOOLIBNAME, cuckoolib);
   lua_rawsetstringstring(L, -1, "initstring", AGENA_LIBVERSION);

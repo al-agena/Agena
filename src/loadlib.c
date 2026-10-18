@@ -369,7 +369,7 @@ const char *fastloader_C (lua_State *L, const char *filename, const char *packag
     n1 = lua_gettop(L);
     funcname = mkfuncname(L, packagename);  /* creates luaopen_<pkgname> string */
     /* STAGE 1: Dynamic Loading / Linking Verification */
-    if (ll_loadfunc(L, filename, funcname) != 0) {  
+    if (ll_loadfunc(L, filename, funcname) != 0) {
       *success = -1;  /* file corrupt */
       if (printerror) {
         const char *err_msg = lua_tostring(L, -1);
@@ -399,7 +399,6 @@ const char *fastloader_C (lua_State *L, const char *filename, const char *packag
 }
 
 static int pkg_loadclib (lua_State *L) {  /* changed 1.5.0, 1.6.0 Valgrind */
-printf("pkg_loadclib\n");
   int success;
   #if !defined(__OS2__) && !defined(LUA_ANSI)  /* 0.27.1 patch */
   const char *s, *dirpath;

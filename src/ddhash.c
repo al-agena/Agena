@@ -559,6 +559,7 @@ static void createmeta (lua_State *L) {
 
 LUALIB_API int luaopen_ddhash (lua_State *L) {
   createmeta(L);
+  lua_pop(L, 1);  /* 7.11.2 fix */
   luaL_register(L, AGENA_DDHASHLIBNAME, ddhashlib);
   return 1;
 }

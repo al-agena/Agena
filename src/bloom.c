@@ -441,6 +441,7 @@ static void createmeta (lua_State *L) {
 LUALIB_API int luaopen_bloom (lua_State *L) {
   /* metamethods */
   createmeta(L);
+  lua_pop(L, 1);  /* 7.11.2 fix */
   /* register library */
   luaL_register(L, AGENA_BLOOMLIBNAME, bloomlib);
   lua_rawsetstringstring(L, -1, "initstring", AGENA_LIBVERSION);

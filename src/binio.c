@@ -1918,6 +1918,12 @@ static const struct luaL_Reg fpos_mt [] = {
   {NULL, NULL}
 };
 
+static const struct luaL_Reg binio_lib[] = {
+  {"__gc",             binio_gc},
+  {"__tostring",       binio_tostring},
+  {NULL, NULL}
+};
+
 static const luaL_Reg binio[] = {
   {"clearerror",       binio_clearerror},
   {"close",            binio_close},             /* July 13, 2008 */
@@ -1968,6 +1974,7 @@ static void createmeta (lua_State *L) {
   lua_pushvalue(L, -1);  /* push metatable */
   lua_setfield(L, -2, "__index");  /* metatable.__index = metatable */
   luaL_register(L, NULL, binio);  /* file methods */
+  luaL_register(L, NULL, binio_lib);  /* metamethods */
 }
 
 /*
@@ -1975,15 +1982,13 @@ static void createmeta (lua_State *L) {
 */
 LUALIB_API int luaopen_binio (lua_State *L) {
   createmeta(L);
-  luaL_register(L, AGENA_BINIOLIBNAME, binio);
-  lua_pushcfunction(L, binio_gc);
-  lua_setfield(L, -2, "__gc");
-  lua_pushcfunction(L, binio_tostring);
-  lua_setfield(L, -2, "__tostring");
-  lua_newtable(L);
-  lua_setfield(L, -2, "openfiles");  /* table for information on all open files */
+  lua_pop(L, 1);  /* 7.11.2 fix */
   luaL_newmetatable(L, FPOS_T_UD);
   luaL_register(L, NULL, fpos_mt);
+  lua_pop(L, 1);  /* 7.11.2 fix */
+  luaL_register(L, AGENA_BINIOLIBNAME, binio);
+  lua_newtable(L);
+  lua_setfield(L, -2, "openfiles");  /* table for information on all open files */
   return 1;
 }
 

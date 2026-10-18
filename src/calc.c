@@ -29,25 +29,9 @@
 
 #define checkldblarray(L, n) (LongDoubleArray *)luaL_checkudata(L, n, "calc")
 
-static int aux_newldblarray64 (lua_State *L, size_t n, const char *procname) {  /* creates numeric C array userdata object */
-  DoubleArray *a;
-  if (n < 1)
-    luaL_error(L, "Error in " LUA_QS ": structure is empty.", procname);
-  a = (DoubleArray *)lua_newuserdata(L, sizeof(DoubleArray));  /* push userdata on stack */
-  a->v = calloc(n, sizeof(double));
-  if (!a->v)
-    luaL_error(L, "Error in " LUA_QS ": memory allocation failed.", procname);
-  a->size = n;
-  /* attach proper metatable with __gc method to userdata; name of mt name must be different from the one of
-     the numarray package to avoid crashes during gc. */
-  luaL_getmetatable(L, "calc");
-  lua_setmetatable(L, -2);
-  return 1;  /* leave userdata on the top of the stack */
-}
-
 /* 2.8.2, there allegedly is a bug in Lua when more than 256 arguments are pushed into the userdata stack; aux_newldblarray
    pushes userdata a. */
-#define aux_pushud(L,a,nops,procname) { \
+#define aux_pushud80(L,a,nops,procname) { \
   if (nops > 256) \
     luaL_error(L, "Error in " LUA_QS ": received too many coefficients.", procname); \
   agnL_newldblarray(L, nops, procname); \
@@ -57,7 +41,7 @@ static int aux_newldblarray64 (lua_State *L, size_t n, const char *procname) {  
 #define aux_pushud64(L,a,nops,procname) { \
   if (nops > 256) \
     luaL_error(L, "Error in " LUA_QS ": received too many coefficients.", procname); \
-  aux_newldblarray64(L, nops, procname); \
+  agnL_newdblarray(L, nops, procname); \
   a = (DoubleArray *)lua_touserdata(L, -1); \
 }
 
@@ -69,7 +53,7 @@ static int arraygc (lua_State *L) {  /* __gc method */
   return 0;
 }
 
-static const struct luaL_Reg numarray_arraylib [] = {
+static const struct luaL_Reg arraylib [] = {
   {"__gc", arraygc},
   {NULL, NULL}
 };
@@ -4519,8 +4503,8 @@ static int calc_neville (lua_State *L) {
   } else {  /* 2.2.0 RC 3, tuned 2.34.1 */
     LongDoubleArray *a, *b;
     luaL_checkstack(L, 3, "not enough stack space");  /* 3.18.4 fix */
-    aux_pushud(L, a, n, "calc.neville");  /* push as ud */
-    aux_pushud(L, b, n, "calc.neville");  /* push as ud */
+    aux_pushud80(L, a, n, "calc.neville");  /* push as ud */
+    aux_pushud80(L, b, n, "calc.neville");  /* push as ud */
     for (i=0; i < n; i++) {
       setldblarray(a, i, x[i]);
       setldblarray(b, i, y[i]);
@@ -4584,17 +4568,46 @@ static int calc_polyfit (lua_State *L) {  /* 2.1.3 */
       sum = tools_koaddl(sum, y[k]*tools_powil(x[k], i), &q);  /* 2.13.0, 2.29.5 tuning */
     b[i] = sum;
   }
+  /* Elimiation with partial pivoting, 7.11.2 improvement */
   for (k=0; k <= m; k++) {
+    /* 1. Find the largest absolute pivot element in the current column */
+    int pivot_row = k;
+    long double max_val = fabsl(a[k + n*k]);
+    for (i = k + 1; i <= m; i++) {
+      long double current_val = fabsl(a[i + n*k]);
+      if (current_val > max_val) {
+        max_val = current_val;
+        pivot_row = i;
+      }
+    }
+    /* 2. Zero Check: If the largest element is still zero, the matrix is singular */
+    if (max_val < 1e-15L) {
+      xfreeall(x, y, a, b);
+      return luaL_error(L, "Error in " LUA_QS ": data matrix is singular (cannot solve).", "calc.polyfit");
+    }
+    /* 3. Swap the current row with the pivot row if a larger value was found */
+    if (pivot_row != k) {
+      /* Swap row elements in matrix A */
+      for (j=0; j <= m; j++) {
+        long double swap_temp = a[k + n*j];
+        a[k + n*j] = a[pivot_row + n*j];
+        a[pivot_row + n*j] = swap_temp;
+      }
+      /* Swap matching entry in vector B */
+      long double swap_temp = b[k];
+      b[k] = b[pivot_row];
+      b[pivot_row] = swap_temp;
+    }
+    /* 4. Execute your original elimination loops safely */
     for (i=0; i <= m; i++) {
       if (i == k) continue;
+      /* Guaranteed safe from division-by-zero now */
       temp = a[i + n*k]/a[k + n*k];
       q = 0;
-      for (j=k; j <= m; j++)
-        /* a[i + n*j] = a[i + n*j] - temp*a[k + n*j]; */
-        a[i + n*j] = tools_koaddl(a[i + n*j], -temp*a[k + n*j], &q);  /* 2.13.0 */
-      /* b[i] = b[i] - temp*b[k]; */
+      for (j=0; j <= m; j++)   // <--- NEW (Starts at 0)
+        a[i + n*j] = tools_koaddl(a[i + n*j], -temp*a[k + n*j], &q);
       q = 0;
-      b[i] = tools_koaddl(b[i], -temp*b[k], &q);  /* 2.13.0 */
+      b[i] = tools_koaddl(b[i], -temp*b[k], &q);
     }
   }
   agn_createseq(L, m + 1);
@@ -4654,8 +4667,8 @@ static int calc_interp (lua_State *L) {
   else {  /* 2.34.1: tuned 3.5 times: use userdata instead of sequences */
     LongDoubleArray *a, *c;
     luaL_checkstack(L, 3, "not enough stack space");  /* 3.18.4 fix */
-    aux_pushud(L, a, n, "calc.interp");  /* push x as ud */
-    aux_pushud(L, c, n, "calc.interp");  /* push coefficients as ud */
+    aux_pushud80(L, a, n, "calc.interp");  /* push x as ud */
+    aux_pushud80(L, c, n, "calc.interp");  /* push coefficients as ud */
     for (i=0; i < n; i++) {
       setldblarray(a, i, x[i]);
       setldblarray(c, i, coeff[i]);
@@ -4831,11 +4844,11 @@ static int calc_nakspline (lua_State *L) {
   } else {  /* 2.34.1 tuning, 6.6 times faster than using seqs */
     LongDoubleArray *X, *Y, *B, *C, *D;
     luaL_checkstack(L, 6, "not enough stack space");  /* 3.18.4 fix */
-    aux_pushud(L, X, n, "calc.nakspline");  /* push x as ud */
-    aux_pushud(L, Y, n, "calc.nakspline");  /* push y as ud */
-    aux_pushud(L, B, n, "calc.nakspline");  /* push b as ud */
-    aux_pushud(L, C, n, "calc.nakspline");  /* push c as ud */
-    aux_pushud(L, D, n, "calc.nakspline");  /* push d as ud */
+    aux_pushud80(L, X, n, "calc.nakspline");  /* push x as ud */
+    aux_pushud80(L, Y, n, "calc.nakspline");  /* push y as ud */
+    aux_pushud80(L, B, n, "calc.nakspline");  /* push b as ud */
+    aux_pushud80(L, C, n, "calc.nakspline");  /* push c as ud */
+    aux_pushud80(L, D, n, "calc.nakspline");  /* push d as ud */
     for (i=0; i < n; i++) {
       setldblarray(X, i, x[i]);
       setldblarray(Y, i, y[i]);
@@ -4892,11 +4905,11 @@ static int calc_clampedspline (lua_State *L) {
   } else {
     LongDoubleArray *X, *Y, *B, *C, *D;
     luaL_checkstack(L, 6, "not enough stack space");  /* 3.18.4 fix */
-    aux_pushud(L, X, n, "calc.clampedspline");  /* push x as ud */
-    aux_pushud(L, Y, n, "calc.clampedspline");  /* push y as ud */
-    aux_pushud(L, B, n, "calc.clampedspline");  /* push b as ud */
-    aux_pushud(L, C, n, "calc.clampedspline");  /* push c as ud */
-    aux_pushud(L, D, n, "calc.clampedspline");  /* push d as ud */
+    aux_pushud80(L, X, n, "calc.clampedspline");  /* push x as ud */
+    aux_pushud80(L, Y, n, "calc.clampedspline");  /* push y as ud */
+    aux_pushud80(L, B, n, "calc.clampedspline");  /* push b as ud */
+    aux_pushud80(L, C, n, "calc.clampedspline");  /* push c as ud */
+    aux_pushud80(L, D, n, "calc.clampedspline");  /* push d as ud */
     for (i=0; i < n; i++) {
       setldblarray(X, i, x[i]);
       setldblarray(Y, i, y[i]);
@@ -4918,7 +4931,7 @@ static int calc_clampedspline (lua_State *L) {
   nops = fnsize(L, 1); \
   LongDoubleArray *t = ((flag == 0) ? a : b); \
   int i; \
-  aux_pushud(L, t, nops, procname); \
+  aux_pushud80(L, t, nops, procname); \
   for (i=0; i < nops; i++) { \
     int rc = 0; \
     setldblarray(t, i, (flag == 0) ? fn(L, 1, i + 1, &rc) : 0); \
@@ -5025,7 +5038,9 @@ static int calc_polygen (lua_State *L) {
   a = b = NULL;  /* changed 2.34.10 */
   nops = agnL_gettop(L, "expected at least one argument", "calc.polygen");
   luaL_checkstack(L, 1, "too many arguments");
-  if ( (rc = aux_pushcoeffs(L, a, b, nops, "calc.polygen", 0, 0)) ) {
+  /* the following pushes a long double array a along with an attached __gc mt onto the stack */
+  if ( (rc = aux_pushcoeffs(L, a, b, nops, "calc.polygen", 0, 0)) ) {  /* complex number found in input,
+    push second long double array b with imaginary parts */
     luaL_checkstack(L, 1, "not enough stack space");
     aux_pushcoeffs(L, a, b, nops, "calc.polygen", 1, 0);
   }
@@ -5995,7 +6010,7 @@ static int calc_cheby (lua_State *L) {  /* 2.10.4, switched to longdoubles 2.34.
   /* pushes LongDoubleArray userdata of Chebyshev coefficient vector onto stack with three additional information, see below */
   if (nops - deriv < 2)  /* 3.3.2 change */
     luaL_error(L, "Error in " LUA_QS ": vector would have too few coefficients.", "calc.cheby");
-  aux_pushud(L, a, nops + 3, "calc.cheby");
+  aux_pushud80(L, a, nops + 3, "calc.cheby");
   a->size = nops;
   y = malloc(nops*sizeof(long double));
   if (y == NULL) {  /* 3.3.2 improvement */
@@ -6345,29 +6360,28 @@ static int savgol (lua_State *L) {
 
 /* This version for ARM gives somewhat better results for derivatives, but not much. */
 static int savgol64 (lua_State *L) {
-  double x, eps;
+  double x, eps, fact, scaling, inv_eps, val, ld_coeff;
   int i, c, nleft, nright, deriv;
-  long double fact, scaling;  /* Changed to long double to avoid overflow before use */
-  LongDoubleArray *a;
+  DoubleArray *a;
   /* Double-Double accumulator */
   dd_pair signal_dd = {0.0, 0.0};
   x = agn_checknumber(L, 1);
-  a = (LongDoubleArray *)lua_touserdata(L, lua_upvalueindex(1));
+  a = (DoubleArray *)lua_touserdata(L, lua_upvalueindex(1));
   /* Assume a->size contains coefficients, followed by metadata */
-  nleft  = (int)getldblarray(a, a->size);
-  nright = (int)getldblarray(a, a->size + 1);
-  deriv  = (int)getldblarray(a, a->size + 2);
-  eps  = getldblarray(a, a->size + 3);
+  nleft  = (int)getdblarray(a, a->size);
+  nright = (int)getdblarray(a, a->size + 1);
+  deriv  = (int)getdblarray(a, a->size + 2);
+  eps  = getdblarray(a, a->size + 3);
   c = 0;
   for (i=nleft; i <= nright; i++) {
     /* 1. Get function value */
-    double val = (double)agnL_fncall(L, lua_upvalueindex(2), (double)(x + i*eps), 10, 9);
+    val = agnL_fncall(L, lua_upvalueindex(2), (double)(x + i*eps), 10, 9);
     /* 2. Get coefficient as LONG DOUBLE to preserve all bits */
-    long double ld_coeff = getldblarray(a, c++);
+    ld_coeff = getdblarray(a, c++);
     /* 3. Convert long double to dd_pair (This is the secret sauce) */
     dd_pair coeff_dd;
-    coeff_dd.hi = (double)ld_coeff;
-    coeff_dd.lo = (double)(ld_coeff - (long double)coeff_dd.hi);
+    coeff_dd.hi = ld_coeff;
+    coeff_dd.lo = (ld_coeff - coeff_dd.hi);
     /* 4. Multiply: coeff_dd * val_double */
     dd_pair term = dd_mul_d(coeff_dd, val);
     /* 5. Accumulate into signal */
@@ -6375,12 +6389,12 @@ static int savgol64 (lua_State *L) {
   }
   /* Compute n! / eps^deriv using long double */
   fact = 1.0L;
-  for (i=1; i <= deriv; i++) fact *= (long double)i;
+  for (i=1; i <= deriv; i++) fact *= (double)i;
   scaling = fact;
-  long double inv_eps = 1.0L/(long double)eps;
+  inv_eps = 1.0L/eps;
   for (i=0; i < deriv; i++) scaling *= inv_eps;
   /* Apply scaling to the DD result. This prevents the 1e-16 error from being amplified into 1e-7. */
-  dd_pair final_res = dd_mul_d(signal_dd, (double)scaling);
+  dd_pair final_res = dd_mul_d(signal_dd, scaling);
   lua_pushnumber(L, dd2double(final_res));
   return 1;
 }
@@ -6509,7 +6523,7 @@ static int calc_savgol (lua_State *L) {  /* 2.10.4, 2.34.10 */
   nops = aux_call_savgolcoeffs(L, nleft, nright, deriv, polydeg, isadaptive, "calc.savgol");
   /* pushes LongDoubleArray userdata of Savgol coefficient vector onto stack that includes four additional information, see below */
   luaL_checkstack(L, 2, "not enough stack space");  /* 3.18.4 fix */
-  aux_pushud(L, a, nops + 4, "calc.savgol");
+  aux_pushud80(L, a, nops + 4, "calc.savgol");
   a->size = nops;
   for (i=0; i < nops; i++) {
     agn_regrawgeti(L, -2, i + 1);
@@ -6547,7 +6561,7 @@ static int calc_savgol64 (lua_State *L) {  /* 7.4.0 */
   nops = aux_call_savgolcoeffs(L, nleft, nright, deriv, polydeg, isadaptive, "calc.savgol64");
   /* pushes LongDoubleArray userdata of Savgol coefficient vector onto stack that includes four additional information, see below */
   luaL_checkstack(L, 2, "not enough stack space");  /* 3.18.4 fix */
-  aux_pushud(L, a, nops + 4, "calc.savgol64");
+  aux_pushud80(L, a, nops + 4, "calc.savgol64");
   a->size = nops;
   for (i=0; i < nops; i++) {
     agn_regrawgeti(L, -2, i + 1);
@@ -8395,8 +8409,9 @@ LUALIB_API int luaopen_calc (lua_State *L) {
   intdeiini64(NSLOTS, INTEG_TINY64, INTEG_EPS64, intdei_w64);  /* 4.12.6 */
   intdeoini64(NSLOTS, INTEG_TINY64, INTEG_EPS64, intdeo_w64);  /* 4.12.6 */
   intccini64(NSLOTS, intcc_w64);  /* 4.12.6 */
-  luaL_newmetatable(L, "calc");
-  luaL_register(L, NULL, numarray_arraylib);  /* associate __gc method */
+  luaL_newmetatable(L, AGENA_CALCLIBNAME);
+  luaL_register(L, NULL, arraylib);  /* associate __gc method */
+  lua_pop(L, 1);  /* 7.11.2 fix */
   luaL_register(L, AGENA_CALCLIBNAME, calclib);
   return 1;
 }

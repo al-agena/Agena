@@ -2215,7 +2215,9 @@ static void createstdfile (lua_State *L, FILE *f, int k, const char *fname) {
 LUALIB_API int luaopen_io (lua_State *L) {
   luaL_newmetatable(L, "io_vecint");
   luaL_register(L, NULL, vecint_arraylib);  /* associate __gc method */
+  lua_pop(L, 1);  /* 7.11.2 fix */
   createmeta(L);
+  lua_pop(L, 1);  /* 7.11.2 fix */
   /* create (private) environment (with fields IO_INPUT, IO_OUTPUT, __close) */
   lua_createtable(L, 2, 1);
   lua_replace(L, LUA_ENVIRONINDEX);
@@ -2234,7 +2236,7 @@ LUALIB_API int luaopen_io (lua_State *L) {
   lua_pushcfunction(L, io_pclose);
   lua_setfield(L, -2, "__close");
   lua_setfenv(L, -2);
-  agn_poptop(L);  /* pop 'popen' */
+  lua_pop(L, 1);  /* pop 'popen' */
   /* set default close function */
   lua_pushcfunction(L, io_fclose);
   lua_setfield(L, LUA_ENVIRONINDEX, "__close");

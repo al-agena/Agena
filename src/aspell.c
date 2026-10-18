@@ -3,7 +3,6 @@
 ** aspell 0.60 binding
 ** See Copyright Notice in agena.h
 ** This library has mostly been created with the help of Gemini AI.
-** Although the library compiles perfectly in OS/2, it crashes with SIGSEGV there.
 */
 
 #define _GNU_SOURCE
@@ -30,7 +29,6 @@
 
 #include "agenalib.h"
 #include "agnhlps.h"
-#include "agnxlib.h"
 #include "agnxlib.h"
 #include "prepdefs.h"
 
@@ -119,14 +117,6 @@ static void sanitize_base_dir (char *base_dir, int check_backslash) {
     return;
   }
 #endif
-#if defined(__SOLARIS)
-  /* 3. Handle Solaris 64-bit architecture subdirectories (amd64 / sparcv9) */
-  char *arch_dir = strrchr(base_dir, '/');
-  if (arch_dir && (strcmp(arch_dir + 1, "amd64") == 0 ||
-                   strcmp(arch_dir + 1, "sparcv9") == 0)) {
-    *arch_dir = '\0'; /* Strip the architecture layer */
-  }
-#endif
   /* 4. Fallback: Step out one level if inside a standard /bin, /lib, or /src folder */
   char *sub_dir = strrchr(base_dir, '/');
   if (check_backslash && !sub_dir) {
@@ -138,12 +128,12 @@ static void sanitize_base_dir (char *base_dir, int check_backslash) {
     *sub_dir = '\0'; /* Step out one level to the application root */
   }
 #ifdef __OS2__
-  /* In OS/2, some binary aspell libraries found on Hobbes may have big problems with a path 
-     preceded by a drive letter and colon, then internally replicating it thrice, and we do 
+  /* In OS/2, some binary aspell libraries found on Hobbes may have big problems with a path
+     preceded by a drive letter and colon, then internally replicating it thrice, and we do
      not want this. */
-  if (strlen(base_dir) > 2 && 
-      isalpha(uchar(base_dir[0])) && 
-      base_dir[1] == ':' && 
+  if (strlen(base_dir) > 2 &&
+      isalpha(uchar(base_dir[0])) &&
+      base_dir[1] == ':' &&
       (base_dir[2] == '/' || base_dir[2] == '\\')) {
     memmove(base_dir, base_dir + 2, strlen(base_dir + 2) + 1);
   }

@@ -683,6 +683,13 @@ static int mt_tostring (lua_State *L) {  /* at the console, the port is formatte
 }
 
 
+static const struct luaL_Reg com_lib[] = {
+  {"__gc",       com_close},
+  {"__tostring", mt_tostring},
+  {NULL, NULL}
+};
+
+
 static const luaL_Reg comlib[] = {
 #ifdef _WIN32
   {"attrib",     com_attrib},  /* renamed 2.26.2 */
@@ -710,15 +717,12 @@ static void createmeta (lua_State *L) {
   lua_pushvalue(L, -1);  /* push metatable */
   lua_setfield(L, -2, "__index");  /* metatable.__index = metatable */
   luaL_register(L, NULL, comlib);  /* methods */
+  luaL_register(L, NULL, com_lib);  /* 7.11.2 simplification */
 }
 
 LUALIB_API int luaopen_com (lua_State *L) {
   /* metamethods */
   createmeta(L);
-  lua_pushcfunction(L, com_close);
-  lua_setfield(L, -2, "__gc");
-  lua_pushcfunction(L, mt_tostring);
-  lua_setfield(L, -2, "__tostring");
   lua_pop(L, 1);
   /* register library */
   luaL_register(L, AGENA_COMLIBNAME, comlib);

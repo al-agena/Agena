@@ -1,5 +1,5 @@
 /* dblmap Library, implements C double-to-C double hash maps.
-   The package provides a number-to-number hash maps, with the Agena numbers the keys and 
+   The package provides a number-to-number hash maps, with the Agena numbers the keys and
    Agena numbers the associated values.
    Created with the help of Gemini AI on July 07/25, 2026 and put to the public domain.
    Based on the former double-to-string hash map package of the same name.
@@ -72,22 +72,22 @@ static kh_inline khint_t mixed_double_hash (double d) {
   uint64_t k;
   memcpy(&k, &d, sizeof(k));
   khint_t h = (khint_t)(k ^ (k >> 32));
-  /* `Fibonacci mixer`: This constant (the golden ratio fractional part of 2^32) breaks up 
+  /* `Fibonacci mixer`: This constant (the golden ratio fractional part of 2^32) breaks up
      any sequential or floating-point patterns instantly. */
   return h * 2654435761U;
 }
 
-/* Stats, see script at the bottom of this file. 
+/* Stats, see script at the bottom of this file.
    --------------------------------------------- */
 /* with 500,000 random integers in 1 .. 250k: 33.795999765396 secs, 152161 colls; 33.671000003815 secs, 151890 colls
    with 500,000 random fractions in 0 .. 1:   33.983000040054 499970; 33.898000001907 499969 */
 /* KHASH_INIT(dblmap, double, double, 1, __kh_double_hash, __kh_double_equal) */
 
-/* with 500,000 random integers in 1 .. 250k: 33.990999937057 secs, 152161 colls; 33.628999948502 secs, 151890 colls 
+/* with 500,000 random integers in 1 .. 250k: 33.990999937057 secs, 152161 colls; 33.628999948502 secs, 151890 colls
    with 500,000 random fractions in 0 .. 1: 34.584000110626 463607; 34.235000133514 463480 */
 KHASH_INIT(dblmap, double, double, 1, lua_hashnum, __kh_double_equal)
 
-/* with 500,000 random integers in 1 .. 250k: 33.881000041962 secs, 216351 colls; 33.669000148773 secs, 216070 colls 
+/* with 500,000 random integers in 1 .. 250k: 33.881000041962 secs, 216351 colls; 33.669000148773 secs, 216070 colls
    with 500,000 random fractions in 0 .. 1: 34.174000024796 499970; 34.960999965668 499969 */
 /* KHASH_INIT(dblmap, double, double, 1, mixed_double_hash, __kh_double_equal) */
 
@@ -288,7 +288,7 @@ static uint32_t khash_collisions (kh_dblmap_t *h) {
   uint32_t collision_moves = 0;
   khint_t k;
   /* kh_end(h) is the total number of buckets currently allocated in the table array */
-  khint_t mask = h->n_buckets - 1; 
+  khint_t mask = h->n_buckets - 1;
   /* Loop through every physical bucket slot in the hash table */
   for (k = kh_begin(h); k < kh_end(h); ++k) {
     /* Check if the current slot actually contains a valid inserted element */
@@ -500,6 +500,7 @@ static void createmeta (lua_State *L) {
 
 LUALIB_API int luaopen_dblmap (lua_State *L) {
   createmeta(L);
+  lua_pop(L, 1);  /* 7.11.2 fix */
   luaL_register(L, AGENA_DBLMAPLIBNAME, dblmaplib);
   return 1;
 }
@@ -526,7 +527,7 @@ to 100 do
    for i in l do
       if not dblmap.getitem(h, i) then print(i) fi
    od;
-   environ.gc('step', 100) 
+   environ.gc('step', 100)
 od;
 print(watch(), colls);
 */

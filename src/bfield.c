@@ -187,6 +187,16 @@ static int mt_zero (lua_State *L) {
 
 /* ---------------------------------------------------------------------------------------------------------------*/
 
+static const struct luaL_Reg bfield_lib[] = {
+  {"__index",      mt_index},
+  {"__writeindex", bfield_setbitto},
+  {"__tostring",   mt_tostring},
+  {"__size",       mt_getsize},
+  {"__zero",       mt_zero},
+  {"__gc",         mt_gc},
+  {NULL, NULL}
+};
+
 static const luaL_Reg bfieldlib[] = {
   {"clearbit",     bfield_clearbit},
   {"flipbit",      bfield_flipbit},
@@ -210,22 +220,11 @@ static void createmeta (lua_State *L) {
   lua_pushvalue(L, -1);  /* push metatable */
   lua_setfield(L, -2, "__index");  /* metatable.__index = metatable */
   luaL_register(L, NULL, bfieldlib);  /* methods */
+  luaL_register(L, NULL, bfield_lib);  /* 7.11.2 simplification */
 }
 
 LUALIB_API int luaopen_bfield (lua_State *L) {
   createmeta(L);
-  lua_pushcfunction(L, mt_index);
-  lua_setfield(L, -2, "__index");
-  lua_pushcfunction(L, bfield_setbitto);
-  lua_setfield(L, -2, "__writeindex");
-  lua_pushcfunction(L, mt_tostring);
-  lua_setfield(L, -2, "__tostring");
-  lua_pushcfunction(L, mt_getsize);
-  lua_setfield(L, -2, "__size");
-  lua_pushcfunction(L, mt_zero);
-  lua_setfield(L, -2, "__zero");
-  lua_pushcfunction(L, mt_gc);
-  lua_setfield(L, -2, "__gc");
   lua_pop(L, 1);
   /* register library */
   luaL_register(L, AGENA_BFIELDLIBNAME, bfieldlib);

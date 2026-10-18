@@ -4199,6 +4199,7 @@ static const luaL_Reg dualnumlib[] = {
 LUALIB_API int luaopen_dual (lua_State *L) {
   luaL_newmetatable(L, AGENA_DUALLIBNAME);  /* metatable for dual numbers, adds it to the registry with key 'dual' */
   luaL_register(L, NULL, dual_metalib);  /* assign C metamethods to this metatable */
+  lua_pop(L, 1);  /* 7.11.2 fix */
   luaL_register(L, AGENA_DUALLIBNAME, dualnumlib);
   return 1;
 }

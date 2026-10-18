@@ -8493,7 +8493,7 @@ void luaV_execute (lua_State *L, int nexeccalls) {
         break;
       }
       case CMD_RESTART: {  /* perform restart */
-        agnL_onexit(L, 1);  /* 2.7.0, if environ.onexit is assigned a function, it is called */
+        Protect(agnL_onexit(L, 1));  /* 2.7.0, if environ.onexit is assigned a function, it is called */
         /* put __RESTART function on stack */
         setobj2s(L, ra, luaH_getstr(hvalue(gt(L)), luaS_new(L, "environ")));
         if (ttistable(ra)) {
@@ -8507,7 +8507,7 @@ void luaV_execute (lua_State *L, int nexeccalls) {
         luaD_checkstack(L, 2);  /* Agena 1.9.4 fix */
         L->top = ra + 2;  /* func. + 1 arg */  /* Agena 1.9.4 fix */
         /* restart the environment */
-        Protect(luaD_call(L, ra, 0, 1));  /* function, args and 0 result */
+        Protect(luaD_call(L, ra, 0, 1));  /* function, args and 0 result, plus additional gc */
         /* do not execute setnilvalue(ra) for it will corrupt the stack if restart is called after
            an error was issued !  Agena 1.0.5 fix */
         /* luaD_call will level the stack automatically, even in case of errors */

@@ -3108,23 +3108,33 @@ static const luaL_Reg dlonglib[] = {
 };
 
 
+static const struct {  /* 7.11.2 simplification */
+  const char *name;
+  int value;
+} fp_constants[] = {
+  {"fp_nan",       FP_NAN},
+  {"fp_infinite",  FP_INFINITE},
+  {"fp_subnormal", FP_SUBNORMAL},
+  {"fp_zero",      FP_ZERO},
+  {"fp_normal",    FP_NORMAL},
+  {NULL, 0} /* End marker */
+};
+
+
 /*
 ** Open long library
 */
+
 LUALIB_API int luaopen_long (lua_State *L) {
+  int i;
   luaL_newmetatable(L, "longdouble");    /* metatable for long double userdata, adds it to the registry with key 'long' */
   luaL_register(L, NULL, dlong_lib);     /* assign C metamethods to this metatable */
+  lua_pop(L, 1);  /* 7.11.2 fix */
   luaL_register(L, AGENA_LONGLIBNAME, dlonglib);
-  lua_pushinteger(L, FP_NAN);
-  lua_setfield(L, -2, "fp_nan");         /* for FP_NAN */
-  lua_pushinteger(L, FP_INFINITE);
-  lua_setfield(L, -2, "fp_infinite");    /* for FP_INFINITE */
-  lua_pushinteger(L, FP_SUBNORMAL);
-  lua_setfield(L, -2, "fp_subnormal");   /* for FP_SUBNORMAL */
-  lua_pushinteger(L, FP_ZERO);
-  lua_setfield(L, -2, "fp_zero");        /* for FP_ZERO */
-  lua_pushinteger(L, FP_NORMAL);
-  lua_setfield(L, -2, "fp_normal");      /* for FP_NORMAL */
+  for (i=0; fp_constants[i].name != NULL; i++) {  /* 7.11.2 simplification */
+    lua_pushinteger(L, fp_constants[i].value);
+    lua_setfield(L, -2, fp_constants[i].name);
+  }
 #ifndef __ARMCPU
   createdlong(L, LDBL_MIN);              /* minimum positive _normalised_ value */
 #else

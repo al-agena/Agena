@@ -152,6 +152,14 @@ static int bimaps_entries (lua_State *L) {
 }
 
 
+static const struct luaL_Reg bimaps_lib[] = {  /* 7.11.2 simplification */
+  {"__empty",  mt_empty},
+  {"__filled", mt_filled},
+  {"__in",     mt_in},
+  {"__notin",  mt_notin},
+  {NULL, NULL}
+};
+
 
 static const luaL_Reg bimaps[] = {
   {"getsize",  bimaps_getsize},   /* January 07, 2025 */
@@ -167,21 +175,15 @@ static const luaL_Reg bimaps[] = {
 */
 
 static void createmeta (lua_State *L) {
-  luaL_newmetatable(L, AGENA_BIMAPSLIBNAME);  /* [stack: metatable] */
-  luaL_register(L, NULL, bimaps);             /* [stack: metatable] */
-  lua_pushcfunction(L, mt_empty);
-  lua_setfield(L, -2, "__empty");
-  lua_pushcfunction(L, mt_filled);
-  lua_setfield(L, -2, "__filled");
-  lua_pushcfunction(L, mt_in);
-  lua_setfield(L, -2, "__in");
-  lua_pushcfunction(L, mt_notin);
-  lua_setfield(L, -2, "__notin");
+  luaL_newmetatable(L, AGENA_BIMAPSLIBNAME);
+  luaL_register(L, NULL, bimaps);
+  luaL_register(L, NULL, bimaps_lib);
 }
 
 LUALIB_API int luaopen_bimaps (lua_State *L) {
   /* metamethods */
   createmeta(L);
+  lua_pop(L, 1);  /* 7.11.2 fix */
   /* register library */
   luaL_register(L, AGENA_BIMAPSLIBNAME, bimaps);
   return 1;

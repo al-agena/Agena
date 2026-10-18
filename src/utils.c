@@ -1805,8 +1805,10 @@ static const luaL_Reg utils[] = {
 LUALIB_API int luaopen_utils (lua_State *L) {
   luaL_newmetatable(L, "utils");
   luaL_register(L, NULL, utils_arraylib);  /* associate __gc method */
+  lua_pop(L, 1);  /* 7.11.2 fix */
   luaL_newmetatable(L, "udata");
   luaL_register(L, NULL, utils_udatalib);
+  lua_pop(L, 1);  /* 7.11.2 fix */
   luaL_register(L, AGENA_UTILSLIBNAME, utils);
   return 1;
 }

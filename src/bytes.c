@@ -2491,8 +2491,10 @@ static const luaL_Reg byteslib[] = {
 LUALIB_API int luaopen_bytes (lua_State *L) {
   luaL_newmetatable(L, "cast");         /* metatable for cast userdata, adds it to the registry with key 'cast' */
   luaL_register(L, NULL, cast_lib);     /* assign C metamethods to this metatable */
+  lua_pop(L, 1);  /* 7.11.2 fix */
   luaL_newmetatable(L, "ieee");         /* metatable for cast userdata, adds it to the registry with key 'cast' */
   luaL_register(L, NULL, ieee_lib);     /* assign C metamethods to this metatable */
+  lua_pop(L, 1);  /* 7.11.2 fix */
   luaL_register(L, AGENA_BYTESLIBNAME, byteslib);
   return 1;
 }

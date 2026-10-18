@@ -11482,43 +11482,46 @@ static void auxopen (lua_State *L, const char *name,  /* reintroduced 2.19.1 */
   lua_setfield(L, -2, name);  /* associate iterator with baselib C function */
 }
 
+static const struct {
+  const char *name;
+  double value;
+} base_constants[] = {
+  {"Pi",         PI},
+  {"Pi2",        PI2},         /* 6.2831853071795865 */
+  {"PiO2",       PIO2},        /* 1.5707963267948966 */
+  {"PiO4",       PIO4},        /* 0.7853981633974483 */
+  {"Exp",        EXP1},        /* 2.7182818284590452 */
+  {"E",          EXP1},        /* 2.7182818284590452 */
+  {"Phi",        PHI},         /* Golden ratio */
+  {"InvPhi",     PHIINV},      /* non-negative inverse Golden ratio 0.6180339887498948482 */
+  {"EulerGamma", EULERGAMMA},  /* 0.5772156649015329 */
+  {"radians",    RADIANS_PER_DEGREE},
+  {"degrees",    1.0/RADIANS_PER_DEGREE},
+  {NULL, 0.0}
+};
+
 static void base_open (lua_State *L) {
+  int i;
   /* set global _G */
   lua_pushvalue(L, LUA_GLOBALSINDEX);
   lua_setglobal(L, "_G");
-  /* define Pi, 2*Pi, PI/2, Pi/4, EXP(1), EXP(1) */
-  lua_pushnumber(L, PI);
-  lua_setglobal(L, "Pi");
-  lua_pushnumber(L, PI2);         /* 6.2831853071795865 */
-  lua_setglobal(L, "Pi2");
-  lua_pushnumber(L, PIO2);        /* 1.5707963267948966 */
-  lua_setglobal(L, "PiO2");
-  lua_pushnumber(L, PIO4);        /* 0.7853981633974483 */
-  lua_setglobal(L, "PiO4");
-  lua_pushnumber(L, EXP1);        /* 2.7182818284590452 */
-  lua_setglobal(L, "Exp");
-  lua_pushnumber(L, EXP1);        /* 2.7182818284590452 */
-  lua_setglobal(L, "E");
-  lua_pushnumber(L, PHI);         /* added 0.5.0, moved to baselib 2.20.0 RC 1 */
-  lua_setglobal(L, "Phi");        /* added 0.5.0, Golden ratio */
-  lua_pushnumber(L, PHIINV);      /* non-negative inverse Golden ratio 0.6180339887498948482, 3.16.5 */
-  lua_setglobal(L, "InvPhi");
-  lua_pushnumber(L, EULERGAMMA);  /* 0.5772156649015329 */
-  lua_setglobal(L, "EulerGamma");
+  for (i=0; base_constants[i].name != NULL; i++) {
+    lua_pushnumber(L, base_constants[i].value);
+    lua_setglobal(L, base_constants[i].name);
+  }
+  /* Due to DJGPP/DOS bailing out otherwise: DJGPP's headers define HUGE_VAL and NAN 
+     as runtime expressions rather than compile-time constants, so define them here 
+     and not in the base_constants table. */
+  lua_pushnumber(L, HUGE_VAL);
+  lua_setglobal(L, "infinity");
+  lua_pushnumber(L, AGN_NAN);
+  lua_setglobal(L, "undefined");
   lua_pushnumber(L, agn_getepsilon(L));
   lua_setglobal(L, "Eps");
   lua_pushnumber(L, agn_getdblepsilon(L));  /* changed 2.21.8 */
   lua_setglobal(L, "DoubleEps");
   lua_pushnumber(L, agn_gethepsilon(L));    /* added 2.31.1 */
   lua_setglobal(L, "hEps");                 /* epsilon value used in quite a lot of approximations */
-  lua_pushnumber(L, HUGE_VAL);
-  lua_setglobal(L, "infinity");
-  lua_pushnumber(L, AGN_NAN);
-  lua_setglobal(L, "undefined");
-  lua_pushnumber(L, RADIANS_PER_DEGREE);
-  lua_setglobal(L, "radians");
-  lua_pushnumber(L, 1/RADIANS_PER_DEGREE);
-  lua_setglobal(L, "degrees");
   /* open lib into global table */
   luaL_register(L, "_G", base_funcs);
   lua_pushliteral(L, AGENA_RELEASE);  /* added */

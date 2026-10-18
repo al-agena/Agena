@@ -503,6 +503,7 @@ static void createmeta (lua_State *L) {
 LUALIB_API int luaopen_trie (lua_State *L) {
   /* metamethods for tries */
   createmeta(L);
+  lua_pop(L, 1);  /* 7.11.2 fix */
   /* register library */
   luaL_register(L, AGENA_TRIELIBNAME, trielib);
   return 1;

@@ -4409,8 +4409,10 @@ LUALIB_API int luaopen_mpfr (lua_State *L) {
   Mpfr_set_default_prec;
   luaL_newmetatable(L, "mpfr");
   luaL_register(L, NULL, mt_mpfrlib);  /* associate __gc method */
+  lua_pop(L, 1);   /* 7.11.2 fix */
   luaL_newmetatable(L, "cmpfr");
   luaL_register(L, NULL, mtc_mpfrlib);  /* associate __gc method */
+  lua_pop(L, 1);   /* 7.11.2 fix */
   luaL_register(L, AGENA_MPFRLIBNAME, mpfrlib);
   lua_rawsetstringstring(L, -1, "initstring", AGENA_LIBVERSION);
   /* constants */

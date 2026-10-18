@@ -577,6 +577,7 @@ static const luaL_Reg ddlib[] = {
 ** Open dd library
 */
 
+
 static void createmeta (lua_State *L) {
   luaL_newmetatable(L, AGENA_DDLIBNAME);  /* create metatable */
   lua_pushvalue(L, -1);  /* push metatable */
@@ -586,7 +587,9 @@ static void createmeta (lua_State *L) {
 
 LUALIB_API int luaopen_dd (lua_State *L) {
   createmeta(L);
+  lua_pop(L, 1);  /* 7.11.2 fix */
   luaL_register(L, AGENA_DDLIBNAME, ddlib);
+  /* we must define constants like this as the code would not compile in Solaris 10 */
   dd_pushdd(L, DD_NOUGHT);
   lua_setfield(L, -2, "naught");
   dd_pushdd(L, DD_NOUGHT);

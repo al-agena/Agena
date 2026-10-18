@@ -456,6 +456,7 @@ LUALIB_API int luaopen_lookup (lua_State *L) {
   /* metamethods */
   luaL_newmetatable(L, "lookup");
   luaL_register(L, NULL, lookup_lib);
+  lua_pop(L, 1);  /* 7.11.2 fix */
   /* register library */
   luaL_register(L, AGENA_LOOKUPLIBNAME, lookuplib);
   return 1;

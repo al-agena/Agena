@@ -1651,11 +1651,12 @@ LUALIB_API int agnL_islinalgvector (lua_State *L, int idx, size_t *dim) {
 
 LUALIB_API void agnL_onexit (lua_State *L, int restart) {  /* 2.7.0, 2.37.0 */
   lua_lock(L);
-  if (agnL_gettablefield(L, "environ", "onexit", NULL, 0) != LUA_TFUNCTION)
+  if (agnL_gettablefield(L, "environ", "onexit", NULL, 0) != LUA_TFUNCTION) {
     agn_poptop(L);  /* remove "infolevel" (or "environ" if table environ does not exist) */
     /* do nothing */
-  else
+  } else {
     lua_call(L, 0, 0);
+  }
 #if defined(LUA_USE_READLINE) && !defined(__APPLE__)
   rl_set_prompt("");
 #endif
@@ -1670,7 +1671,6 @@ LUALIB_API void agnL_onexit (lua_State *L, int restart) {  /* 2.7.0, 2.37.0 */
     if (L->C) lua_close(L->C);  /* 2.37.0, close the cache stack at final exit, not at restart.
       7.6.6 patch to prevent Valgrind warnings and segfaults with srglue/sragena. */
   }
-
   lua_unlock(L);
 }
 
@@ -2352,6 +2352,24 @@ LUALIB_API lua_Number luaL_str2d (lua_State *L, const char *s, int *overflow) { 
 }
 
 
+LUALIB_API int agnL_newdblarray (lua_State *L, size_t n, const char *procname) {  /* creates a C double array userdata object, 7.11.2 */
+  DoubleArray *a;
+  if (n < 1)
+    luaL_error(L, "Error in " LUA_QS ": structure is empty.", procname);
+  a = (DoubleArray *)lua_newuserdata(L, sizeof(DoubleArray));  /* push userdata on stack */
+  a->v = calloc(n, sizeof(double));
+  if (!a->v)
+    luaL_error(L, "Error in " LUA_QS ": memory allocation failed.", procname);
+  a->size = n;
+  /* attach proper metatable with __gc method to userdata; name of mt name must be different from the one of
+     the numarray package to avoid crashes during gc. */
+  luaL_getmetatable(L, AGENA_CALCLIBNAME);
+  lua_setmetatable(L, -2);
+  return 1;  /* leave userdata on the top of the stack */
+}
+
+
+
 LUALIB_API int agnL_newldblarray (lua_State *L, size_t n, const char *procname) {  /* creates numeric C array userdata object */
   LongDoubleArray *a;
   if (n < 1)  /* 2.35.1 fix */
@@ -2363,7 +2381,7 @@ LUALIB_API int agnL_newldblarray (lua_State *L, size_t n, const char *procname) 
   a->size = n;
   /* attach proper metatable with __gc method to userdata; name of mt name must be different from the one of
      the numarray package to avoid crashes during gc. */
-  luaL_getmetatable(L, "calc");
+  luaL_getmetatable(L, AGENA_CALCLIBNAME);
   lua_setmetatable(L, -2);
   return 1;  /* leave userdata on the top of the stack */
 }

@@ -781,6 +781,13 @@ static int binpack_dump (lua_State* L) {
 }
 
 
+static const struct luaL_Reg binpack_lib [] = {
+  {"__gc",       mt_gc},
+  {"__tostring", mt_tostring},
+  {NULL, NULL}
+};
+
+
 static const struct luaL_Reg binpack[] = {
   {"bool",       binpack_bool},
   {"chars",      binpack_chars},
@@ -814,13 +821,10 @@ LUALIB_API int luaopen_binpack (lua_State *L) {
   /* Set metatable.__index = metatable */
   lua_pushvalue(L, -1);
   lua_setfield(L, -2, "__index");
-  /* Register the functions directly into the metatable as OOP methods */
+  /* Register the functions and the metamethods directly into the metatable created above as OOP methods */
   luaL_register(L, NULL, binpack);
-  /* Register the special garbage collection destructor into the metatable */
-  lua_pushcfunction(L, mt_gc);
-  lua_setfield(L, -2, "__gc");
-  lua_pushcfunction(L, mt_tostring);
-  lua_setfield(L, -2, "__tostring");
+  luaL_register(L, NULL, binpack_lib);
+  lua_pop(L, 1);  /* 7.11.2 fix */
   /* Create the procedural global package table (e.g., global 'ads') */
   luaL_register(L, AGENA_BINPACKLIBNAME, binpack);
   return 1;

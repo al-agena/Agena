@@ -169,6 +169,7 @@ LUALIB_API int  (agnL_isvalidpattern) (lua_State *L, const char *p, size_t l, in
 
 LUALIB_API lua_Number (luaL_str2d) (lua_State *L, const char *s, int *overflow);
 
+LUALIB_API int agnL_newdblarray (lua_State *L, size_t n, const char *procname);
 LUALIB_API int agnL_newldblarray (lua_State *L, size_t n, const char *procname);
 LUALIB_API void agnL_pushcoeffs (lua_State *L, LongDoubleArray *a, size_t nops, const char *procname);
 LUALIB_API void agnL_pushhex (lua_State *L, int idx, int classic);

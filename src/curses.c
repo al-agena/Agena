@@ -460,7 +460,7 @@ static void cleanup () {
 
 /* 7.10.9 Windows 64-bit fix */
 static void signal_cleanup (int sig) {
-  (void)sig; 
+  (void)sig;
   cleanup();
 }
 
@@ -1833,6 +1833,7 @@ static const luaL_reg curseslib[] = {
 
 
 int luaopen_curses (lua_State *L) {
+  luaL_checkstack(L, 3, "not enough stack space");
   /* create new metatable for window objects */
   luaL_newmetatable(L, WINDOWMETA);
   lua_pushliteral(L, "__index");

@@ -865,6 +865,7 @@ LUALIB_API int luaopen_tuples (lua_State *L) {
   /* metamethods */
   luaL_newmetatable(L, AGENA_TUPLESLIBNAME);
   luaL_register(L, NULL, mt_tupleslib);
+  lua_pop(L, 1);  /* 7.11.2 fix */
   /* register library */
   luaL_register(L, AGENA_TUPLESLIBNAME, tupleslib);
   return 1;
