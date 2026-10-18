@@ -5,7 +5,7 @@
 <HEAD>
 
 <PCK INDEX=1
-     PACKAGEID="Alexander Walz\Agena\Agena\7\11\1"
+     PACKAGEID="Alexander Walz\Agena\Agena\7\11\2"
      TARGET="$(WARPIN_DEFAULTAPPSPATH)\agena"
      TITLE="Agena"
      CONFIGSYS="set AGENAPATH=$(/1)/LIB | UNIQUE"
@@ -61,7 +61,7 @@ AGENA Copyright 2006-2026 by Alexander Walz. All rights reserved.
 Portions Copyright 1994-2026 Lua.org, PUC-Rio. All rights reserved.
 
 See licence file in the Agena folder. In short: The sources are published under
-the MIT licence, the binaries under GPL 2.
+the MIT licence, the binaries and Aspell dictionaries under GPL 2.
 </README>
 </PAGE>
 
