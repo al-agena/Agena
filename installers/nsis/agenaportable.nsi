@@ -3,7 +3,7 @@
 ;-----------------------------------------------------------------------------------------
 Unicode True
 !define APPNAME "Agena"
-!define VERSION "7.11.2"
+!define VERSION "7.11.3"
 !define NICKNAME "Despina"
 !define COMPANYNAME "Alexander Walz"
 Name "${APPNAME} ${VERSION}"
@@ -17,7 +17,7 @@ VIProductVersion "${VERSION}.0"
 VIAddVersionKey /LANG=2057 "ProductName" "${APPNAME} (${NICKNAME})"
 VIAddVersionKey /LANG=2057 "CompanyName" "${COMPANYNAME}"
 VIAddVersionKey /LANG=2057 "LegalCopyright" "Copyright © Alexander Walz"
-VIAddVersionKey /LANG=2057 "FileDescription" "${APPNAME} Interpreter for Windows"
+VIAddVersionKey /LANG=2057 "FileDescription" "${APPNAME} Interpreter for 32-bit Windows"
 VIAddVersionKey /LANG=2057 "ProductVersion" "${VERSION}"
 VIAddVersionKey /LANG=2057 "FileVersion" "${VERSION}.0"
 VIAddVersionKey /LANG=2057 "LegalTrademarks" "(n/a)"
