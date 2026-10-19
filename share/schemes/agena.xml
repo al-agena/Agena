@@ -1410,6 +1410,7 @@
       <KEYWORD3>os.fattrib</KEYWORD3>
       <KEYWORD3>os.fcopy</KEYWORD3>
       <KEYWORD3>os.filename</KEYWORD3>
+      <KEYWORD3>os.findinpath</KEYWORD3>
       <KEYWORD3>os.freemem</KEYWORD3>
       <KEYWORD3>os.fstat</KEYWORD3>
       <KEYWORD3>os.ftok</KEYWORD3>

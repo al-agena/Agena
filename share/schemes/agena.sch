@@ -343,7 +343,7 @@ object TPersHolder
           Name = 'os'
           Keywords =
             'os,battery,beep,bios,cachelinesize,cdrom,chdir,chmod,chown,clock,codepage,computername,countcore,cpuid,cpuinfo,cpuload,curdir,curdrive,date,' +
-            'datetosecs,difftime,dirname,drives,drivestat,endian,environ,esd,execute,exists,exit,faccess,fattrib,fcopy,filename,freemem,' +
+            'datetosecs,difftime,dirname,drives,drivestat,endian,environ,esd,execute,exists,exit,faccess,fattrib,fcopy,filename,findinpath,freemem,' +
             'fstat,ftok,getadapter,getcommandline,getconsolemode,getdirpathsep,getextlibpath,getenv,getfullpathname,getip,getlanguage,getloadeddlls,getlocale,getmac,' +
             'getmodulefilename,getprocesses,gettemppath,getthreadid,getthreadseed,getusbdevices,getwinsysdirs,groupinfo,hasnetwork,inode,isamd,isansi,isarm,' +
             'isarm32,isarm64,iscyrix,isdir,isdocked,isdos,isdriveletter,isdst,isfile,isintel,islinux,islinux386,islocale,ismac,ismounted,' +

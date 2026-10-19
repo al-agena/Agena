@@ -1211,6 +1211,7 @@ os.exit
 os.fattrib
 os.fcopy
 os.filename
+os.findinpath
 os.freemem
 os.fstat
 os.ftok
