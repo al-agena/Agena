@@ -1,3 +1,50 @@
+7.11.3 Despina, October 19, 2026
+
+- New `os.findinpath` searches for a target file or target folder starting from a given folder and moving upwards
+  toward the filesystem root. The function is available on all platforms. Some Windows examples:
+
+  First get the fully resolved path to the running Agena executable, but any other path will do, too.
+
+  > s := os.getmodulefilename():
+  c:/agena/src/agena.exe
+
+  There definitely is a 'src' folder in s:
+
+  > os.findinpath(s, 'src'):
+  c:/agena/src
+
+  Since on the same file hierarchy level there are a 'lib' and an 'src' folder, we get:
+
+  > os.findinpath(s, 'lib'):
+  c:/agena/lib
+
+  There is no subfolder named 'lib/library':
+
+  > os.findinpath(s, 'lib/library'):
+  null
+
+  But there is the main library file in the 'lib' folder:
+
+  > os.findinpath(s, 'lib/library.agn'):
+  c:/agena/lib/library.agn
+
+- In macOS and Solaris, `os.getmodulefilename` has been further improved to return the fully resolved path to
+  the Agena executable, independently of the current working directory.
+
+- In all operating systems, `aspell.new` can now better automatically find installed Aspell dictionary files,
+  regardless of the current working directory.
+
+- Added Malay and Swahili Aspell dictionaries to the major installers.
+
+- On macOS and ARM, values are now being correctly stored to and retrieved from integer hash maps (`intmap`
+  package).
+
+- Solaris optimization: The interpreter is now compiled with Position-Independent Code (-fPIC) support. Multiple 
+  running instances of the interpreter will now share a single copy of the executable code in memory, significantly 
+  lowering the overall RAM footprint on multi-user systems. Drawback: The interpreter has become 12 percent slower, 
+  at least on 32-bit Solaris 10.
+
+
 7.11.2 Despina, October 18, 2026
 
 - Overhauled package initialization to eliminate virtual stack pollution across all extensions. This also fixes an
@@ -10,16 +57,16 @@
 
 - The `restart` statement sometimes did not correctly clean up userdata objects stored to package tables, deleting
   the garbage collection metamethods before, thus crashing the interpreter. This has been fixed. Affected packages
-  were at least `ival` and `gmp`. The statement now also should fully restores package metamethods.
-
-- Chapter 9.12 now lists all the Aspell dictionaries shipped with some installers and how to invoke them by giving
-  the respective abbreviations.
+  were at least `ival` and `gmp`. The statement now also should fully restore package metamethods.
 
 - The Agena 32- and 64-bit Windows editions, the 64-bit Linux edition and the macOS and Solaris 10 32-bit editions
   now come with the Aspell dictionaries: Afrikaans, Arabic, Czech, Danish, Dutch, English, Farsi, Finish, French,
   Frisian, Low German, German, Greek, Hebrew, Hindi, Hungarian, Icelandic, Indonesian, Italian, Kurdish, Latin,
   Malayalam, Norwegian Bokmal, Norwegian Nynorsk, Punjabi, Brazilian Portuguese, Polish, Punjabi, Romanian, Russian,
   Serbian, Spanish, Swedish, Turkish, Uzbek, Yiddish, Zulu.
+
+- Chapter 9.12 of the Agena Reference now lists all the Aspell dictionaries shipped with some installers and how
+  to invoke them by giving the respective abbreviations.
 
 - The Agena OS/2 edition now also supports the `aspell` binding, and it comes with an Italian dictionary, along
   with all the others:
