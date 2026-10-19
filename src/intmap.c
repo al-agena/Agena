@@ -66,8 +66,8 @@ typedef struct {
 
 /*** Agena C Functions ****************************************************************/
 
-static khint_t aux_checkinteger (lua_State *L, int idx, int issigned, const char *procname)  {  /* 7.7.11 */
-  khint_t s_val;  /* khint_t is natively a uint32_t !!! */
+static int32_t aux_checkinteger (lua_State *L, int idx, int issigned, const char *procname)  {  /* 7.7.11 */
+  int32_t s_val;  /* khint_t is natively a uint32_t !!! */
   lua_Number x = lua_checkinteger(L, idx);
   if (!issigned) {
     /* unsigned to signed: maps from 0.0 .. 4294967295.0 (2^31-1) to -2147483648.0 (-2^31) .. 2147483647.0 (2^31-1)*/
@@ -76,24 +76,25 @@ static khint_t aux_checkinteger (lua_State *L, int idx, int issigned, const char
     /* Step 1: Force Lua input into a clean 32-bit unsigned integer */
     uint32_t u_val = (uint32_t)x;
     /* Step 2: Shift the range. 0 becomes 0x80000000 (INT_MIN) */
-    s_val = u_val ^ 0x80000000U;
+    s_val = (int32_t)(u_val ^ 0x80000000U);
   } else {
     /* signed: just check range and cast to int32_t */
     if (x < -2147483648.0 || x > 2147483647.0) {
       luaL_error(L, "Error in " LUA_QS ": %f is out of range.", procname, (lua_Number)x);
     }
-    s_val = (uint32_t)x;  /* khint_t is unsigned actually ! */
+    s_val = (int32_t)x;  /* khint_t is unsigned actually ! */
   }
   return s_val;
 }
 
-static lua_Number aux_tonumber (khint_t x, int issigned) {  /* 7.7.11 */
+static lua_Number aux_tonumber (int32_t x, int issigned) {  /* 7.7.11 */
   if (!issigned) {
     uint32_t u_val = (uint32_t)x ^ 0x80000000U;
     return (lua_Number)u_val;
   } else {
-    int32_t s_val = (int32_t)x;
-    return (lua_Number)s_val;
+    /* int32_t s_val = (int32_t)x;
+    return (lua_Number)s_val; */
+    return (lua_Number)x;
   }
 }
 
@@ -153,7 +154,7 @@ static int intmap_getitem (lua_State *L)  {
   } else {
     luaL_checkstack(L, 2, "not enough stack space");
     if (agn_isinteger(L, 2))  {
-      khint_t key = aux_checkinteger(L, 2, map->issigned, "intmap.getitem");
+      int32_t key = aux_checkinteger(L, 2, map->issigned, "intmap.getitem");
       khint_t k = kh_get(intmap, h, key);
       if (k != kh_end(h))  {
         lua_pushnumber(L, aux_tonumber(kh_val(h, k), map->issigned));
@@ -172,8 +173,8 @@ static int intmap_include (lua_State *L) {
   int rc;
   IntMap *map = checkintmap(L, 1);
   kh_intmap_t *h = (map && map->hash) ? map->hash : NULL;
-  khint_t key = aux_checkinteger(L, 2, map->issigned, "intmap.include");
-  khint_t val = aux_checkinteger(L, 3, map->issigned, "intmap.include");
+  int32_t key = aux_checkinteger(L, 2, map->issigned, "intmap.include");
+  int32_t val = aux_checkinteger(L, 3, map->issigned, "intmap.include");
   if (!h)  {
     luaL_error(L, "Error in " LUA_QS ": uninitialized hash map.", "intmap.include");
   }
@@ -191,7 +192,7 @@ static int intmap_purge (lua_State *L) {
   int rc = 0;
   IntMap *map = checkintmap(L, 1);
   kh_intmap_t *h = (map && map->hash) ? map->hash : NULL;
-  khint_t key = aux_checkinteger(L, 2, map->issigned, "intmap.purge");
+  int32_t key = aux_checkinteger(L, 2, map->issigned, "intmap.purge");
   if (!h)  {
     luaL_error(L, "Error in " LUA_QS ": uninitialized hash map.", "intmap.purge");
   }
@@ -209,7 +210,7 @@ static int intmap_purge (lua_State *L) {
 }
 
 
-static int aux_has (khash_t(intmap) *h, khint_t x) {
+static int aux_has (khash_t(intmap) *h, int32_t x) {
   int rc = 0;
   if (h) {
     khint_t k;
@@ -228,7 +229,7 @@ static int aux_has (khash_t(intmap) *h, khint_t x) {
 static int intmap_has (lua_State *L) {
   IntMap *map = checkintmap(L, 1);
   kh_intmap_t *h = (map && map->hash) ? map->hash : NULL;
-  khint_t x = aux_checkinteger(L, 2, map->issigned, "intmap.has");
+  int32_t x = aux_checkinteger(L, 2, map->issigned, "intmap.has");
   if (!h)  {
     luaL_error(L, "Error in " LUA_QS ": uninitialized hash map.", "intmap.has");
   }
@@ -292,7 +293,7 @@ static int iterate (lua_State *L) {
     if (kh_exist(h, k)) {
       lua_pushnumber(L, aux_tonumber(kh_key(h, k), map->issigned));
       lua_pushnumber(L, aux_tonumber(kh_val(h, k), map->issigned));
-      lua_pushinteger(L, (int)k + 1);
+      lua_pushinteger(L, (lua_Integer)k + 1);
       lua_replace(L, lua_upvalueindex(2));
       return 2;
     }
@@ -309,7 +310,7 @@ static int intmap_iterate (lua_State *L) {  /* 7.7.3 */
   }
   luaL_checkstack(L, 2, "not enough stack space");
   lua_pushvalue(L, 1);
-  lua_pushinteger(L, (int)kh_begin(h));
+  lua_pushinteger(L, (lua_Integer)kh_begin(h));
   lua_pushcclosure(L, &iterate, 2);
   return 1;
 }
@@ -326,7 +327,7 @@ static uint32_t khash_collisions (kh_intmap_t *h) {
   for (k = kh_begin(h); k < kh_end(h); ++k) {
     /* Check if the current slot actually contains a valid inserted element */
     if (kh_exist(h, k)) {
-      khint_t key = kh_key(h, k);
+      int32_t key = (int32_t)kh_key(h, k);
       /* 1. Calculate the raw hash value using your hash function */
       khint_t raw_hash = kh_int_hash_func(key);
       /* 2. Calculate the "ideal" starting bucket slot khash intended to use */
@@ -361,7 +362,7 @@ static int intmap_attrib (lua_State *L) {
   lua_rawsetstringnumber(L, -1, "loadfactor", cap == 0.0 ? 0.0 : (double)n_occupied / cap);
   lua_rawsetstringnumber(L, -1, "utilization", cap == 0.0 ? 0.0 : (double)(n_occupied + n_empty) / cap);
   lua_rawsetstringboolean(L, -1, "signed", map->issigned);
-  lua_rawsetstringnumber(L, -1, "collisions", khash_collisions(h));
+  lua_rawsetstringnumber(L, -1, "collisions", (double)khash_collisions(h));
   return 1;
 }
 
@@ -372,11 +373,11 @@ static int intmap_totable (lua_State *L)  {
   if (!h)  {
     luaL_error(L, "Error in " LUA_QS ": uninitialized hash map.", "intmap.totable");
   }
-  lua_createtable(L, (int)kh_size(h), 0);
+  lua_createtable(L, 0, (int)kh_size(h));
   khint_t k;
   for (k=kh_begin(h); k != kh_end(h); ++k)  {
     if (kh_exist(h, k))  {
-      lua_pushnumber(L, aux_tonumber(kh_key(h, k), map->issigned));
+      lua_pushnumber(L, aux_tonumber((int32_t)kh_key(h, k), map->issigned));
       lua_pushnumber(L, aux_tonumber(kh_val(h, k), map->issigned));
       lua_rawset(L, -3);
     }

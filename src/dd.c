@@ -15,6 +15,7 @@
 #define dd_c
 #define LUA_LIB
 
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -577,7 +578,7 @@ static const luaL_Reg ddlib[] = {
 ** Open dd library
 */
 
-
+#ifdef DONOTCOMPILEME
 static void createmeta (lua_State *L) {
   luaL_newmetatable(L, AGENA_DDLIBNAME);  /* create metatable */
   lua_pushvalue(L, -1);  /* push metatable */
@@ -688,17 +689,97 @@ LUALIB_API int luaopen_dd (lua_State *L) {
   lua_setfield(L, -2, "Eps");
   return 1;
 }
+#endif
 
 
-/*
-1. Extract the pointer from Lua
-dd_pair *p = (dd_pair *)luaL_checkudata(L, 1, "Lua.dd_pair");
+/* NOTE: We cannot define constants like DD_EULER_GAMMA in the following arrays, as older GCC compilers will
+   reject this ! 7.11.3 improvement */
 
-2. Dereference it to use your library functions
-dd_pair result = dd_some_function(*p);
+typedef struct { 
+  const char *name; 
+  double val1; 
+  double val2; 
+} DdConfigEntry;
 
-3. Push the result back to Lua
-dd_push(L, result);
-*/
+/* Integers and named constants mapped by their raw double components */
+static const DdConfigEntry dd_raw_list[] = {
+  { "naught",       0.0,  0.0 },
+  { "nought",       0.0,  0.0 },
+  { "one",          1.0,  0.0 },
+  { "two",          2.0,  0.0 },
+  { "three",        3.0,  0.0 },
+  { "four",         4.0,  0.0 },
+  { "five",         5.0,  0.0 },
+  { "six",          6.0,  0.0 },
+  { "seven",        7.0,  0.0 },
+  { "eight",        8.0,  0.0 },
+  { "nine",         9.0,  0.0 },
+  { "ten",          10.0, 0.0 },
+  { "eleven",       11.0, 0.0 },
+  { "twelve",       12.0, 0.0 },
+  { "sixteen",      16.0, 0.0 },
+  { "hundred",      100.0,0.0 },
+  { "thousand",     1000.0,0.0 }
+};
 
+/* Fractional divisions */
+static const DdConfigEntry dd_div_list[] = {
+  { "half",         1.0,    2.0 },
+  { "third",        1.0,    3.0 },
+  { "quarter",      1.0,    4.0 },
+  { "threequarter", 3.0,    4.0 },
+  { "fifth",        1.0,    5.0 },
+  { "sixth",        1.0,    6.0 },
+  { "eighth",       1.0,    8.0 },
+  { "tenth",        1.0,    10.0 },
+  { "twelfth",      1.0,    12.0 },
+  { "sixteenth",    1.0,    16.0 },
+  { "hundredth",    1.0,    100.0 },
+  { "thousandth",   1.0,    1000.0 }
+};
+
+static void createmeta (lua_State *L) {
+  luaL_newmetatable(L, AGENA_DDLIBNAME);  /* create metatable */
+  lua_pushvalue(L, -1);  /* push metatable */
+  lua_setfield(L, -2, "__index");  /* metatable.__index = metatable */
+  luaL_register(L, NULL, dd_lib);  /* methods */
+}
+
+LUALIB_API int luaopen_dd (lua_State *L) {
+  size_t i;
+  createmeta(L);
+  lua_pop(L, 1);  /* 7.11.2 fix */
+  luaL_register(L, AGENA_DDLIBNAME, ddlib);
+  /* Loop 1: build and register integer constants dynamically, 7.11.3 change */
+  for (i=0; i < sizeof(dd_raw_list)/sizeof(dd_raw_list[0]); i++) {
+    dd_pushdd(L, ((dd_pair){dd_raw_list[i].val1, dd_raw_list[i].val2}));
+    lua_setfield(L, -2, dd_raw_list[i].name);
+  }
+  /* Loop 2: calculate and register division properties, 7.11.3 change */
+  for (i=0; i < sizeof(dd_div_list)/sizeof(dd_div_list[0]); i++) {
+    dd_pushdd(L, dd_div_d_d(dd_div_list[i].val1, dd_div_list[i].val2));
+    lua_setfield(L, -2, dd_div_list[i].name);
+  }
+  /* Loop 3: Append complex math constants manually to circumvent compiler macro constraints */
+  #define BIND_DD_MACRO(name, macro) do { dd_pushdd(L, (macro)); lua_setfield(L, -2, (name)); } while(0)
+  BIND_DD_MACRO("Pi",           DD_PI);
+  BIND_DD_MACRO("Pi2",          DD_2PI);
+  BIND_DD_MACRO("PiO2",         DD_PI_2);
+  BIND_DD_MACRO("PiO4",         DD_PI_4);
+  BIND_DD_MACRO("PiO180",       DD_PI_180);
+  BIND_DD_MACRO("E",            DD_E);
+  BIND_DD_MACRO("Ln2",          DD_LN2);
+  BIND_DD_MACRO("Invln2",       DD_INV_LN2);
+  BIND_DD_MACRO("Zeta2",        DD_ZETA2);
+  BIND_DD_MACRO("Euler",        DD_EULER_GAMMA);
+  BIND_DD_MACRO("sqrt2",        DD_SQRT2);
+  BIND_DD_MACRO("sqrt3",        DD_SQRT3);
+  BIND_DD_MACRO("ddmax",        DD_MAX);
+  BIND_DD_MACRO("ddmin",        DD_MIN);
+  BIND_DD_MACRO("undefined",    DD_NAN);
+  BIND_DD_MACRO("infinity",     DD_INF);
+  BIND_DD_MACRO("Eps",          DD_APPROX_EPS);
+  #undef BIND_DD_MACRO
+  return 1;
+}
 

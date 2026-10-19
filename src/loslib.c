@@ -9479,6 +9479,19 @@ static int os_gettemppath (lua_State *L) {
 }
 
 
+static int os_findinpath (lua_State *L) {  /* 7.11.3 */
+  size_t l;
+  char *r = tools_findinpath(agn_checkstring(L, 1), agn_checkstring(L, 2), &l);
+  if (r) {
+    lua_pushlstring(L, r, l);
+    xfree(r);
+  } else {
+    lua_pushnil(L);
+  }
+  return 1;
+}
+
+
 /* Checks whether a directory or file can be accessed. `path` represents the path to the file, directory or symbolic link, and `mode`
    specifies the accessibility:
    os.f_ok = check for existence
@@ -10081,6 +10094,7 @@ static const luaL_Reg syslib[] = {
   {"fattrib",   os_fattrib},          /* 0.26.0, added August 06, 2009 */
   {"fcopy",     os_fcopy},            /* added on July 19, 2009 */
   {"filename",  os_filename},         /* added on January 16, 2017 */
+  {"findinpath", os_findinpath},      /* added on October 19, 2026 */
   {"freemem",   os_freemem},          /* 0.5.3  Sept 15, 2007 */
   {"fstat",     os_fstat},            /* added on October 11, 2008 */
   {"ftok",      os_ftok},             /* added on January 17, 2023 */

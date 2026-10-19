@@ -234,7 +234,6 @@ mingw:
 	$(CC) -mwindows -static -static-libgcc -o run.exe -s -Wl,--large-address-aware run.c run.res
 	$(MAKE) check-memory
 
-
 msys64:
 	windres agena.rc -O coff -o agena.res
 	windres -I .. run.rc -O coff -o run.res
@@ -277,7 +276,6 @@ mingwsse:
 
 posix:
 	$(MAKE) all MYCFLAGS=-DLUA_USE_POSIX
-
 
 # For GCC 9.5.0, 12% slower [sic!] than the version compiled with "solarisold", but code will be sharable
 # among multiple instances.

@@ -161,10 +161,21 @@ static int l_aspell_new (lua_State *L) {
     /* Your standard fallback setup goes here */
     char *base_dir = getModuleFileName();
     if (base_dir) {
-      sanitize_base_dir(base_dir, 1);
-      snprintf(abs_aspell_dir, sizeof(abs_aspell_dir), "%s/data/" ASPELL_DIR_NAME, base_dir);
-      aspell_config_replace(config, "data-dir", abs_aspell_dir);
-      aspell_config_replace(config, "dict-dir", abs_aspell_dir);
+      char *r;
+      size_t l;
+      r = tools_findinpath(base_dir, "data/" ASPELL_DIR_NAME, &l);  /* 7.11.3 improvement */
+      (void)l;
+      if (r) {
+        snprintf(abs_aspell_dir, sizeof(abs_aspell_dir), "%s", r);
+        aspell_config_replace(config, "data-dir", abs_aspell_dir);   // <------ ????  cause for the segfault in Solaris ? 
+        aspell_config_replace(config, "dict-dir", abs_aspell_dir);   // <------ ????  cause for the segfault in Solaris ? 
+        xfree(r);
+      } else {
+        sanitize_base_dir(base_dir, 1);
+        snprintf(abs_aspell_dir, sizeof(abs_aspell_dir), "%s/data/" ASPELL_DIR_NAME, base_dir);
+        aspell_config_replace(config, "data-dir", abs_aspell_dir);
+        aspell_config_replace(config, "dict-dir", abs_aspell_dir);
+      }
       xfree(base_dir);
     } else {
       aspell_config_replace(config, "data-dir", "data/" ASPELL_DIR_NAME);

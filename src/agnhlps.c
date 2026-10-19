@@ -31,6 +31,7 @@
 #ifdef __APPLE__
 #include <mach/mach_time.h>
 #include <mach-o/dyld.h>  /* for _NSGetExecutablePath */
+#include <libproc.h>      /* for proc_pidpath */
 #endif
 #include <float.h>      /* for sincos, rem_pio2, DBL_MAX_EXP */
 #include <sys/timeb.h>  /* ftime, for milliseconds */
@@ -5347,8 +5348,15 @@ LUALIB_API char *getModuleFileName (void) {
   if (nchar >= 0) {
     apath[nchar] = '\0';
     return apath;
+  }  
+#elif defined(__SOLARIS)  /* new 7.11.1 */
+  /* 1. Try kernel proc link first (Safe from chdir bugs), 7.11.3 */
+  int nchar = readlink("/proc/self/path/a.out", apath, MAX_PATH - 1);
+  if (nchar >= 0) {
+    apath[nchar] = '\0';
+    return apath;
   }
-#elif defined(__sun) && defined(__SVR4)  /* new 7.11.1 */
+  /* 2. Fall back if proc is constrained */
   const char *execname = getexecname();
   if (execname) {
     char resolved[MAX_PATH] = { 0 };
@@ -5359,6 +5367,16 @@ LUALIB_API char *getModuleFileName (void) {
     }
   }
 #elif defined (__APPLE__)  /* new 7.11.1 */
+  /* Using proc_pidpath is immune to working directory shifts, 7.11.3 extension */
+  char apple_pathbuf[PROC_PIDPATHINFO_MAXSIZE];  /* Apple API strict constraint size */
+  pid_t pid = getpid();
+  if (proc_pidpath(pid, apple_pathbuf, sizeof(apple_pathbuf)) > 0) {
+    /* Copy the verified absolute path into your standard returned token */
+    strncpy(apath, apple_pathbuf, MAX_PATH - 1);
+    apath[MAX_PATH - 1] = '\0';
+    return apath;
+  }
+  /* Fallback if libproc fails */  
   uint32_t size = MAX_PATH;
   if (_NSGetExecutablePath(apath, &size) == 0) {
     char resolved[MAX_PATH] = { 0 };
@@ -5378,6 +5396,90 @@ LUALIB_API char *getModuleFileName (void) {
 #endif
   xfree(apath);  /* Clean up if API calls failed, 7.7.11 */
   return NULL;
+}
+
+
+/* Searches for a target file or target folder starting from a given subdirectory and 
+ * moving upwards toward the filesystem root.
+ *
+ * @param path   The fully resolved path to the executable (read-only).
+ * @param what   The absolute or relative path (the latter is preferred) or name of the 
+ *               file/folder to find.
+ * @param outlen Pointer to size_t where the returned path length will be stored.
+ * @return       Newly allocated string with forward slashes containing the full path,
+ *               or NULL if not found. Caller must free().
+ * Created by Gemini AI, 7.11.3 */
+LUALIB_API char *tools_findinpath (const char *path, const char *what, size_t *outlen) {
+  size_t i;
+  char *current_dir, *target_norm, *result_path, *last_sep, *test_path;
+  if (!path || !what || path[0] == '\0' || what[0] == '\0') return NULL;
+  *outlen = 0;
+  /* 1. Create mutable copies of the inputs */
+  current_dir = strdup(path);
+  if (!current_dir) return NULL;
+  target_norm = strdup(what);
+  if (!target_norm) { xfree(current_dir); return NULL; }
+  /* 2. Unconditionally convert all backslashes to forward slashes */
+  for (i=0; current_dir[i] != '\0'; i++) {
+    if (current_dir[i] == '\\') current_dir[i] = '/';
+  }
+  for (i=0; target_norm[i] != '\0'; i++) {
+    if (target_norm[i] == '\\') target_norm[i] = '/';
+  }
+  /* path and what are actually the same, altough what should not be an absolute path */
+  if (tools_streq(current_dir, target_norm)) {
+    *outlen = strlen(current_dir);
+    xfree(target_norm);
+    return current_dir;
+  } 
+  /* Check if the second argument is a fully qualified absolute path */
+  if (target_norm[0] == '/' || (target_norm[0] != '\0' && target_norm[1] == ':' && target_norm[2] == '/')) {
+    if (tools_exists(target_norm)) {
+      *outlen = strlen(target_norm);
+      xfree(current_dir);
+      return target_norm; /* Return the normalized absolute path */
+    } else {
+      xfree(current_dir);
+      xfree(target_norm);
+      return NULL; /* Absolute path was explicitly passed but does not exist */
+    }
+  }
+  result_path = NULL;
+  /* 3. Traversal loop: Truncate right-to-left at each forward slash */
+  while (1) {
+    last_sep = strrchr(current_dir, '/');
+    /* If no more slashes exist, we've reached the end of traversal */
+    if (!last_sep) break;
+    /* Truncate the string at the slash to get the parent folder path */
+    *last_sep = '\0';
+    /* Edge case fallback if truncation leaves an empty string (e.g., input was "/exec") */
+    const char *dir_to_check = (strlen(current_dir) == 0) ? "/" : current_dir;
+    /* Allocate buffer for the potential target path: dir + '/' + target + null terminator */
+    size_t needed = strlen(dir_to_check) + 1 + strlen(target_norm) + 1;
+    test_path = (char* )malloc(needed);
+    if (!test_path) break;
+    /* Construct the test path using explicit POSIX formatting */
+    if (strcmp(dir_to_check, "/") == 0 || (strlen(dir_to_check) == 2 && dir_to_check[1] == ':')) {
+      /* Root structures like "/" or "C:" */
+      sprintf(test_path, "%s/%s", dir_to_check, target_norm);
+    } else {
+      sprintf(test_path, "%s/%s", dir_to_check, target_norm);
+    }
+    /* Check for existence using the low-level OS API layer */
+    if (tools_exists(test_path) ) {
+      result_path = test_path;
+      *outlen = strlen(result_path);
+      break;  /* target found ! */
+    }
+    free(test_path);
+    /* stop loop if we just evaluated the root directory to avoid infinite loops */
+    if (tools_streq(dir_to_check, "/") || (strlen(dir_to_check) == 2 && dir_to_check[1] == ':')) {
+      break;
+    }
+  }
+  free(current_dir);
+  free(target_norm);
+  return result_path;
 }
 
 

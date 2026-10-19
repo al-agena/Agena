@@ -43,6 +43,7 @@ static int agnL_gettablefield (lua_State *L, const char *table, const char *fiel
 
 #endif
 
+
 #include "fi_lib.h"
 
 #define AGENA_IVALLIBNAME		"ival"
