@@ -266,9 +266,8 @@ end;
 
 
 astro.aux.getdatapath := proc(pn :: string) is
-   for i from size mainlibname downto 1 while mainlibname[i] <> '/' do od;
-   local path := mainlibname[1 to i] & 'data' & '/';
-   if not os.exists(path) then
+   local path := os.dirname(os.findinpath(os.getmodulefilename(), 'data/cities.dbf'));  # changed 7.11.3
+   if unassigned path then
       error('Error in `' & pn & '`: could not find data folder.')
    fi;
    return path
@@ -326,7 +325,7 @@ end;
 astro.locate := proc(place :: string, ?) is
    local fd, fb, c, line, path, addentry, traverse, finder, oldplace, country, options, codepage, codepages,
       result;
-   path := astro.aux.getdatapath('astro.locate');
+   path := astro.aux.getdatapath('astro.locate') & '/';
    if not(os.exists(path & 'cities.kdx') and
           os.exists(path & 'cities.dbf') and
           os.exists(path & 'timezone.csv')) then
