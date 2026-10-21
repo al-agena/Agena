@@ -1,3 +1,26 @@
+7.11.4 Despina, October 21, 2026
+
+- `os.findinpath` now accepts a third argument `true` which will guarantee that the resulting string will never
+  include a filename.
+
+- In Windows, `os.filename` when given any second argument to retrieve a 8.3 DOS filename did not work correctly. 
+  This has been fixed.
+
+- When given just a drive letter, with or without trailing slashes or backslashes, `os.dirname` and `os.filename`
+  now behave the same on Windows, DOS and OS/2.
+
+- The underlying function that is called by `os.dirname` and `os.filename` has been simplified and consumes only
+  roughly half the memory previously needed.
+
+- In OS/2, `aspell.new` did not find the dictionary files out-of-the-box. This has been fixed.
+
+- Agena installers now come with a pre-installed English Aspell dictionary only. You can find all the other
+  dictionaries on SourceForge at https://sourceforge.net/projects/agena/files/Packages/AspellDicts.zip.
+  New: The ZIP file also includes binary Australian English and Slovak dictionaries.
+
+- Due to low demand, we are discontinuing the Raspberry Pi, DOS and 32-bit Linux binary editions of Agena.
+
+
 7.11.3 Despina, October 19, 2026
 
 - New `os.findinpath` searches for a target file or target folder starting from a given folder and moving upwards
@@ -36,13 +59,13 @@
 
 - Added Malay and Swahili Aspell dictionaries to the major installers.
 
-- On macOS and ARM, values are now being correctly stored to and retrieved from integer hash maps (`intmap`
-  package).
+- On macOS and ARM platforms, values are now being correctly stored to and retrieved from signed integer hash
+  maps (`intmap` package).
 
-- Solaris optimization: The interpreter is now compiled with Position-Independent Code (-fPIC) support. Multiple 
-  running instances of the interpreter will now share a single copy of the executable code in memory, significantly 
-  lowering the overall RAM footprint on multi-user systems. Drawback: The interpreter has become 12 percent slower, 
-  at least on 32-bit Solaris 10.
+- Solaris optimization: The interpreter is now compiled with Position-Independent Code (-fPIC) support using
+  GCC 9.5.0 (upgraded from GCC 6.3.0). Multiple running instances of the interpreter will now share a single copy
+  of the executable code in memory, significantly lowering the overall RAM footprint on multi-user systems.
+  Drawback: The interpreter has become 12 percent slower, at least on 32-bit Solaris 10.
 
 
 7.11.2 Despina, October 18, 2026
@@ -60,7 +83,7 @@
   were at least `ival` and `gmp`. The statement now also should fully restore package metamethods.
 
 - The Agena 32- and 64-bit Windows editions, the 64-bit Linux edition and the macOS and Solaris 10 32-bit editions
-  now come with the Aspell dictionaries: Afrikaans, Arabic, Czech, Danish, Dutch, English, Farsi, Finish, French,
+  now come with the Aspell dictionaries: Afrikaans, Arabic, Czech, Danish, Dutch, English, Farsi, Finnish, French,
   Frisian, Low German, German, Greek, Hebrew, Hindi, Hungarian, Icelandic, Indonesian, Italian, Kurdish, Latin,
   Malayalam, Norwegian Bokmal, Norwegian Nynorsk, Punjabi, Brazilian Portuguese, Polish, Punjabi, Romanian, Russian,
   Serbian, Spanish, Swedish, Turkish, Uzbek, Yiddish, Zulu.
