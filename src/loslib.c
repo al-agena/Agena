@@ -9229,88 +9229,63 @@ static int os_chmod (lua_State *L) {  /* 2.10.0 */
 
 
 /* Returns the directory name of the given path, a string. If `path` has no separator, then the function returns '.'.
-   If you would like to test relative paths, apply `os.realpath` to `path` before calling this function. */
-static void dirorfilename (lua_State *L, int what) {  /* 2.10.0 */
-  char *path, *cur, *subs;
-  const char *path0;
-  size_t l;
-  struct stat buf;
-  int mode, e;
-  path0 = agn_checklstring(L, 1, &l);
+   If you would like to test relative paths, apply `os.realpath` to `path` before calling this function.
+   what = 1 -> for dirname, what = 0 -> for filename */
+static int dirorfilename (lua_State *L, int what, const char *pn) {
+  int rc = 0;
+  size_t l, outlen;
+  const char *str = agn_checklstring(L, 1, &l);
   if (l == 0)
-    luaL_error(L, "Error in " LUA_QS ": path is empty.", (what) ? "os.filename" : "os.dirname");
-  else if (l == 1 && ispathsep(*path0))
-    lua_pushstring(L, "/");
-  else {
-    int isdriveletter;
-    path = (l == 2 && isdriveletter(path0)) ? (l++, str_concat(path0, "/", NULL)) : tools_strndup(path0, l);
-    str_charreplace(path, '\\', '/', 0);
-    isdriveletter = (l == 3 && isdriveletter(path) && path[2] == '/');  /* drive letter with trailing slash ? 2.39.8 */
-    cur = path + l;  /* set cursor to '\0' */
-    while (!isdriveletter && path < cur && ispathsep(*(cur - 1)))
-      cur--; /* "remove" trailing slashes; don't touch if path = "/" or drive letter, 2.39.8 fix */
-    subs = str_substr(path, 0, cur - path - 1, &e);
-    if (e == -1) {
-      xfree(path);
-      luaL_error(L, "Error in " LUA_QS ": memory allocation failed.", (what) ? "os.filename" : "os.dirname");
-    }
-#if (defined(__unix__) && !defined(__DJGPP__)) || defined(__APPLE__)
-    mode = lstat(subs, &buf);
-#else
-    mode = stat(subs, &buf);
-#endif
-    /* check whether passed path actually is a directory */
-    if (mode != -1 && S_ISDIR(buf.st_mode)) {  /* with os.filename, check for files, links, sockets, and special files */
-      if (what)  /*`get directory name */
-        lua_pushlstring(L, path, cur - path);  /* 2.39.7 fix, do not return surplus trailing \0 */
-      else  /* filename retrieval ? */
-        lua_pushnil(L);
-    } else {  /* ignore (l)stat error */
-      while (path < cur && !ispathsep(*cur)) cur--;  /* skip filename */
-      if (what) {  /* get directory name */
-        if (path == cur && !ispathsep(*path)) {
-          char first = tolower(*path);
-          if (tools_strlen(path) == 2 && first >= 'a' && first <= 'z' && *(path + 1) == ':') { /* a drive letter in OS/2, Windows, and DOS ? */
-            *path = toupper(*path);
-            lua_pushstring(L, path);  /* absolute path given: return drive letter, else relative path */
-          } else
-            lua_pushstring(L, ".");
-        } else
-          lua_pushlstring(L, path, cur - path);
-      } else {  /* push filename without leading slash */
-        if (ispathsep(*cur)) cur++;
-        lua_pushstring(L, cur);
-      }
-    }
-    xfree(path); xfree(subs);
+    luaL_error(L, "Error in " LUA_QS ": path is empty.", pn);
+  char *r = tools_dirorfilename(str, l, what, &outlen, &rc);
+  if (rc) {
+    xfree(r);
+    luaL_error(L, "Error in " LUA_QS ": memory allocation failed or other error.", pn);
   }
+  if (what == 0 && rc == 0 && r == NULL) {
+    lua_pushnil(L);
+  } else {
+    lua_pushlstring(L, r, outlen);
+    xfree(r);
+  }
+  return 1;
 }
 
 static int os_dirname (lua_State *L) {
-  dirorfilename(L, 1);
-  return 1;
+  return dirorfilename(L, 1, "os.dirname");
 }
 
 static int os_filename (lua_State *L) {  /* = UNIX basename command */
 #ifdef _WIN32
-  const char *filename = agn_checkstring(L, 1);
-  int option = lua_gettop(L) > 1;
+  int rc, option = lua_gettop(L) > 1;
+  luaL_checkstack(L, 1 + option, "not enough stack space");  /* 7.11.4 stack */
 #else
   int option = 0;
 #endif
-  dirorfilename(L, 0);
+  dirorfilename(L, 0, "os.filename");  /* pushes the filename onto the stack */
 #ifdef _WIN32
-  if (option && agn_isstring(L, -1)) {  /* 2.27.1 */
-    DWORD shortlength = GetShortPathName(filename, NULL, 0);
+  if (option && agn_isstring(L, -1)) {  /* 2.27.1: get 8.3 DOS filename, too */
+    const char *filename = agn_checkstring(L, 1);
+    /* we call GetShortPathNameA (ANSI version, no WCHAR), works flawlessly in Windows 2000, too */
+    DWORD shortlength = GetShortPathNameA(filename, NULL, 0);  /* query buffer size */
     if (shortlength != 0) {
-      TCHAR *buffer = tools_stralloc(shortlength);
-      shortlength = GetShortPathName(filename, buffer, shortlength);
-      if (!buffer)
+      char *buffer = tools_stralloc(shortlength * sizeof(char));
+      if (!buffer) {
         lua_pushnil(L);
-      else {
-        lua_pushstring(L, buffer);
-        xfree(buffer);
+      } else {
+        size_t outlen;
+        shortlength = GetShortPathNameA(filename, buffer, shortlength);  /* now get the 8.3 filename */
+        /* get rid of the preceding full path, push only 8.3 DOS file name */
+        char *tofilename = tools_dirorfilename(buffer, (size_t)shortlength, 0, &outlen, &rc);
+        if (rc == 0 && tofilename != NULL) {
+          lua_pushlstring(L, tofilename, outlen);
+        } else {
+          lua_pushnil(L);
+        }
+        xfreeall(buffer, tofilename);
       }
+    } else {
+      option = 0;
     }
   }
 #endif
@@ -9480,10 +9455,21 @@ static int os_gettemppath (lua_State *L) {
 
 
 static int os_findinpath (lua_State *L) {  /* 7.11.3 */
-  size_t l;
+  size_t l, outlen;
   char *r = tools_findinpath(agn_checkstring(L, 1), agn_checkstring(L, 2), &l);
+  int rc, stripfilename = agnL_optboolean(L, 3, 0);
   if (r) {
-    lua_pushlstring(L, r, l);
+    if (stripfilename) {
+      char *todirname = tools_dirorfilename(r, l, 1, &outlen, &rc);
+      if (rc) {
+        lua_pushnil(L);
+      } else {
+        lua_pushlstring(L, todirname, outlen);
+      }
+      xfree(todirname);
+    } else {
+      lua_pushlstring(L, r, l);
+    }
     xfree(r);
   } else {
     lua_pushnil(L);

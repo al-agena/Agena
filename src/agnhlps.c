@@ -5348,7 +5348,7 @@ LUALIB_API char *getModuleFileName (void) {
   if (nchar >= 0) {
     apath[nchar] = '\0';
     return apath;
-  }  
+  }
 #elif defined(__SOLARIS)  /* new 7.11.1 */
   /* 1. Try kernel proc link first (Safe from chdir bugs), 7.11.3 */
   int nchar = readlink("/proc/self/path/a.out", apath, MAX_PATH - 1);
@@ -5376,7 +5376,7 @@ LUALIB_API char *getModuleFileName (void) {
     apath[MAX_PATH - 1] = '\0';
     return apath;
   }
-  /* Fallback if libproc fails */  
+  /* Fallback if libproc fails */
   uint32_t size = MAX_PATH;
   if (_NSGetExecutablePath(apath, &size) == 0) {
     char resolved[MAX_PATH] = { 0 };
@@ -5399,11 +5399,88 @@ LUALIB_API char *getModuleFileName (void) {
 }
 
 
-/* Searches for a target file or target folder starting from a given subdirectory and 
+#define ispathsep(c)      ((c) == '/' || (c) == '\\')
+#define isdriveletter(s)  (isalpha(uchar((s)[0])) && uchar((s)[1]) == ':')
+
+/* The function returns either the null-terminated directory name or the filename in a path and also it's length.
+   It works exactly as `os.dirname` and `os.filename` did before 7.11.4. Initaited 2.10.0, transferred to agnhlps.c
+   with 7.11.4.
+   what = 1: get dirname, what = 0: get filename */
+LUALIB_API char *tools_dirorfilename (const char *path0, size_t l, int what, size_t *outlen, int *rc) {
+  char *path, *cur;
+  *outlen = 0;
+  *rc = 0;
+  if (!path0) { *rc = 1; return NULL; }
+  if (l == 0) { *rc = 2; return NULL; }
+  else if (l == 1 && ispathsep(*path0)) {
+    path = strdup("/");
+    if (!path) { *rc = 1; return NULL; }
+    *outlen = 1;
+  } else {
+    struct stat buf;
+    int isdriveletter, isbaredrive, mode;
+    path = (l == 2 && isdriveletter(path0)) ? (l++, str_concat(path0, "/", NULL)) : tools_strndup(path0, l);
+    if (!path) { *rc = 1; return NULL; }
+    str_charreplace(path, '\\', '/', 0);
+    isdriveletter = (l == 3 && isdriveletter(path) && path[2] == '/');  /* drive letter with trailing slash ? 2.39.8 */
+    cur = path + l;  /* set cursor to '\0' */
+    while (!isdriveletter && path < cur && ispathsep(*(cur - 1))) {
+      cur--; /* "remove" trailing slashes; don't touch if path = "/" or drive letter, 2.39.8 fix */
+    }
+    char lastchar = *cur;  /* avoid duplicating string for the stat check */
+    *cur = '\0';
+#if (defined(__unix__) && !defined(__DJGPP__)) || defined(__APPLE__)
+    mode = lstat(path, &buf);
+#else
+    mode = stat(path, &buf);
+#endif
+    *cur = lastchar;  /* restore string */
+    /* check whether given path actually is a directory, let DOS behave like Windows */
+    isbaredrive = ((cur - path) == 2 && isdriveletter(path));
+    if (mode != -1 && S_ISDIR(buf.st_mode) && !isbaredrive) {
+    /* if (mode != -1 && S_ISDIR(buf.st_mode)) { */  /* with os.filename, check for files, links, sockets, and special files */
+    if (what) {  /*`get directory name */
+        *outlen = cur - path;
+        *cur = '\0';
+      } else {  /* filename retrieval ? */
+        xfree(path); path = NULL;
+      }
+    } else {  /* ignore (l)stat error */
+      while (path < cur && !ispathsep(*cur)) cur--;  /* skip filename */
+      if (what) {  /* push directory name */
+        char origchar = *path;  /* save the character before it gets overwritten so that the ispathsep() check will not fail */
+        *cur = '\0';  /* slice off filename */
+        *outlen = cur - path;
+        if (path == cur && !ispathsep(origchar)) {
+          char first = tolower((unsigned char)*path);
+          if (*outlen == 2 && first >= 'a' && first <= 'z' && *(path + 1) == ':') { /* a drive letter in OS/2, Windows, and DOS ? */
+            *path = toupper((unsigned char)*path);  /* absolute path given: return drive letter, else relative path */
+          } else {
+            xfree(path);
+            path = strdup(".");
+            if (!path) { *rc = 1; *outlen = 0; } else *outlen = 1;
+          }
+        }
+      } else {  /* push filename without leading slash */
+        if (ispathsep(*cur)) cur++;
+        char *filename = strdup(cur);  /* we must duplicate for otherwise we would free somewhere in the middle
+          of the returned string and not its beginning, casuing a segfault. */ 
+        xfree(path);
+        if (!filename) { *rc = 1; return NULL; }
+        *outlen = strlen(filename);
+        return filename;
+      }
+    }
+  }
+  return path;
+}
+
+
+/* Searches for a target file or target folder starting from a given subdirectory and
  * moving upwards toward the filesystem root.
  *
  * @param path   The fully resolved path to the executable (read-only).
- * @param what   The absolute or relative path (the latter is preferred) or name of the 
+ * @param what   The absolute or relative path (the latter is preferred) or name of the
  *               file/folder to find.
  * @param outlen Pointer to size_t where the returned path length will be stored.
  * @return       Newly allocated string with forward slashes containing the full path,
@@ -5431,7 +5508,7 @@ LUALIB_API char *tools_findinpath (const char *path, const char *what, size_t *o
     *outlen = strlen(current_dir);
     xfree(target_norm);
     return current_dir;
-  } 
+  }
   /* Check if the second argument is a fully qualified absolute path */
   if (target_norm[0] == '/' || (target_norm[0] != '\0' && target_norm[1] == ':' && target_norm[2] == '/')) {
     if (tools_exists(target_norm)) {

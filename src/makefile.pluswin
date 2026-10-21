@@ -11,7 +11,6 @@ LIB_DIR = ../lib
 
 # --- Flag Definitions ---
 # -Wtype-limits prints warnings about futile comparisons
-#BASE_FLAGS = -pipe -fgnu89-inline -Wtype-limits -Wno-attributes -fno-omit-frame-pointer $(SSE_FLAGS)
 BASE_FLAGS = -pipe -fgnu89-inline -Wtype-limits -Wno-attributes -fno-omit-frame-pointer
 OFFS = -Wint-to-pointer-cast -Wpointer-to-int-cast
 
@@ -74,6 +73,18 @@ else
   MAPM_LINK = -lmapm
 endif
 
+ifeq ($(MSYSTEM),UCRT64)
+  ASPELL_LINK = -laspell
+else ifeq ($(MSYSTEM),MINGW64)
+  ASPELL_LINK = -laspell
+else ifdef IS64BIT
+  ASPELL_LINK = -laspell
+else
+  # Das originale 32-Bit Legacy-System bleibt vollkommen unangetastet
+  ASPELL_LINK = libaspell.a
+endif
+
+
 # --- Target Lists ---
 DLLS = abci.dll ads.dll aspell.dll astro.dll com.dll cordic.dll curses.dll \
 	ddhash.dll double.dll fastmath.dll fractals.dll gmp.dll gzip.dll iconv.dll \
@@ -101,9 +112,15 @@ ads.dll: ads.o vecoff64.o
 	@mv -f $@ $(LIB_DIR)
 	rm -f $^
 
+#aspell.dll: aspell.c
+#	@rm -f $@.tmp
+#	$(CC) $(CFLAGS_DLL) -o $@.tmp $< libaspell.a -lstdc++ -lmsvcrt $(AG_LIBS)
+#	$(STRIP) $@.tmp
+#	@mv -f $@.tmp $(LIB_DIR)/$@
+
 aspell.dll: aspell.c
 	@rm -f $@.tmp
-	$(CC) $(CFLAGS_DLL) -o $@.tmp $< libaspell.a -lstdc++ -lmsvcrt $(AG_LIBS)
+	$(CC) $(CFLAGS_DLL) -o $@.tmp $< $(ASPELL_LINK) -lstdc++ -lmsvcrt $(AG_LIBS)
 	$(STRIP) $@.tmp
 	@mv -f $@.tmp $(LIB_DIR)/$@
 
@@ -178,7 +195,7 @@ iconv.dll: iconv.c
 
 ival.dll: ival.o
 	@rm -f $@
-	$(CC) $(CFLAGS_DLL) -o $@ $< ../ports/ival/src/fi_lib.a $(AG_LIBS)
+	$(CC) $(CFLAGS_DLL) -o $@ $< ../ports/ival/src/fi_lib.a $(AG_LIBS) -lm
 	$(STRIP) $@
 	@mv -f $@ $(LIB_DIR)
 	rm -f $<

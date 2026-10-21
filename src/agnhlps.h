@@ -1301,6 +1301,7 @@ LUALIB_API int getSysOpType (int *minorVersion, int *BuildNumber, int *PlatformI
 
 LUALIB_API char *getModuleFileName (void);
 LUALIB_API char *tools_findinpath (const char *path, const char *what, size_t *outlen);
+LUALIB_API char *tools_dirorfilename (const char *path0, size_t l, int what, size_t *out_len, int *rc);
 LUALIB_API char *tools_computername (void);
 LUALIB_API int tools_shellgeom (int *width, int *height);
 LUALIB_API int tools_doublebase (void);

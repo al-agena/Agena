@@ -140,6 +140,10 @@ static void sanitize_base_dir (char *base_dir, int check_backslash) {
 #endif
 }
 
+#ifdef __OS2__
+#define isdriveletter(s)  (isalpha(uchar((s)[0])) && uchar((s)[1]) == ':')
+#endif
+
 /* aspell.new(lang) -> speller or (nil, err_msg) */
 static int l_aspell_new (lua_State *L) {
   const char *lang = luaL_checkstring(L, 1);
@@ -167,16 +171,22 @@ static int l_aspell_new (lua_State *L) {
       (void)l;
       if (r) {
         snprintf(abs_aspell_dir, sizeof(abs_aspell_dir), "%s", r);
-        aspell_config_replace(config, "data-dir", abs_aspell_dir);   // <------ ????  cause for the segfault in Solaris ? 
-        aspell_config_replace(config, "dict-dir", abs_aspell_dir);   // <------ ????  cause for the segfault in Solaris ? 
         xfree(r);
       } else {
         sanitize_base_dir(base_dir, 1);
         snprintf(abs_aspell_dir, sizeof(abs_aspell_dir), "%s/data/" ASPELL_DIR_NAME, base_dir);
-        aspell_config_replace(config, "data-dir", abs_aspell_dir);
-        aspell_config_replace(config, "dict-dir", abs_aspell_dir);
       }
       xfree(base_dir);
+      char *path_to_use = abs_aspell_dir;
+#if defined(__OS2__)
+      /* 7.11.4: does path start with drive letter and a colon (e.g. "c:") ? */
+      if (isdriveletter(abs_aspell_dir)) {
+        /* skip them, for otherwise the dictionary files cannot be found in OS/2 Aspell, for whatever reason */
+        path_to_use += 2;
+      }
+#endif
+      aspell_config_replace(config, "data-dir", path_to_use);
+      aspell_config_replace(config, "dict-dir", path_to_use);
     } else {
       aspell_config_replace(config, "data-dir", "data/" ASPELL_DIR_NAME);
       aspell_config_replace(config, "dict-dir", "data/" ASPELL_DIR_NAME);
