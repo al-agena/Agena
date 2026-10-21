@@ -2,7 +2,7 @@
 
 # 1. Configuration
 set -e
-export AGENAVER="7.11.3"
+export AGENAVER="7.11.4"
 export BUILD_USER="alex"
 export AGENAHOME="/home/$BUILD_USER/agena"
 
@@ -24,7 +24,7 @@ sudo rm -rf "$AGENATARGET_ROOT/usr"
 mkdir -p "$AGENATARGET_BIN"
 mkdir -p "$AGENATARGET_LIB"
 mkdir -p "$AGENATARGET_DATA"
-mkdir -p "$AGENATARGET_DATA/aspell"
+mkdir -p "$AGENATARGET_DATA/aspell64"
 mkdir -p "$AGENATARGET_DOC"
 mkdir -p "$AGENATARGET_SHARE/fractint"
 mkdir -p "$AGENATARGET_SHARE/icons"
