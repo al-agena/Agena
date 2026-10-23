@@ -18,7 +18,7 @@ for i in abci.o ads.o aspell.o astro.o charbuf.o com.o cordic.o curses.o \
     dcastro.o double.o fastmath.o fractals.o gmp.o iconv.o interp.o \
     luasys.o miniz.o minizip.o moon.o mpfr.o net.o phq.o \
     skycrane.o sqlite.o sqlite3.o sunriset.o testlib.o zx.o \
-    strhash.o strmap.o intmap.o
+    strhash.o strmap.o
 do
   if [ -f "$i" ]; then
     rm "$i"
@@ -121,13 +121,6 @@ gcc $OPTIONS1  $ICONV_INC iconv.c -o iconv.o
 gcc $OPTIONS2 -o iconv.so iconv.o $ICONV_STATIC
 rm -f iconv.o
 mv -f iconv.so $EXPORTTO
-printf "done.\n"
-
-printf "Compiling intmap ... "
-gcc $OPTIONS1 intmap.c -o intmap.o
-gcc $OPTIONS2 -o intmap.so intmap.o
-mv -f intmap.so $EXPORTTO
-rm -f intmap.o
 printf "done.\n"
 
 printf "Compiling minizip ... "

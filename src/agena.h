@@ -31,7 +31,7 @@
 #define agena_h
 
 #define AGENA_VERSION     "agena 7.11"
-#define AGENA_EDITION     "7.11.4"
+#define AGENA_EDITION     "7.11.5"
 #define AGENA_MOTTO       "despina"
 #define AGENA_NAME        "agena"
 #define AGENA_LOGO        ">>"

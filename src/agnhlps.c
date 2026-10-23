@@ -5404,7 +5404,7 @@ LUALIB_API char *getModuleFileName (void) {
 
 /* The function returns either the null-terminated directory name or the filename in a path and also it's length.
    It works exactly as `os.dirname` and `os.filename` did before 7.11.4. Initaited 2.10.0, transferred to agnhlps.c
-   with 7.11.4.
+   with 7.11.4. FREE IT !
    what = 1: get dirname, what = 0: get filename */
 LUALIB_API char *tools_dirorfilename (const char *path0, size_t l, int what, size_t *outlen, int *rc) {
   char *path, *cur;
@@ -5438,8 +5438,7 @@ LUALIB_API char *tools_dirorfilename (const char *path0, size_t l, int what, siz
     /* check whether given path actually is a directory, let DOS behave like Windows */
     isbaredrive = ((cur - path) == 2 && isdriveletter(path));
     if (mode != -1 && S_ISDIR(buf.st_mode) && !isbaredrive) {
-    /* if (mode != -1 && S_ISDIR(buf.st_mode)) { */  /* with os.filename, check for files, links, sockets, and special files */
-    if (what) {  /*`get directory name */
+      if (what) {  /*`get directory name */
         *outlen = cur - path;
         *cur = '\0';
       } else {  /* filename retrieval ? */
@@ -5464,7 +5463,7 @@ LUALIB_API char *tools_dirorfilename (const char *path0, size_t l, int what, siz
       } else {  /* push filename without leading slash */
         if (ispathsep(*cur)) cur++;
         char *filename = strdup(cur);  /* we must duplicate for otherwise we would free somewhere in the middle
-          of the returned string and not its beginning, casuing a segfault. */ 
+          of the returned string and not its beginning, casuing a segfault. */
         xfree(path);
         if (!filename) { *rc = 1; return NULL; }
         *outlen = strlen(filename);
@@ -5536,12 +5535,8 @@ LUALIB_API char *tools_findinpath (const char *path, const char *what, size_t *o
     test_path = (char* )malloc(needed);
     if (!test_path) break;
     /* Construct the test path using explicit POSIX formatting */
-    if (strcmp(dir_to_check, "/") == 0 || (strlen(dir_to_check) == 2 && dir_to_check[1] == ':')) {
-      /* Root structures like "/" or "C:" */
-      sprintf(test_path, "%s/%s", dir_to_check, target_norm);
-    } else {
-      sprintf(test_path, "%s/%s", dir_to_check, target_norm);
-    }
+    /* Root structures like "/" or "C:" */
+    sprintf(test_path, (tools_streq(dir_to_check, "/")) ? "%s%s" : "%s/%s" , dir_to_check, target_norm);  /* 7.11.5 fix, no double slash in front */
     /* Check for existence using the low-level OS API layer */
     if (tools_exists(test_path) ) {
       result_path = test_path;

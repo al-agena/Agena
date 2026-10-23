@@ -150,11 +150,11 @@ static int l_aspell_new (lua_State *L) {
   AspellConfig *config = new_aspell_config();
   if (!config) {
     lua_pushnil(L);
-    lua_pushstring(L, "Failed to create Aspell config allocation.");
+    lua_pushstring(L, "failed to create Aspell config allocation");
     return 2;
   }
   /* Sized strictly to the system's maximum path limit */
-  char abs_aspell_dir[PATH_MAX] = {0};
+  char abs_aspell_dir[PATH_MAX] = { 0 };
   if (custom_dict_path[0] != '\0') {
     /* Use the custom path explicitly from our static variable */
     aspell_config_replace(config, "data-dir", custom_dict_path);
@@ -322,6 +322,72 @@ static int l_speller_config (lua_State *L) {
 }
 
 
+static int l_speller_list_dicts (lua_State *L) {
+  LuaAspeller *la = get_speller(L, 1);
+  AspellConfig *speller_config = aspell_speller_config(la->speller);
+  if (!speller_config) {
+    luaL_error(L, "Error in " LUA_QS ": could not retrieve speller configuration.", "aspell.getdictinfo");
+  }
+  AspellConfig *config = aspell_config_clone(speller_config);
+  if (lua_gettop(L) >= 2 && lua_isstring(L, 2)) {
+    const char *lang_filter = lua_tostring(L, 2);
+    if (strlen(lang_filter) == 0) {
+      aspell_config_replace(config, "lang", "");
+    } else {
+      aspell_config_replace(config, "lang", lang_filter);
+    }
+  } else {
+    /* Default behavior: Clear language option to fetch all available dicts */
+    aspell_config_replace(config, "lang", "");
+  }
+  AspellDictInfoList *dict_list = get_aspell_dict_info_list(config);
+  if (!dict_list) {
+    delete_aspell_config(config);
+    luaL_error(L, "Error in " LUA_QS ": failed to create dictionary info list.", "aspell.getdictinfo");
+  }
+  lua_newtable(L);
+  AspellDictInfoEnumeration *elements = aspell_dict_info_list_elements(dict_list);
+  const AspellDictInfo *dict;
+  int index = 1;
+  while ((dict = aspell_dict_info_enumeration_next(elements)) != NULL) {
+    lua_newtable(L);
+    /* The "name" field is the exact identifier you must pass to aspell.new() to open that specific 
+       dictionary file. It combines the language code with regional dialects, spelling reforms, 
+       or vocabulary sizes. */
+    lua_pushstring(L, dict->name);
+    lua_setfield(L, -2, "name");
+    /* The "code" field represents the root language using the standard ISO 639 code. */
+    lua_pushstring(L, dict->code);
+    lua_setfield(L, -2, "code");
+    /* The jargon field represents extra descriptive information used to distinguish between different 
+       variants or sub-types of dictionaries for the exact same language and size. */
+    lua_pushstring(L, dict->jargon);
+    lua_setfield(L, -2, "jargon");
+    /* The "size" field represents the relative vocabulary size (or density) of that specific 
+         dictionary variant:
+       - 10 to 40 (Small): Contains only the most common words. Great for minimal resource 
+         environments or specialized, small-vocabulary tasks.
+       - 50 (Standard/Default): The normal, recommended size for daily spellchecking 
+         (roughly equivalent to a standard desk dictionary).
+       - 60 to 70 (Large): Includes specialized terms, less common variants, and 
+         technical jargon.
+       - 80+ (Huge/Insane): Contains archaic words, rare regional variants, and massive 
+         permutations of word forms. */
+    lua_pushinteger(L, dict->size);
+    lua_setfield(L, -2, "size");
+    /* The "module" field indicates the underlying spelling engine backend that is responsible for 
+       loading and processing that specific dictionary. */
+    lua_pushstring(L, dict->module->name);
+    lua_setfield(L, -2, "module");
+    lua_rawseti(L, -2, index++);
+  }
+  /* Free allocated enumeration iterator and cloned configuration context */
+  delete_aspell_dict_info_enumeration(elements);
+  delete_aspell_config(config);
+  return 1;
+}
+
+
 /* speller:add_to_session("word") -> boolean or (nil, err_msg) */
 static int l_speller_add_to_session (lua_State *L) {
   LuaAspeller *la = get_speller(L, 1);
@@ -379,10 +445,23 @@ static int l_aspell_path (lua_State *L) {
       custom_dict_path[sizeof(custom_dict_path) - 1] = '\0';
     }
   }
-  if (custom_dict_path[0] == '\0')
-    lua_pushnil(L);
-  else
+  if (custom_dict_path[0] == '\0') {
+    /* Create a temporary config to extract the default compiled-in dict-dir */
+    AspellConfig *config = new_aspell_config();
+    if (config) {
+      const char *default_path = aspell_config_retrieve(config, "dict-dir");
+      if (default_path) {
+        lua_pushstring(L, default_path);
+      } else {
+        lua_pushnil(L);
+      }
+      delete_aspell_config(config);
+    } else {
+      lua_pushnil(L);
+    }
+  } else {
     lua_pushstring(L, custom_dict_path);
+  }
   return 1;
 }
 
@@ -401,6 +480,7 @@ static const struct luaL_Reg aspell_funcs[] = {
   {"check",         l_speller_check},
   {"close",         l_speller_close},
   {"config",        l_speller_config},
+  {"getdictinfo",   l_speller_list_dicts},
   {"new",           l_aspell_new},
   {"path",          l_aspell_path},
   {"suggest",       l_speller_suggest},

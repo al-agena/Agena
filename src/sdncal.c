@@ -997,132 +997,6 @@ static void FindStartOfYear(
  * all be set to zero, otherwise *pYear will be > 0; *pMonth will be in the
  * range 1 to 13 inclusive; *pDay will be in the range 1 to 30 inclusive.
  */
-#ifdef DONOTCOMPILEME
-void SdnToJewish (long int sdn, int *pYear, int *pMonth, int *pDay) {
-    long int inputDay;
-    long int day;
-    long int halakim;
-    int metonicCycle;
-    int metonicYear;
-    int tishri1;
-    int tishri1After;
-    int yearLength;
-
-    if (sdn <= SDN_OFFSET2) {
-	*pYear = 0;
-	*pMonth = 0;
-	*pDay = 0;
-	return;
-    }
-    inputDay = sdn - SDN_OFFSET2;
-
-    FindTishriMolad(inputDay, &metonicCycle, &metonicYear, &day, &halakim);
-    tishri1 = Tishri1(metonicYear, day, halakim);
-
-    if (inputDay >= tishri1) {
-	/* It found Tishri 1 at the start of the year. */
-	*pYear = metonicCycle * 19 + metonicYear + 1;
-	if (inputDay < tishri1 + 59) {
-	    if (inputDay < tishri1 + 30) {
-		*pMonth = 1;
-		*pDay = inputDay - tishri1 + 1;
-	    } else {
-		*pMonth = 2;
-		*pDay = inputDay - tishri1 - 29;
-	    }
-	    return;
-	}
-
-	/* We need the length of the year to figure this out, so find
-	 * Tishri 1 of the next year. */
-	halakim += HALAKIM_PER_LUNAR_CYCLE * monthsPerYear[metonicYear];
-	day += halakim / HALAKIM_PER_DAY;
-	halakim = halakim % HALAKIM_PER_DAY;
-	tishri1After = Tishri1((metonicYear + 1) % 19, day, halakim);
-    } else {
-	/* It found Tishri 1 at the end of the year. */
-    *pYear = metonicCycle * 19 + metonicYear;
-   	if (inputDay >= tishri1 - 177) {
-	    /* 1. Check if the current year is actually a leap year */
-	    int isLeap = (monthsPerYear[(*pYear - 1) % 19] == 13);  /* 7.8.8 fix */
-	    /* It is one of the last months of the year. */
-	    if (inputDay > tishri1 - 30) {
-		*pMonth = isLeap ? 13 : 12;  /* Fall back to Month 12 (Elul) in common years! */
-		*pDay = inputDay - tishri1 + 30;
-	    } else if (inputDay > tishri1 - 60) {
-		*pMonth = isLeap ? 12 : 11;  /* Av */
-		*pDay = inputDay - tishri1 + 60;
-	    } else if (inputDay > tishri1 - 89) {
-		*pMonth = isLeap ? 11 : 10;  /* Tammuz */
-		*pDay = inputDay - tishri1 + 89;
-	    } else if (inputDay > tishri1 - 119) {
-		*pMonth = isLeap ? 10 : 9;   /* Sivan */
-		*pDay = inputDay - tishri1 + 119;
-	    } else if (inputDay > tishri1 - 148) {
-		*pMonth = isLeap ? 9 : 8;    /* Iyar */
-		*pDay = inputDay - tishri1 + 148;
-	    } else {
-		*pMonth = isLeap ? 8 : 7;    /* Nisan */
-		*pDay = inputDay - tishri1 + 178;
-	    }
-	    return;
-	} else {
-	    if (monthsPerYear[(*pYear - 1) % 19] == 13) {
-		*pMonth = 7;
-		*pDay = inputDay - tishri1 + 207;
-		if (*pDay > 0) return;
-		(*pMonth)--;
-		(*pDay) += 30;
-		if (*pDay > 0) return;
-		(*pMonth)--;
-		(*pDay) += 30;
-	    } else {
-		*pMonth = 6;
-		*pDay = inputDay - tishri1 + 207;
-		if (*pDay > 0) return;
-		(*pMonth)--;
-		(*pDay) += 30;
-	    }
-	    if (*pDay > 0) return;
-	    (*pMonth)--;
-	    (*pDay) += 29;
-	    if (*pDay > 0) return;
-
-	    /* We need the length of the year to figure this out, so find
-	     * Tishri 1 of this year. */
-	    tishri1After = tishri1;
-	    FindTishriMolad(day - 365,
-		&metonicCycle, &metonicYear, &day, &halakim);
-	    tishri1 = Tishri1(metonicYear, day, halakim);
-	}
-    }
-
-    yearLength = tishri1After - tishri1;
-    day = inputDay - tishri1 - 29;
-    if (yearLength == 355 || yearLength == 385) {
-	/* Heshvan has 30 days */
-	if (day <= 30) {
-	    *pMonth = 2;
-	    *pDay = day;
-	    return;
-	}
-	day -= 30;
-    } else {
-	/* Heshvan has 29 days */
-	if (day <= 29) {
-	    *pMonth = 2;
-	    *pDay = day;
-	    return;
-	}
-	day -= 29;
-    }
-
-    /* It has to be Kislev. */
-    *pMonth = 3;
-    *pDay = day;
-}
-#endif
-
 void SdnToJewish (long int sdn, int *pYear, int *pMonth, int *pDay) {
   long int inputDay;
   long int day;
@@ -1248,7 +1122,7 @@ void SdnToJewish (long int sdn, int *pYear, int *pMonth, int *pDay) {
 
 normalize_and_exit:
   /* UNIFIED CHRONOLOGICAL MAPPING LOGIC
-     This translates the internal backward indices into absolute, 
+     This translates the internal backward indices into absolute,
      uniform standard months: Elul is ALWAYS 12, Adar II is ALWAYS 13. */
   if (monthsPerYear[(*pYear - 1) % 19] == 13) {
     /* Only apply shifting logic inside true 13-month leap years */

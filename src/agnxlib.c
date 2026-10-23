@@ -1302,50 +1302,35 @@ LUALIB_API void agnL_initialise (lua_State *L, int skipinis, int debug, int skip
 
 /* end of Agena initialisation */
 
-/* This helper function introduced in 7.3.2 no longer pokes into system-managed memory by writing a
-   finalising '\0' into the memory area administering environment variables. Advised by Gemini AI. */
-static int tryassignagenapath (lua_State *L, const char *incoming_path, int debug) {
-  char *copy, *worker, *newpath;
-  int success = 0;
-  size_t in_len;
-  if (incoming_path == NULL) return 0;
-  in_len = strlen(incoming_path);
-  /* Allocate with extra padding (8 bytes) and ZERO the memory */
-  /* This prevents 'size 4' over-reads from hitting uninitialized memory */
-  copy = (char *)calloc(in_len + 8, sizeof(char));
-  if (copy == NULL) return 0;
-  strcpy(copy, incoming_path);
-  /* Normalize */
-  str_charreplace(copy, '\\', '/', 1);
-  worker = strstr(copy, "/agena");
-  if (worker != NULL) {
-    /* Move to the start of the part we might want to clip */
-    char *searcher = worker + 6;
-    /* Find the next slash or the end */
-    while (*searcher != '\0') {
-      if (*searcher == '/') break;
-      searcher++;
+
+static int tryassignlibname (lua_State *L, const char *path, int debug, const char *from) {
+  int rc, result = 0;
+  if (path == NULL) return 0;
+  agnL_debuginfo2(debug, "and\n      traversing towards the file system root from ", from);
+  agnL_debuginfo2(debug, "\n      ", path);
+  size_t outlen0, outlen1;
+  result = 0;
+  char *candidate = tools_findinpath(path, "lib/library.agn", &outlen0);
+  if (candidate) {
+    agnL_debuginfo(debug, " succeeded.\n      Setting libname ");
+    char *newpath = tools_dirorfilename(candidate, outlen0, 1, &outlen1, &rc);
+    if (rc == 0 && newpath && outlen1 != 0) {  /* better sure than sorry */
+      agnL_debuginfo2(debug, "to ", newpath);
+      lua_pushlstring(L, newpath, outlen1);  /* tools_dirorfilename guarantees that the fuile actually exists */
+      lua_setglobal(L, "libname");
+      result = 1;
     }
-    /* Truncate */
-    *searcher = '\0';
-    newpath = str_concat(copy, "/lib", NULL);
-    if (newpath != NULL) {
-      if (tools_exists(newpath)) {
-        lua_pushstring(L, newpath);
-        lua_setglobal(L, "libname");
-        success = 1;
-      }
-      xfree(newpath); /* Use your specific free */
-    }
+    xfree(newpath);
   }
-  xfree(copy); /* Use standard free since we used calloc */
-  return success;
+  agnL_debuginfo(debug, (result) ? " succeeded.\n" : " failed.\n");
+  xfree(candidate);
+  return result;
 }
 
 LUALIB_API void agnL_setLibname (lua_State *L, int warning, int debug, int skipagenapath) {  /* changed Agena 1.0.2, 1.0.3,
   patched and improved 2.1.6 */
   char *path, *apath;
-  int result;
+  int result = 0;  /* to prevent compiler warning */
   path = NULL;  /* to prevent compiler warnings */
   agnL_debuginfo(debug, "Calling agnL_setLibname:\n");
   lua_getglobal(L, "libname");
@@ -1371,55 +1356,33 @@ LUALIB_API void agnL_setLibname (lua_State *L, int warning, int debug, int skipa
     agnL_debuginfo2(debug, path, ".\n");
     xfree(path);
     return;
+  } else {  /* 2.1.6, avoid setting AGENAPATH to the environment in Windows 2000 or later */
+    result = 0;
+    agnL_debuginfo(debug, "   Search for main Agena libray by calling getModuleFileName ");
+    apath = getModuleFileName();  /* 7.11.5, for Win, Sol, Lin, Mac, DOS, else always returns NULL */
+    if (apath) {
+      result = tryassignlibname(L, apath, debug, "executable");
+    } else {
+      agnL_debuginfo(debug, "failed.\n");
+    }  /* end of apath */
+    xfree(apath);  /* path is NULL, so no need to free it */
+    if (result) return;
   }
-#ifdef _WIN32
-  else {  /* 2.1.6, avoid setting AGENAPATH to the environment in Windows 2000 or later */
-    int winversion;
-    struct WinVer winver;
-    winversion = getWindowsVersion(&winver);
-    if (winversion >= MS_WIN2K || winversion == MS_WINNT4) {  /* NT 4.0, 2000 or later ? 2.17.2 extension */
-      result = 0;
-      agnL_debuginfo(debug, "   Trying to get AGENAPATH by calling GetModuleFileName: ");
-      apath = agn_stralloc(L, MAX_PATH, "agnL_setLibname", NULL);  /* 2.16.5 */
-      if (GetModuleFileName(NULL, apath, MAX_PATH + 1)) {
-        int j;  /* 2.1.8 patch */
-        for (j=0; j < tools_strlen(apath); j++) apath[j] = tolower(apath[j]);  /* 2.17.8 tweak */
-        result = tryassignagenapath(L, apath, debug);
-      } else
-        agnL_debuginfo(debug, "failed.\n");
-      xfree(apath);  /* path is NULL, so no need to free it */
-      if (result) return;
-    }
-  }
-#endif
 labelA:
   /* try to build path from current working directory */
-  agnL_debuginfo(debug, "   Trying path to current working directory");
+  agnL_debuginfo(debug, "   Search for main Agena library from current working directory ");
   apath = agn_stralloc(L, PATH_MAX, "agnL_setLibname", NULL);  /* 2.16.5 */
-  /* Agena 1.0.4 */
-  if (tools_cwd(apath) != 0) {
-    xfree(apath); /* 2.35.4 patch; path is NULL, so no need to free it */
+  if (apath == NULL) {  /* path is NULL, so no need to free it */
     luaL_error(L, "memory failure during initialisation, in " LUA_QL("agnL_setLibname") ".");
   }
-  result = tryassignagenapath(L, apath, debug);
-  if (result) {
-    xfree(apath);  /* path is NULL, so no need to free it */
-    return;
-   } else {  /* 2.35.4 */
-    str_charreplace(apath, '\\', '/', 1);
-    char *altpath = str_concat(apath, "/../lib/library.agn", NULL);
-    char *newpath = str_concat(apath, "/../lib", NULL);
-    agnL_debuginfo2(debug, "   failed. Trying\n      ", newpath);
-    if (tools_exists(altpath)) {
-      lua_pushstring(L, newpath);
-      lua_setglobal(L, "libname");
-      agnL_debuginfo3(debug, ".\n   Success, libname set to ", newpath, ".\n");
-      xfree(newpath); xfree(altpath); xfree(apath);  /* path is NULL, so no need to free it */
-      return;
-    }
-    agnL_debuginfo(debug, "\n   did not succeed.\n");
-    xfree(apath); xfree(altpath); xfree(newpath);
+  /* Agena 1.0.4 */
+  if (tools_cwd(apath) == 0) {
+    result = tryassignlibname(L, apath, debug, "");
+  } else {
+    agnL_debuginfo(debug, "failed.\n");
   }
+  xfree(apath);  /* path is NULL, so no need to free it */
+  if (result) return;
 #if (!defined(__DJGPP__)) && (defined(__unix__) || defined(__APPLE__))  /* 2.34.9 DOS fix */
   /* set default path if path could not be determined before */
   if (tools_exists("/usr/agena/lib")) {  /* 2.16.11 change */

@@ -12,8 +12,8 @@ export EXPORTTO="../lib"
 for i in abci.o ads.o aspell.o astro.o charbuf.o com.o cordic.o curses.o \
     dcastro.o double.o fastmath.o fractals.o gmp.o iconv.o interp.o \
     luasys.o miniz.o minizip.o moon.o mpfr.o net.o phq.o skycrane.o \
-    sqlite.o sqlite3.o sunriset.o testlib.o zx.o strhash.o strmap.o \
-    intmap.o
+    sqlite.o sqlite3.o sunriset.o testlib.o zx.o strhash.o strmap.o
+
 do
   if [ -f "$i" ]; then
     rm "$i"
@@ -111,12 +111,6 @@ printf "Compiling iconv ... "
 gcc $OPTIONS -o iconv.so iconv.c -liconv
 strip iconv.so
 mv -f iconv.so $EXPORTTO
-printf "done.\n"
-
-printf "Compiling intmap ... "
-gcc $OPTIONS -o intmap.so intmap.c
-strip intmap.so
-mv -f intmap.so $EXPORTTO
 printf "done.\n"
 
 printf "Compiling minizip ... "

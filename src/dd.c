@@ -578,127 +578,13 @@ static const luaL_Reg ddlib[] = {
 ** Open dd library
 */
 
-#ifdef DONOTCOMPILEME
-static void createmeta (lua_State *L) {
-  luaL_newmetatable(L, AGENA_DDLIBNAME);  /* create metatable */
-  lua_pushvalue(L, -1);  /* push metatable */
-  lua_setfield(L, -2, "__index");  /* metatable.__index = metatable */
-  luaL_register(L, NULL, dd_lib);  /* methods */
-}
-
-LUALIB_API int luaopen_dd (lua_State *L) {
-  createmeta(L);
-  lua_pop(L, 1);  /* 7.11.2 fix */
-  luaL_register(L, AGENA_DDLIBNAME, ddlib);
-  /* we must define constants like this as the code would not compile in Solaris 10 */
-  dd_pushdd(L, DD_NOUGHT);
-  lua_setfield(L, -2, "naught");
-  dd_pushdd(L, DD_NOUGHT);
-  lua_setfield(L, -2, "nought");
-  dd_pushdd(L, DD_ONE);
-  lua_setfield(L, -2, "one");
-  dd_pushdd(L, DD_TWO);
-  lua_setfield(L, -2, "two");
-  dd_pushdd(L, DD_THREE);
-  lua_setfield(L, -2, "three");
-  dd_pushdd(L, DD_FOUR);
-  lua_setfield(L, -2, "four");
-  dd_pushdd(L, DD_FIVE);
-  lua_setfield(L, -2, "five");
-  dd_pushdd(L, DD_SIX);
-  lua_setfield(L, -2, "six");
-  dd_pushdd(L, DD_SEVEN);
-  lua_setfield(L, -2, "seven");
-  dd_pushdd(L, DD_EIGHT);
-  lua_setfield(L, -2, "eight");
-  dd_pushdd(L, DD_NINE);
-  lua_setfield(L, -2, "nine");
-  dd_pushdd(L, DD_TEN);
-  lua_setfield(L, -2, "ten");
-  dd_pushdd(L, DD_ELEVEN);
-  lua_setfield(L, -2, "eleven");
-  dd_pushdd(L, DD_TWELVE);
-  lua_setfield(L, -2, "twelve");
-  dd_pushdd(L, (dd_pair){16.0, 0.0});
-  lua_setfield(L, -2, "sixteen");  /* 7.4.1 */
-  dd_pushdd(L, (dd_pair){100.0, 0.0});
-  lua_setfield(L, -2, "hundred");
-  dd_pushdd(L, (dd_pair){1000.0, 0.0});
-  lua_setfield(L, -2, "thousand");
-  dd_pushdd(L, dd_div_d_d(1.0, 2.0));
-  lua_setfield(L, -2, "half");
-  dd_pushdd(L, dd_div_d_d(1.0, 3.0));
-  lua_setfield(L, -2, "third");
-  dd_pushdd(L, dd_div_d_d(1.0, 4.0));
-  lua_setfield(L, -2, "quarter");
-  dd_pushdd(L, dd_div_d_d(3.0, 4.0));
-  lua_setfield(L, -2, "threequarter");
-  dd_pushdd(L, dd_div_d_d(1.0, 5.0));
-  lua_setfield(L, -2, "fifth");
-  dd_pushdd(L, dd_div_d_d(1.0, 6.0));
-  lua_setfield(L, -2, "sixth");
-  dd_pushdd(L, dd_div_d_d(1.0, 8.0));
-  lua_setfield(L, -2, "eighth");
-  dd_pushdd(L, dd_div_d_d(1.0, 12.0));
-  lua_setfield(L, -2, "twelfth");
-  dd_pushdd(L, dd_div_d_d(1.0, 16.0));
-  lua_setfield(L, -2, "sixteenth");
-  dd_pushdd(L, dd_div_d_d(1.0, 10.0));
-  lua_setfield(L, -2, "tenth");
-  dd_pushdd(L, dd_div_d_d(1.0, 12.0));
-  lua_setfield(L, -2, "twelfth");
-  dd_pushdd(L, dd_div_d_d(1.0, 16.0));
-  lua_setfield(L, -2, "sixteenth");
-  dd_pushdd(L, dd_div_d_d(1.0, 100.0));
-  lua_setfield(L, -2, "hundredth");
-  dd_pushdd(L, dd_div_d_d(1.0, 1000.0));
-  lua_setfield(L, -2, "thousandth");
-  dd_pushdd(L, DD_PI);
-  lua_setfield(L, -2, "Pi");
-  dd_pushdd(L, DD_2PI);
-  lua_setfield(L, -2, "Pi2");
-  dd_pushdd(L, DD_PI_2);
-  lua_setfield(L, -2, "PiO2");
-  dd_pushdd(L, DD_PI_4);
-  lua_setfield(L, -2, "PiO4");
-  dd_pushdd(L, DD_PI_180);
-  lua_setfield(L, -2, "PiO180");
-  dd_pushdd(L, DD_E);
-  lua_setfield(L, -2, "E");
-  dd_pushdd(L, DD_LN2);
-  lua_setfield(L, -2, "Ln2");
-  dd_pushdd(L, DD_INV_LN2);
-  lua_setfield(L, -2, "Invln2");
-  dd_pushdd(L, DD_ZETA2);
-  lua_setfield(L, -2, "Zeta2");
-  dd_pushdd(L, DD_EULER_GAMMA);
-  lua_setfield(L, -2, "Euler");
-  dd_pushdd(L, DD_SQRT2);
-  lua_setfield(L, -2, "sqrt2");
-  dd_pushdd(L, DD_SQRT3);
-  lua_setfield(L, -2, "sqrt3");
-  dd_pushdd(L, DD_MAX);
-  lua_setfield(L, -2, "ddmax");
-  dd_pushdd(L, DD_MIN);
-  lua_setfield(L, -2, "ddmin");
-  dd_pushdd(L, DD_NAN);
-  lua_setfield(L, -2, "undefined");
-  dd_pushdd(L, DD_INF);
-  lua_setfield(L, -2, "infinity");
-  dd_pushdd(L, DD_APPROX_EPS);
-  lua_setfield(L, -2, "Eps");
-  return 1;
-}
-#endif
-
-
 /* NOTE: We cannot define constants like DD_EULER_GAMMA in the following arrays, as older GCC compilers will
    reject this ! 7.11.3 improvement */
 
-typedef struct { 
-  const char *name; 
-  double val1; 
-  double val2; 
+typedef struct {
+  const char *name;
+  double val1;
+  double val2;
 } DdConfigEntry;
 
 /* Integers and named constants mapped by their raw double components */

@@ -1243,17 +1243,6 @@ static int astro_persiandate (lua_State *L) {
   return 3;
 }
 
-/* Returns the Farsi name of integer month. 7.3.0 */
-#ifdef DONOTCOMPILEME
-static int astro_pmonth (lua_State *L) {
-  int month = agn_checkinteger(L, 1);
-  if (month < 1 || month > 12) {
-    luaL_error(L, "Error in " LUA_QS ": invalid month given.", "astro.pmonth");
-  }
-  lua_pushstring(L, PERSIAN_MONTHS[month - 1]);
-  return 1;
-}
-#endif
 
 /* Returns the Farsi name of an integer month, or the integer index of a string name. 7.3.0 */
 static int astro_pmonth (lua_State *L) {
@@ -1339,38 +1328,6 @@ static double persian_to_jd (int py, int pm, int pd, int h, int m, double s) {
   return nowruz + (double)days_elapsed + time_fraction - SHIRAZ_OFFSET_JD;
 }
 
-#ifdef DONOTCOMPILE
-static PersianDate jd_to_persian (double jd) {
-  PersianDate pd;
-  lua_Number fd, sec;
-  int greg_year, imm, idd, deg, min;
-  jd += SHIRAZ_OFFSET_JD;
-  /* 1. Estimate the Persian year (approx Gregorian - 621) */
-  if ((tools_jd2cdate(jd, &greg_year, &imm, &idd, &fd, &deg, &min, &sec)) == -1) {
-    PersianDate pd;
-    pd.year = pd.month = pd.day = 0;
-    pd.hour = pd.minute = pd.second = 0;
-    pd.name = "Invalid";
-    return pd;
-  }
-  int py = greg_year - 621;
-  /* 2. Check if we are still in the previous Persian year */
-  /* If the target date is BEFORE this year's Nowruz, it belongs to the previous py */
-  double nowruz_this_year = get_nowruz_jde(py);
-  if (jd < nowruz_this_year) {
-    py--;
-    nowruz_this_year = get_nowruz_jde(py);
-  }
-  /* 3. The 'Day of Year' is the difference between target and Nowruz + 1 */
-  int day_of_year = (int)(jd - nowruz_this_year + 1.05);
-  /* 4. Reuse your existing robust calculation logic */
-  pd = calculate_persian_date(py, day_of_year);
-  pd.hour = deg;
-  pd.minute = min;
-  pd.second = sec;
-  return pd;
-}
-#endif
 
 /* There are peculiar roundoff errors with Julian Dates und fractional seconds. This function tries
    to minimise them. 7.8.8 */
