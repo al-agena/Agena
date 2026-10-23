@@ -10,6 +10,16 @@
 # drmemory -no_check_uninitialized -logdir ./logs -suppress ..\src\drmemory.cfg -debug -brief -- ..\src\agena.exe
 # See src/drmemory.cfg for more info on the call to Dr. Memory.
 
+# Compiling 32-bit Agena on msys2:
+# make clean && make config && make mingw -j4
+# make -f makefile.pluswin clean
+# make -f makefile.pluswin
+
+# Compiling 64-bit Agena on msys2:
+# make clean && make config && make msys64 -j4
+# make -f makefile.pluswin clean
+# make -f makefile.pluswin
+
 # == CHANGE THE SETTINGS BELOW TO SUIT YOUR ENVIRONMENT =======================
 
 # Your platform. See PLATS for possible values.
