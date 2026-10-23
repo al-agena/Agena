@@ -1,9 +1,26 @@
+7.11.5 Despina, October 23, 2026
+
+- The initialization start-up phase has been improved by a broader file system search for an Agena installation:
+  the system now also checks the directory containing the executable and the current working directory, searching
+  up the respective directory trees to the filesystem root. 
+  
+  This is useful only if you have multiple Agena installations on a drive or you prefer a folder name other than
+  `agena`, and mostly spares you from manually setting `libname`, either by giving the command-line `-p` switch 
+  at start-up or assigning `libname` at the Agena prompt.
+
+- `aspell.path` when given no argument now returns the built-in dictionary default folder.
+
+- New `aspell.listdicts` returns all the language dictionaries that are currently available along with details.
+
+- In UNIX, `os.findinpath` no longer returns a path with two leading slashes.
+
+
 7.11.4 Despina, October 21, 2026
 
 - `os.findinpath` now accepts a third argument `true` which will guarantee that the resulting string will never
   include a filename.
 
-- In Windows, `os.filename` when given any second argument to retrieve a 8.3 DOS filename did not work correctly. 
+- In Windows, `os.filename` when given any second argument to retrieve a 8.3 DOS filename did not work correctly.
   This has been fixed.
 
 - When given just a drive letter, with or without trailing slashes or backslashes, `os.dirname` and `os.filename`
