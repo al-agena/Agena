@@ -1,1 +1,122 @@
-/* currently empty */
+package.checkclib('aspell');  # has C dynamic link library been found ?
+
+aspell.languages := [
+  af    = 'Afrikaans',
+  am    = 'Amharic',
+  ar    = 'Arabic',
+  az    = 'Azerbaijani',
+  be    = 'Belarusian',
+  bg    = 'Bulgarian',
+  bn    = 'Bengali',
+  br    = 'Breton',
+  ca    = 'Catalan',
+  cs    = 'Czech',
+  cy    = 'Welsh',
+  da    = 'Danish',
+  de    = 'German',
+  de_AT = 'German (Austria)',
+  de_CH = 'German (Switzerland)',
+  de_DE = 'German (Germany)',
+  el    = 'Greek',
+  en    = 'English',
+  en_AU = 'English (Australia)',
+  en_CA = 'English (Canada)',
+  en_GB = 'English (United Kingdom)',
+  en_US = 'English (United States)',
+  eo    = 'Esperanto',
+  es    = 'Spanish',
+  et    = 'Estonian',
+  fa    = 'Persian (Farsi)',
+  'fi'  ~ 'Finnish',
+  fo    = 'Faroese',
+  fr    = 'French',
+  fr_CH = 'French (Switzerland)',
+  fr_FR = 'French (France)',
+  fy    = 'Western Frisian',
+  ga    = 'Irish',
+  gd    = 'Scottish Gaelic',
+  gl    = 'Galician',
+  gu    = 'Gujarati',
+  gv    = 'Manx',
+  he    = 'Hebrew',
+  hi    = 'Hindi',
+  hr    = 'Croatian',
+  hsb   = 'Upper Sorbian',
+  hu    = 'Hungarian',
+  hy    = 'Armenian',
+  ia    = 'Interlingua',
+  id    = 'Indonesian',
+  'is'  ~ 'Icelandic',
+  it    = 'Italian',
+  ku    = 'Kurdish',
+  la    = 'Latin',
+  lt    = 'Lithuanian',
+  lv    = 'Latvian',
+  mg    = 'Malagasy',
+  mi    = 'Maori',
+  mk    = 'Macedonian',
+  ml    = 'Malayalam',
+  mn    = 'Mongolian',
+  mr    = 'Marathi',
+  ms    = 'Malay',
+  mt    = 'Maltese',
+  nb    = 'Norwegian Bokmål',
+  nl    = 'Dutch',
+  nn    = 'Norwegian Nynorsk',
+  no    = 'Norwegian',
+  ny    = 'Chichewa',
+  'or'  ~ 'Oriya',
+  pa    = 'Panjabi',
+  pl    = 'Polish',
+  pt    = 'Portuguese',
+  pt_BR = 'Portuguese (Brazil)',
+  ro    = 'Romanian',
+  ru    = 'Russian',
+  rw    = 'Kinyarwanda',
+  sc    = 'Sardinian',
+  sk    = 'Slovak',
+  sk_SK = 'Slovak (Slovakia)',
+  sl    = 'Slovenian',
+  sr    = 'Serbian',
+  sv    = 'Swedish',
+  sw    = 'Swahili',
+  ta    = 'Tamil',
+  te    = 'Telugu',
+  tet   = 'Tetum',
+  th    = 'Thai',
+  tk    = 'Turkmen',
+  tl    = 'Tagalog',
+  tr    = 'Turkish',
+  uk    = 'Ukrainian',
+  uz    = 'Uzbek',
+  vi    = 'Vietnamese',
+  wa    = 'Walloon',
+  yi    = 'Yiddish',
+  zu    = 'Zulu'
+];
+
+
+aspell.list := proc() is
+   for keys code in aspell.languages do
+      if local speller := aspell.new(code) then
+         local info, r := speller@@getdictinfo(), [];
+         for entry in info do
+            local jargon := entry.jargon;
+            if jargon = '' then jargon := null fi;
+            local module := entry.module;
+            if module = 'default' then module := null fi;
+            tables.include(r, entry.code, 
+               [jargon = jargon,
+                module = module,
+                name   = entry.name,
+                'size' ~ entry['size']])
+         od;
+         for i, j in r do
+            put(j, 1, aspell.languages[i] or 'unknown')
+         od;
+         speller@@close();
+         return r
+      fi
+   od;
+   return null
+end;
