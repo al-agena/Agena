@@ -1,16 +1,87 @@
+7.12.0 Kerberos, October 25, 2026
+
+- The new `phones` package encodes words phonetically:
+
+  `phones.soundex` implements the original, official Soundex algorithm, following the National Archives (NARA) 
+  rules. You can use it by issuing `import phones` before.
+  
+  > import phones;
+
+  > phones.soundex('Washington'):
+  W252
+
+  `phones.phonetiQs` is a variant of Soundex, suited for most languages that use the Latin script and where you 
+  mostly pronounce words as you spell them.
+  
+  > import phones;
+  
+  > phones.phonetiQs('Washington'):
+  WSNKTN  
+
+  With phonetiQs, you can modify the mapping of phonemes with `phones.setphonetiQs` and query them with 
+  `phones.getphonetiQs`. It also allows to set a different symbol for vowels and change their definition,
+  with `phones.vowelsymbol`.
+
+- Keyfiles can now contain keys only, without associated data. With ordinary wordlists, this reduces the 
+  file size by around 10 % and searching will also be around 10 % faster:
+
+  > keyfile.new('tn.key');
+  > fh := keyfile.open('tn.key');
+  > keyfile.start(fh);
+
+  > keyfile.write(fh, 'Chattanooga');
+  > keyfile.write(fh, 'Memphis');
+  > keyfile.write(fh, 'Nashville');
+
+  > keyfile.commit(fh, true);
+  > keyfile.sync(fh);
+
+  > keyfile.read(fh, 'Chattanooga'):
+  true
+
+  > keyfile.close(fh);
+
+- The new function `keyfile.first` sets the cursor to the first record slot and `keyfile.last` to the last one.
+
+- The new low-level function `keyfile.advance` sets the cursor to the next record slot. `keyfile.current` 
+  retrieves the key and - if present - the associated value at the current slot. `keyfile.exists` searches for 
+  a key, setting the cursor to its position if found.
+
+- `keyfile.count` when just counting the total number of entries in a file has been tweaked by 3.5 %.
+
+- New `strings.var` calculates an approximate (heuristic) edit distance between two strings, counting substitutions, 
+  transpositions, insertions, and deletions. It is around 45 percent faster than `strings.dleven`, and has O(1) 
+  vs. O(min(N, M)) memory complexity, but is not as smart.
+
+- The start-up phase has been changed: If Agena finds the environment variable "AGENAPATH" it now checks whether
+  it points to an existing folder. If it cannot find this folder, it no longer issues an error but continues its
+  search for a working Agena installation. This spares you from manually deleting the environment variable and
+  setting 'libname' manually or usinf the -p command-line switch.
+
+- Initialisation of the `strings` library could theoretically crash the interpreter, but this has never been
+  observed on all the supported and formerly supported platforms. However, this has been fixed.
+
+- This release has been successfully Dr. Memory-tested on Windows and Valgrind-tested on x64 Linux.
+
+- Spell-checked the source files again.
+
+- This release is named after Kerberos, a moon in the Pluto-Charon system. Pluto is the Ninth Planet in our 
+  Solar System.
+ 
+
 7.11.5 Despina, October 23, 2026
 
-- The initialization start-up phase has been improved by a broader file system search for an Agena installation:
-  the system now also checks the directory containing the executable and the current working directory, searching
-  up the respective directory trees to the filesystem root. 
-  
+- The start-up phase has been improved by a broader file system search for an Agena installation: the system now
+  also checks the directory containing the executable and the current working directory, searching up the
+  respective directory trees to the filesystem root.
+
   This is useful only if you have multiple Agena installations on a drive or you prefer a folder name other than
-  `agena`, and mostly spares you from manually setting `libname`, either by giving the command-line `-p` switch 
+  `agena`, and mostly spares you from manually setting `libname`, either by giving the command-line `-p` switch
   at start-up or assigning `libname` at the Agena prompt.
 
 - `aspell.path` when given no argument now returns the built-in dictionary default folder.
 
-- New `aspell.listdicts` returns all the language dictionaries that are currently available along with details.
+- New `aspell.list` returns all the language dictionaries that are currently available along with details.
 
 - In UNIX, `os.findinpath` no longer returns a path with two leading slashes.
 
