@@ -5403,7 +5403,7 @@ LUALIB_API char *getModuleFileName (void) {
 #define isdriveletter(s)  (isalpha(uchar((s)[0])) && uchar((s)[1]) == ':')
 
 /* The function returns either the null-terminated directory name or the filename in a path and also it's length.
-   It works exactly as `os.dirname` and `os.filename` did before 7.11.4. Initaited 2.10.0, transferred to agnhlps.c
+   It works exactly as `os.dirname` and `os.filename` did before 7.11.4. Initiated 2.10.0, transferred to agnhlps.c
    with 7.11.4. FREE IT !
    what = 1: get dirname, what = 0: get filename */
 LUALIB_API char *tools_dirorfilename (const char *path0, size_t l, int what, size_t *outlen, int *rc) {
@@ -5463,7 +5463,7 @@ LUALIB_API char *tools_dirorfilename (const char *path0, size_t l, int what, siz
       } else {  /* push filename without leading slash */
         if (ispathsep(*cur)) cur++;
         char *filename = strdup(cur);  /* we must duplicate for otherwise we would free somewhere in the middle
-          of the returned string and not its beginning, casuing a segfault. */
+          of the returned string and not its beginning, causing a segfault. */
         xfree(path);
         if (!filename) { *rc = 1; return NULL; }
         *outlen = strlen(filename);
@@ -5502,7 +5502,7 @@ LUALIB_API char *tools_findinpath (const char *path, const char *what, size_t *o
   for (i=0; target_norm[i] != '\0'; i++) {
     if (target_norm[i] == '\\') target_norm[i] = '/';
   }
-  /* path and what are actually the same, altough what should not be an absolute path */
+  /* path and what are actually the same, although what should not be an absolute path */
   if (tools_streq(current_dir, target_norm)) {
     *outlen = strlen(current_dir);
     xfree(target_norm);

@@ -18,7 +18,7 @@ for i in abci.o ads.o aspell.o astro.o charbuf.o com.o cordic.o curses.o \
     dcastro.o double.o fastmath.o fractals.o gmp.o iconv.o interp.o \
     luasys.o miniz.o minizip.o moon.o mpfr.o net.o phq.o \
     skycrane.o sqlite.o sqlite3.o sunriset.o testlib.o zx.o \
-    strhash.o strmap.o
+    strhash.o strmap.o phones.o
 do
   if [ -f "$i" ]; then
     rm "$i"
@@ -145,14 +145,12 @@ rm -f net.o
 mv -f net.so $EXPORTTO
 printf "done.\n"
 
-if [ -f ../phq/phq.c ]; then
-   printf "Compiling phonetiQs ... "
-   gcc $OPTIONS1 -o phq.o ../phq/phq.c
-   gcc $OPTIONS2 -o phq.so phq.o
-   mv -f phq.so ../phq
-   rm -f phq.o
-   printf "done.\n"
-fi
+printf "Compiling phones ... "
+gcc $OPTIONS1 -o phones.o phones.c
+gcc $OPTIONS2 -o phones.so phones.o
+rm -f phones.o
+mv -f phones.so $EXPORTTO
+printf "done.\n"
 
 printf "Compiling skycrane ... "
 gcc $OPTIONS1 -o skycrane.o skycrane.c

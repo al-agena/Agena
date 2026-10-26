@@ -131,15 +131,11 @@ gcc $OPTFINAL -o net.so net.o -lsocket -lnsl
 rm -f net.o
 printf "done.\n"
 
-if [ -f ../phq/phq.c ]; then
-   printf "Compiling phonetiQs ... "
-   gcc $OPTIONS -c -o phq.o ../phq/phq.c
-   gcc $OPTFINAL -o phq.so phq.o
-   rm -f phq.o
-   printf "done.\n"
-   strip phq.so
-   mv phq.so ../phq
-fi
+printf "Compiling phones ... "
+gcc $OPTIONS -c -o phones.o phones.c
+gcc $OPTFINAL -o phones.so phones.o
+rm -f phones.o
+printf "done.\n"
 
 printf "Compiling skycrane ... "
 gcc $OPTIONS -c -o skycrane.o skycrane.c
@@ -198,6 +194,7 @@ mv intmap.so ../lib
 mv minizip.so ../lib
 mv mpfr.so ../lib
 mv net.so ../lib
+mv phones.so ../lib
 mv skycrane.so ../lib
 mv strhash.so ../lib
 mv strmap.so ../lib

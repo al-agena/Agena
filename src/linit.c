@@ -99,6 +99,7 @@ static const luaL_Reg lualibs[] = {
   {AGENA_SKYCRANELIBNAME, luaopen_skycrane},
   {AGENA_TESTLIBLIBNAME, luaopen_testlib},    /* 3.1.3 */
   {AGENA_ZXLIBNAME, luaopen_zx},              /* 2.9.3 */
+  {AGENA_PHONESLIBNAME, luaopen_phones},      /* 7.11.6 */
 #endif
 #if defined(__DJGPP__) || defined(__OS2__)    /* 2.17.0 extended for DOS */
   {AGENA_FRACTLIBNAME, luaopen_fractals},     /* 2.21.11 ArcaOS */

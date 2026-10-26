@@ -185,7 +185,7 @@ typedef struct PBL_CACHED_ITEM_s
     long            datablock;   /* number of block the data is on            */
     long            dataoffset;  /* offset of data on block                   */
     unsigned char   keycommon;   /* number of initial bytes this item has in  */
-                                 /* common with its predecessor on tbe block  */
+                                 /* common with its predecessor on the block  */
 
     unsigned char   keylen;      /* length of the key                         */
 
@@ -199,7 +199,7 @@ typedef struct PBLITEM_s
     unsigned int    level;       /* level where item is inserted              */
 
     int             keycommon;   /* number of initial bytes this item has in  */
-                                 /* common with its predecessor on tbe block  */
+                                 /* common with its predecessor on the block  */
 
     int             keylen;      /* length of the key                         */
     unsigned char * key;         /* pointer to the key                        */
@@ -384,7 +384,7 @@ long            datalen
   DESCRIPTION:  Inserts a new block reference into the hash table
 
   RETURNS:      int rc == 0: a new reference was inserted
-                int rc == 1: the reference was already there, it was udpated
+                int rc == 1: the reference was already there, it was updated
                 int rc <  0: some error occurred, see pbl_errno
                  PBL_ERROR_OUT_OF_MEMORY:        malloc failed, out of memory
 ------------------------------------------------------------------------------
@@ -1084,7 +1084,7 @@ static long pbf_blockappend( int bf, unsigned char * buffer )
         for( i = 0; 1; i++ )
         {
             /*
-             * Create and open next filesytem file used for the bigfile
+             * Create and open next filesystem file used for the bigfile
              */
             fh = pbf_fh_open( pbf_pool[ bf ].name, pbf_pool[ bf ].mode, bf, i );
             if( -1 == fh )
@@ -1981,7 +1981,7 @@ static int pblItemDelete( PBLBLOCK_t * block, int index )
     }
 
     /*
-     * Calculate the size the item ocupies on the block
+     * Calculate the size the item occupies on the block
      */
     itemsize = pblItemSize( block, &item );
 
@@ -6536,7 +6536,7 @@ size_t        * okeylen   /** length of the result key after return  */
 
 long pblKfGetAbs(
 pblKeyFile_t  * k,        /** key file to position in                */
-long            absindex, /** index of record to positon to          */
+long            absindex, /** index of record to position to          */
 void          * okey,     /** buffer for result key                  */
 size_t        * okeylen   /** length of the result key after return  */
 )

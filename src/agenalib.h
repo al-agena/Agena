@@ -266,6 +266,9 @@ LUALIB_API int (luaopen_strhash) (lua_State *L);  /* 7.7.2 */
 #define AGENA_STRMAPLIBNAME "strmap"
 LUALIB_API int (luaopen_strmap) (lua_State *L);   /* 7.7.2 */
 
+#define AGENA_PHONESLIBNAME "phones"
+LUALIB_API int (luaopen_phones) (lua_State *L);  /* 7.11.6 */
+
 #endif
 
 #if defined(__OS2__) || defined(__DJGPP__)           /* 2.17.0 extended for DOS */

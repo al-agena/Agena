@@ -602,7 +602,17 @@ extern "C"
 
 #ifndef PROPCMPLX
 #include <complex.h>
-#define agn_Complex  double complex  /* complex number data type */
+
+/* 7.11.6, added so that AgenaEdit will compile with FLTK 1.4.5 */
+#ifdef __cplusplus
+#  undef complex
+#  define complex __complex__
+#  define agn_Complex double __complex__
+#else
+#  define agn_Complex  double complex  /* complex number data type */
+#endif
+
+
 #define agn_pComplex agn_Complex     /* type of a pointer into a complex double array */
 #define real(z) creal(z)
 #define imag(z) cimag(z)

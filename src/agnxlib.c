@@ -11,7 +11,18 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+//#include <string.h>
+
+
+#if defined(__OS2__) && !defined(os2_swab_workaround_done)
+#define os2_swab_workaround_done
+#define swab os2_swab_workaround
 #include <string.h>
+#include <unistd.h>
+#undef swab
+#else
+#include <unistd.h>
+#endif
 
 #if defined(__unix__) || defined(__OS2__) || defined(__APPLE__) || defined(__HAIKU__)
 #include <unistd.h>   /* for access */
@@ -1349,13 +1360,18 @@ LUALIB_API void agnL_setLibname (lua_State *L, int warning, int debug, int skipa
   path = tools_getenv("AGENAPATH");  /* 2.37.1 change */
   agnL_debuginfo(debug, (path == NULL) ? "unassigned.\n" : "found.\n");
   if (path != NULL) {  /* 2.37.4 fix */
-    agnL_debuginfo(debug, "   Setting libname to AGENAPATH: ");
-    str_charreplace(path, '\\', '/', 1);
-    lua_pushstring(L, path);  /* 0.28.2 patch */
-    lua_setglobal(L, "libname");
-    agnL_debuginfo2(debug, path, ".\n");
-    xfree(path);
-    return;
+    if (!tools_exists(path)) {  /* 7.11.6 fix */
+      agnL_debuginfo(debug, "      AGENAPATH points to invalid folder and will be ignored:\n");
+      agnL_debuginfo3(debug, "      ", path, "\n");
+    } else {
+      agnL_debuginfo(debug, "      Setting libname to AGENAPATH: ");
+      str_charreplace(path, '\\', '/', 1);
+      lua_pushstring(L, path);  /* 0.28.2 patch */
+      lua_setglobal(L, "libname");
+      agnL_debuginfo2(debug, path, ".\n");
+      xfree(path);
+      return;
+    }
   } else {  /* 2.1.6, avoid setting AGENAPATH to the environment in Windows 2000 or later */
     result = 0;
     agnL_debuginfo(debug, "   Search for main Agena libray by calling getModuleFileName ");

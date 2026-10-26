@@ -89,7 +89,7 @@ endif
 DLLS = abci.dll ads.dll aspell.dll astro.dll com.dll cordic.dll curses.dll \
 	ddhash.dll double.dll fastmath.dll fractals.dll gmp.dll gzip.dll iconv.dll \
 	ival.dll mapm.dll minizip.dll mpfr.dll net.dll skycrane.dll strhash.dll \
-	strmap.dll testlib.dll zx.dll
+	strmap.dll testlib.dll zx.dll phones.dll
 
 OBJS = abci.o ads.o agnt64.o astro.o cordic.o curses.o dcastro.o ival.o \
 	miniz.o moon.o net.o network.o sdncal.o sofa.o sunriset.o vecoff64.o
@@ -111,12 +111,6 @@ ads.dll: ads.o vecoff64.o
 	$(STRIP) $@
 	@mv -f $@ $(LIB_DIR)
 	rm -f $^
-
-#aspell.dll: aspell.c
-#	@rm -f $@.tmp
-#	$(CC) $(CFLAGS_DLL) -o $@.tmp $< libaspell.a -lstdc++ -lmsvcrt $(AG_LIBS)
-#	$(STRIP) $@.tmp
-#	@mv -f $@.tmp $(LIB_DIR)/$@
 
 aspell.dll: aspell.c
 	@rm -f $@.tmp
@@ -226,6 +220,12 @@ net.dll: net.o network.o
 	$(STRIP) $@
 	@mv -f $@ $(LIB_DIR)
 	rm -f $^
+
+phones.dll: phones.c
+	@rm -f $@
+	$(CC) $(CFLAGS_DLL) -o $@ $< $(AG_LIBS)
+	$(STRIP) $@
+	@mv -f $@ $(LIB_DIR)
 
 strhash.dll: strhash.c
 	@rm -f $@

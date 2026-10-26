@@ -157,7 +157,7 @@ static int keyfile_start (lua_State *L) {
 static int keyfile_write (lua_State *L) {
   pblKeyFile_t **pf = checkkeyfile(L, 1);
   int isseq, rc;
-  size_t klen, dlen, j;
+  size_t klen, vallen, j;
   const char *key = luaL_checklstring(L, 2, &klen);  /* 7.10.4 extension for numbers */
   char *data = NULL;
   if (*pf == NULL) {
@@ -166,25 +166,48 @@ static int keyfile_write (lua_State *L) {
   if (klen == 0 || klen > 255) {
     luaL_error(L, "Error in " LUA_QS ": key length must be in [1, 255].", "keyfile.write");
   }
-  if ( (isseq = lua_isseq(L, 3)) ) {  /* 7.10.4 extension */
-    dlen = agn_seqsize(L, 3);
-    if (dlen < 1)
-      luaL_error(L, "Error in " LUA_QS ": sequence is empty.", "keyfile.write");
-    data = (char *)agn_stralloc(L, dlen, "keyfile.write", NULL);
-    for (j=0; j < dlen; j++) {
-      data[j] = (unsigned char)agn_seqrawgetiinteger(L, 3, j + 1, &rc);
-      if (!rc) {
-        xfree(data);
-        luaL_error(L, "Error in " LUA_QS ": sequence must consist of integers only.", "keyfile.write");
+  int has_value = (lua_gettop(L) >= 3 && !lua_isnil(L, 3));
+  if (has_value) {
+    if ( (isseq = lua_isseq(L, 3)) ) {  /* 7.10.4 extension */
+      vallen = agn_seqsize(L, 3);
+      if (vallen < 1)
+        luaL_error(L, "Error in " LUA_QS ": sequence is empty.", "keyfile.write");
+      data = (char *)agn_stralloc(L, vallen, "keyfile.write", NULL);
+      for (j=0; j < vallen; j++) {
+        data[j] = (unsigned char)agn_seqrawgetiinteger(L, 3, j + 1, &rc);
+        if (!rc) {
+          xfree(data);
+          luaL_error(L, "Error in " LUA_QS ": sequence must consist of integers only.", "keyfile.write");
+        }
       }
+      vallen++;
+    } else {
+      data = (char *)luaL_checklstring(L, 3, &vallen);  /* ditto */
+      vallen++;
     }
-  } else {
-    data = (char *)luaL_checklstring(L, 3, &dlen);  /* dito */
+  } else {  /* no value to be stored, 7.11.6 */
+    isseq = 0;
+    data = NULL;
+    vallen = 0; /* 0 length signals PBL not to allocate any data blocks */
+  }
+  if (vallen == 0) {
+    char okey[256] = { 0 };
+    size_t okeylen = sizeof(okey);
+    if (pblKfFind(*pf, PBLEQ, (void *)key, klen + 1, (void *)okey, &okeylen) == 0) {
+      if (isseq && data) { xfree(data); }
+      lua_pushtrue(L);
+      return 1;
+    }
   }
   /* Assuming pblKfInsert signature */
-  if (pblKfInsert(*pf, (void *)key, klen + 1, (void *)data, dlen + 1) != 0) {
+  if (pblKfInsert(*pf, (void *)key, klen + 1, (void *)data, vallen) != 0) {
+    /* If the file configuration rejected it because it already exists, it is a no-op! */
+    if (pbl_errno == PBL_ERROR_EXISTS) goto finale;
+    /* Real database error handling */
+    if (isseq && data) { xfree(data); }
     luaL_error(L, "Error in " LUA_QS ": failed to insert record, pbl code %d.", "keyfile.write", pbl_errno);
   }
+finale:
   if (isseq) { xfree(data); }
   lua_pushtrue(L);
   return 1;
@@ -260,6 +283,9 @@ static int keyfile_read (lua_State *L) {
   if (reclen < 0 || !tools_streq(key, okey)) {
     lua_pushnil(L);
     return 1;
+  } else if (reclen == 0) {
+    lua_pushtrue(L);
+    return 1;
   }
   char *buffer = calloc(reclen, sizeof(char));
   if (!buffer) {
@@ -268,9 +294,11 @@ static int keyfile_read (lua_State *L) {
   /* reclen will hold the record length, the return can be negative, indicating an error; we must
      subtract 1 for the return counts the trailing \0, too. */
   reclen = pblKfRead(*pf, buffer, reclen);
-  if (reclen >= 0) {
+  if (reclen > 0) {
     lua_pushlstring(L, buffer, reclen - 1);
-  } else {
+  } else if (reclen == 0) {
+    lua_pushfalse(L);
+  } else {  /* error */
     lua_pushnil(L);
   }
   xfree(buffer);
@@ -369,22 +397,25 @@ static int keyfile_iterate (lua_State *L) {
   }
   luaL_checkstack(L, 2, "not enough stack space");
   reclen = (firstone) ? pblKfFirst(*pf, key, &keylen) : pblKfNext(*pf, key, &keylen);
+  luaL_checkstack(L, 1 + (reclen != 0), "not enough stack space");
   if (reclen < 0) {  /* reclen < 0 indicates either no more records or an error */
     lua_pushnil(L);
     lua_pushnil(L);
-    return 2;
-  }
-  buffer = calloc(reclen, sizeof(char));
-  if (!buffer)
-    luaL_error(L, "Error in " LUA_QS ": failed to allocate %ld bytes.", "keyfile.iterate", reclen);
-  if (pblKfRead(*pf, (void *)buffer, reclen) == 0) {
+  } else if (reclen == 0) {
+    lua_pushlstring(L, (const char *)key, keylen - 1);
+  } else {
+    buffer = calloc(reclen, sizeof(char));
+    if (!buffer)
+      luaL_error(L, "Error in " LUA_QS ": failed to allocate %ld bytes.", "keyfile.iterate", reclen);
+    if (pblKfRead(*pf, (void *)buffer, reclen) == 0) {
+      xfree(buffer);
+      luaL_error(L, "Error in " LUA_QS ": cannot read record with key %s.", "keyfile.iterate", key);
+    }
+    lua_pushlstring(L, (const char *)key, keylen - 1);
+    lua_pushlstring(L, (const char *)buffer, (size_t)reclen - 1);
     xfree(buffer);
-    luaL_error(L, "Error in " LUA_QS ": cannot read record with key %s.", "keyfile.iterate", key);
   }
-  lua_pushlstring(L, (const char *)key, keylen - 1);
-  lua_pushlstring(L, (const char *)buffer, (size_t)reclen - 1);
-  xfree(buffer);
-  return 2;
+  return 1 + (reclen != 0);
 }
 
 
@@ -551,15 +582,16 @@ static size_t aux_sizeof (lua_State *L, const char *pn) {
     }
   } else if (!hasfunc) {
     c++;
-    while (1) {
-      reclen = pblKfNext(*pf, key, &keylen);
-      if (reclen < 0) return c;
-      if (unique) {
-        /* the keys are implicitly sorted in the B-Tree, so we can easily check for duplicates */
+    if (unique) {
+      while (1) {
+        reclen = pblKfNext(*pf, key, &keylen);
+        if (reclen < 0) return c;
         if (!strcmp(oldkey, key)) continue;
         memcpy(oldkey, key, keylen);
+        c++;
       }
-      c++;
+    } else {  /* 7.11.6 3.5 % tweak */
+      while (pblKfNext(*pf, NULL, NULL) >= 0) c++;
     }
   } else {
     luaL_checkstack(L, 2, "not enough stack space");
@@ -598,7 +630,6 @@ static size_t aux_sizeof (lua_State *L, const char *pn) {
   return c;
 }
 
-
 static int keyfile_count (lua_State *L) {
   lua_pushinteger(L, aux_sizeof(L, "keyfile.count"));
   return 1;
@@ -610,10 +641,28 @@ static int keyfile_count (lua_State *L) {
    is successful invoke `keyfile.purge`. */
 static int keyfile_purge (lua_State *L) {
   pblKeyFile_t **pf = checkkeyfile(L, 1);
+  size_t klen;
+  int rc = 0;
+  const char *key = luaL_optlstring(L, 2, NULL, &klen);
   if (*pf == NULL) {
     luaL_error(L, "Error in " LUA_QS ": cannot operate on a closed file.", "keyfile.purge");
   }
-  lua_pushboolean(L, pblKfDelete(*pf) == 0);
+  if (key == NULL) {
+    rc = (pblKfDelete(*pf) == 0);
+  } else {  /* 7.11.6 extension */
+    if (klen == 0 || klen > 255) {
+      luaL_error(L, "Error in " LUA_QS ": key length must be in [1, 255].", "keyfile.purge");
+    }
+    char okey[256] = { 0 };
+    size_t okeylen = sizeof(okey);
+    /* Step 1: Use pblKfFind to seek the key and position the internal transaction cursor precisely
+       onto the record we want to delete. */
+    if (pblKfFind(*pf, PBLEQ, (void *)key, klen + 1, (void *)okey, &okeylen) == 0) {
+      /* Step 2: The cursor is now locked onto the target key. Safe to delete! */
+      if (pblKfDelete(*pf) == 0) rc = 1;  /* successfully deleted */
+    }
+  }
+  lua_pushboolean(L, rc);  /* true: success, else: Key wasn't found or delete failed */
   return 1;
 }
 
@@ -630,6 +679,13 @@ static int keyfile_update (lua_State *L) {
   if (*pf == NULL) {
     luaL_error(L, "Error in " LUA_QS ": cannot operate on a closed file.", "keyfile.update");
   }
+  char current_key[256] = { 0 };
+  size_t klen = sizeof(current_key);
+  long datalenatpos = pblKfThis(*pf, current_key, &klen);
+  if (datalenatpos < 0)
+    luaL_error(L, "Error in " LUA_QS ": no record currently selected.", "keyfile.update");
+  else if (datalenatpos == 0)
+    luaL_error(L, "Error in " LUA_QS ": cannot update a key-only entry.", "keyfile.update");
   if (dlen == 0) {
     lua_pushboolean(L, pblKfDelete(*pf) == 0);
   } else {
@@ -648,6 +704,123 @@ static int keyfile_isopen (lua_State *L) {
     pblKeyFile_t **pf = (pblKeyFile_t **)lua_touserdata(L, 1);
     lua_pushboolean(L, *pf != NULL);
   }
+  return 1;
+}
+
+
+/* Positions the cursor on the very first alphabetical record in the file.
+   Returns true on success, false if the file is empty. Created by Gemini AI 7.11.6 */
+static int keyfile_first (lua_State *L) {
+  pblKeyFile_t **pf = checkkeyfile(L, 1);
+  if (*pf == NULL) {
+    luaL_error(L, "Error in " LUA_QS ": cannot operate on a closed file.", "keyfile.first");
+  }
+  char okey[256] = { 0 };
+  size_t okeylen = sizeof(okey);
+  const char *dummy_search_key = "";
+  /* Pass a valid string address and a length > 0.
+     PBLFIRST will override the dummy key and drop straight onto the lowest key. */
+  if (pblKfFind(*pf, PBLFIRST, (void *)dummy_search_key, 1, (void *)okey, &okeylen) == 0) {
+    lua_pushtrue(L);
+  } else {
+    lua_pushfalse(L);
+  }
+  return 1;
+}
+
+
+/* Positions the cursor on the very last alphabetical record in the file. Returns true on success,
+   false if the file is empty. Created by Gemini AI 7.11.6 */
+static int keyfile_last (lua_State *L) {
+  pblKeyFile_t **pf = checkkeyfile(L, 1);
+  if (*pf == NULL) {
+    luaL_error(L, "Error in " LUA_QS ": cannot operate on a closed file.", "keyfile.last");
+  }
+  char okey[256] = { 0 };
+  size_t okeylen = sizeof(okey);
+  lua_pushboolean(L, pblKfLast(*pf, okey, &okeylen) >= 0);
+  return 1;
+}
+
+
+/* Advances the cursor to the next record slot in the keyfile. Returns true on success, or false if
+   it hits the end of the file. Created by Gemini AI 7.11.6 */
+static int keyfile_advance (lua_State *L) {
+  pblKeyFile_t **pf = checkkeyfile(L, 1);
+  if (*pf == NULL) {
+    luaL_error(L, "Error in " LUA_QS ": cannot operate on a closed file.", "keyfile.advance");
+  }
+  /* pblKfNext reads the next sequential index entry on the B-Tree leaf page. If it returns >= 0,
+     it successfully advanced the cursor. */
+  lua_pushboolean(L, pblKfNext(*pf, NULL, NULL) >= 0);
+  return 1;
+}
+
+
+/* Extracts the key and value strings at the current cursor position. Returns true, the string key
+   and the value, a string or null if no value is associated with the key. If the position is
+   invalid or empty, returns false. The function does not move the cursor.
+   Created by Gemini AI 7.11.6 */
+static int keyfile_current (lua_State *L) {
+  pblKeyFile_t **pf = checkkeyfile(L, 1);
+  if (*pf == NULL) {
+    luaL_error(L, "Error in " LUA_QS ": cannot operate on a closed file.", "keyfile.current");
+  }
+  char current_key[256] = { 0 };
+  size_t klen = sizeof(current_key);
+  /* Step 1: Fetch the data length and key at the current cursor position.
+     pblKfThis does not alter the B-Tree position context. */
+  long datalenatpos = pblKfThis(*pf, current_key, &klen);
+  /* If datalenatpos < 0, no valid record is currently selected */
+  if (datalenatpos < 0) {
+    lua_pushfalse(L);
+    return 1;
+  }
+  luaL_checkstack(L, 3, "not enough stack space");
+  lua_pushtrue(L);
+  /* 1. Push the key string (stripping the trailing \0 overhead) */
+  lua_pushlstring(L, current_key, klen - 1);
+  /* 2. Handle the value payload based on your storage format */
+  if (datalenatpos == 0) {
+    /* wordlist / key-only mode: explicitly push null */
+    lua_pushnil(L);
+  } else {
+    /* key-value mode: allocate a temporary memory buffer to read the value from disk */
+    char *val_buffer = (char *)malloc(datalenatpos);
+    if (!val_buffer) {
+      luaL_error(L, "Error in " LUA_QS ": memory allocation failed.", "keyfile.current");
+    }
+    /* read the actual value payload out of the data block */
+    long read_bytes = pblKfRead(*pf, val_buffer, datalenatpos);
+    if (read_bytes >= 0) {
+      /* safely push the string, stripping the trailing \0 byte (read_bytes - 1) */
+      lua_pushlstring(L, val_buffer, read_bytes - 1);
+    } else {
+      lua_pushnil(L); /* disk read failed or data block mismatch */
+    }
+    free(val_buffer);
+  }
+  return 3; /* true, key, (value or null) */
+}
+
+
+/* Checks if a key exists in the file and returns true if found, false if not found. The function bypasses
+   all data payload reading overhead and sets the cursor to the position of the key if it is found. 7.11.6,
+   created by Gemini AI */
+static int keyfile_exists (lua_State *L) {
+  pblKeyFile_t **pf = checkkeyfile(L, 1);
+  size_t keylen;
+  const char *key = luaL_checklstring(L, 2, &keylen);
+  if (*pf == NULL) {
+    luaL_error(L, "Error in " LUA_QS ": cannot operate on a closed file.", "keyfile.exists");
+  }
+  if (keylen == 0 || keylen > 255) {
+    luaL_error(L, "Error in " LUA_QS ": key length must be in [1, 255].", "keyfile.exists");
+  }
+  /* We pass NULL and 0 for the output key buffer. We use PBLFI (Find Exact) to search the index tree.
+     The engine will locate the key but skip reading or loading any attached data blocks. */
+  int found = (pblKfFind(*pf, PBLFI, (void *)key, keylen + 1, NULL, NULL) == 0);
+  lua_pushboolean(L, found);
   return 1;
 }
 
@@ -750,6 +923,12 @@ static const luaL_Reg keyfile[] = {
   {"sync",            keyfile_sync},
   {"update",          keyfile_update},
   {"write",           keyfile_write},
+  /* iterator-specific functions */
+  {"advance",         keyfile_advance},
+  {"current",         keyfile_current},
+  {"exists",          keyfile_exists},
+  {"first",           keyfile_first},
+  {"last",            keyfile_last},
   {NULL, NULL}
 };
 
@@ -758,8 +937,8 @@ static void createmeta (lua_State *L) {  /* new 7.11.2 */
   luaL_newmetatable(L, AGENA_KEYFILELIBNAME);
   lua_pushvalue(L, -1);
   lua_setfield(L, -2, "__index");
-  luaL_register(L, NULL, keyfile);                 
-  luaL_register(L, NULL, keyfile_meta);            
+  luaL_register(L, NULL, keyfile);
+  luaL_register(L, NULL, keyfile_meta);
 }
 
 LUALIB_API int luaopen_keyfile (lua_State *L) {

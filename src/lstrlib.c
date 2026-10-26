@@ -1331,6 +1331,7 @@ static void changemodito (char *form, char chr) {  /* 2.10.0 */
 /* See: GNU C Library/Setting-the-Locale.html#index-setlocale, 2.10.0 */
 static void numcurlocale (lua_State *L, char *buff, char *form, int arg, char from, char to) {
   char *old_locale, *saved_locale;
+  double num_val = (double)agn_checknumber(L, arg);  /* 7.11.6 security fix against invalid arguments */
   /* get the name of the current locale */
   old_locale = setlocale(LC_ALL, NULL);
   /* copy the name so it won’t be clobbered by setlocale */
@@ -1344,7 +1345,7 @@ static void numcurlocale (lua_State *L, char *buff, char *form, int arg, char fr
   changemodito(form, to);
   setlocale(LC_ALL, "");
   if (from == 'n')
-    sprintf(buff, form, (double)agn_checknumber(L, arg));
+    sprintf(buff, form, num_val);
   else {
     int isnumber = lua_isnumber(L, arg);
     changespec(form, isnumber);
@@ -4205,105 +4206,57 @@ static int str_diffs (lua_State *L) {
 }
 
 
-/* Table of characters: decimal, hex, character
-  65, 41 a  66, 42 b  67, 43 c  68, 44 d  69, 45 e  70, 46 f  71, 47 g
-  72, 48 h  73, 49 i  74, 4A j  75, 4B k  76, 4C l  77, 4D m  78, 4E n
-  79, 4F o  80, 50 p  81, 51 q  82, 52 r  83, 53 s  84, 54 t  85, 55 u
-  86, 56 v  87, 57 w  88, 58 x  89, 59 y  90, 5A z
-
-   Phonetic mapping (not downward-compatible to Soundex since w is regarded a vowel there):
-
-   'a', 'e', 'i', 'o', 'u', 'y', 'h', diacritics -> '#'
-   'b', 'p'                                      -> 'P'
-   'f', 'v', 'w'                                 -> 'F'
-   'd', 't'                                      -> 'T'
-   'm', 'n'                                      -> 'N'
-   'l'                                           -> 'L'
-   'r'                                           -> 'R'
-   'j'                                           -> 'J'
-   'c', 'k', 'q', 'g'                            -> 'K'
-   's', 'z', 'x'                                 -> 'S' */
-
-static unsigned char phQmap[256] = {
-   0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,  /* 0 .. 7*/
-   0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,  /* 8 .. 15 */
-   0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,  /* 16 .. 23 */
-   0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,  /* 24 .. 31 */
-   0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27,  /* 32 .. 39 */
-   0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f,  /* 40 .. 47 */
-   0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,  /* 48 .. 55 */
-   0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f,  /* 56 .. 63 */
-   0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47,  /* 64 .. 71 */
-   0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f,  /* 72 .. 79 */
-   0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57,  /* 80 .. 87 */
-   0x58, 0x59, 0x5a, 0x5b, 0x5c, 0x5d, 0x5e, 0x5f,  /* 88 .. 95 */
-   0x60, 0x23, 0x50, 0x4b, 0x54, 0x23, 0x46, 0x4b,  /* 96 .. 103 */
-/* 096`  097a  098b  099c  100d  101e  102f  103g */
-   0x23, 0x23, 0x4a, 0x4b, 0x4c, 0x4e, 0x4e, 0x23,  /* 104 .. 111 */
-/* 104h  105i  106j  107k  108l  109m  110n  111o */
-   0x50, 0x4b, 0x52, 0x53, 0x54, 0x23, 0x46, 0x46,  /* 112 .. 119 */
-/* 112p  113q  114r  115s  116t  117u  118v  119w */
-   0x53, 0x23, 0x53, 0x7b, 0x7c, 0x7d, 0x7e, 0x7f,  /* 120 .. 127 */
-/* 120x  121y  122z  123{  124|  125}  126~  127¦ */
-   0x40, 0x23, 0x23, 0x23, 0x23, 0x23, 0x23, 0x40,  /* 128 .. 135 */
-/* 128Ç  129ü  130é  131â  132ä  133à  134å  135ç */
-   0x23, 0x23, 0x23, 0x23, 0x23, 0x23, 0x23, 0x23,  /* 136 .. 143 */
-/* 136ê  137ë  138è  139ï  140î  141ì  142Ä  143Å */
-   0x23, 0x23, 0x23, 0x23, 0x23, 0x23, 0x23, 0x23,  /* 144 .. 151 */
-/* 144É  145æ  146Æ  147ô  148ö  149ò  150û  151ù */
-   0x23, 0x23, 0x23, 0x23, 0x9c, 0x9d, 0x9e, 0x9f,  /* 152 .. 159 */
-/* 152ÿ  153Ö  154Ü  155ø  156£  157Ø  158×  159ƒ */
-   0x23, 0x23, 0x23, 0x23, 0xa4, 0xa5, 0xa6, 0xa7,  /* 160 .. 167 */
-/* 160á  161í  162ó  163ú  164ñ  165Ñ  166ª  167º */
-   0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf,  /* 168 .. 175 */
-/* 168¿  169®  170¬  171½  172¼  173¡  174«  175» */
-   0xb0, 0xb1, 0xb2, 0xb3, 0xb4, 0x23, 0x23, 0x23,  /* 176 .. 183 */
-/* 176¦  177¦  178¦  179¦  180¦  181Á  182Â  183À */
-   0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe, 0xbf,  /* 184 .. 191 */
-/* 184©  185¦  186¦  187+  188+  189¢  190¥  191+ */
-   0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0x23, 0x23,  /* 192 .. 199 */
-/* 192+  193-  194-  195+  196-  197+  198ã  199Ã */
-   0xc8, 0xc9, 0xca, 0xcb, 0xcc, 0xcd, 0xce, 0xcf,  /* 200 .. 207 */
-/* 200+  201+  202-  203-  204¦  205-  206+  207¤ */
-   0xe8, 0xe8, 0x23, 0x23, 0x23, 0x23, 0x23, 0x23,  /* 208 .. 215 */
-/* 208ð  209Ð  210Ê  211Ë  212È  213i  214Í  215Î */
-   0x23, 0xd9, 0xda, 0xdb, 0xdc, 0xdd, 0x23, 0xdf,  /* 216 .. 223 */
-/* 216Ï  217+  218+  219¦  220_  221¦  222Ì  223¯ */
-   0x23, 0x53, 0x23, 0x23, 0x23, 0x23, 0xe6, 0xe8,  /* 224 .. 231 */
-/* 224Ó  225ß  226Ô  227Ò  228õ  229Õ  230µ  231þ */
-   0xe8, 0x23, 0x23, 0x23, 0x23, 0x23, 0xee, 0xef,  /* 232 .. 239 */
-/* 232Þ  233Ú  234Û  235Ù  236ý  237Ý  238¯  239´ */
-   0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7,  /* 240 .. 247 */
-/* 240­  241±  242=  243¾  244¶  245§  246÷  247¸ */
-   0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff   /* 248 .. 255 */
-/* 248°  249¨  250·  251¹  252³  253²  254¦  255 */
-};
-
-
-static int str_phonetiqs (lua_State *L) {  /* October 18, 2008; extended 2.4.5, March 09, 2015 */
-  size_t l, i, pos;
-  int maxlen, novowels;
-  unsigned char c;
-  const char *str;
-  char *result;
-  str = agn_checklstring(L, 1, &l);
-  novowels = agnL_optboolean(L, 2, 1);
-  maxlen = luaL_optinteger(L, 3, l);
-  if (maxlen < 1 || maxlen > l)
-    luaL_error(L, "Error in " LUA_QS ": second argument %d is out-of-range.", "strings.phonetiqs", maxlen);
-  result = agn_stralloc(L, l, "strings.phonetiqs", NULL);  /* 2.16.5 change */
-  for (i=0; i < l; i++)
-    result[i] = phQmap[uchar(str[i])];
-  result[i] = '\0';
-  pos = 0;
-  /* this is faster than comparing and inserting a value into the array in only one loop */
-  for (i=1; i < l; i++) {
-    c = result[i];
-    if (((novowels && c != '#') || !novowels) && (c != result[i - 1])) result[++pos] = c;
+/* Returns the number of differences between two strings s, t: substitutions, transpositions, insertions and deletions.
+   It is around 45 percent faster than `strings.dleven`, and has O(1) vs. O(min(N, M)) memory complexity, but because it 
+   looks ahead only one character, it can easily get stuck or miscount edits on complex string differences where 
+   the Levenshtein algorithm would find the mathematically optimal shortest path.
+   Originally written July 24, 2007. Published 7.11.6 */
+static int str_var (lua_State *L) {
+  int i, j, last, result, noffsets;
+  size_t nstr1, nstr2;
+  const char *str1 = agn_checklstring(L, 1, &nstr1);
+  const char *str2 = agn_checklstring(L, 2, &nstr2);
+  const int minNumber = luaL_optint(L, 3, 3);
+  const int AllowedDiffs = luaL_optint(L, 4, 1);
+  if (nstr1 < minNumber || nstr2 < minNumber) {
+    lua_pushinteger(L, AllowedDiffs + 1);
+    return 1;
   }
-  result[++pos] = '\0';
-  lua_pushlstring(L, result, (pos < maxlen) ? pos : maxlen);
-  xfree(result);
+  last = (nstr1 > nstr2) ? nstr2 : nstr1;
+  i = j = noffsets = result = 0;
+  while (i < last && j < last) {  /* both i and j must be checked ! Invalid subscripts and crashes otherwise */
+    if (uchar(str1[i]) != uchar(str2[j])) {
+      result++;
+      if (uchar(str1[i+1]) == uchar(str2[j]) && uchar(str1[i]) == uchar(str2[j+1])) {
+        /* transposition */
+        i += 2;
+        j += 2;
+        continue;
+      }
+      else if (uchar(str1[i+1]) == uchar(str2[j])) {
+        /* insertion */
+        i += 2;
+        j++;
+        noffsets++;
+        continue;
+      }
+      else if (uchar(str1[i]) == uchar(str2[j+1])) {
+        /* deletion */
+        i++;
+        j += 2;
+        noffsets++;
+        continue;
+      }
+      else if (uchar(str1[i+1]) == uchar(str2[j+1])) {
+        /* substitution */
+        i += 2;
+        j += 2;
+        continue;
+      }
+    }
+    i++; j++;
+  }
+  lua_pushnumber(L, result + ((nstr1 - nstr2 == 0) ? 0 : abs(nstr1 - nstr2) - noffsets));
   return 1;
 }
 
@@ -6468,7 +6421,6 @@ static int str_jaro (lua_State *L) {
   }
   match_distance = MAX(l1, l2) / 2 - 1;
   if (match_distance < 0) match_distance = 0;
-
   s1_matches = bitfield_new(L, l1, 0);
   s2_matches = bitfield_new(L, l2, 0);
   matches = 0;
@@ -6760,7 +6712,7 @@ static int mt_sub (lua_State *L) {  /* new 7.11.0 */
 }
 
 
-static const luaL_Reg strmetals[] = {
+static const luaL_Reg strmeta[] = {
   {"__mul",    mt_mul},
   {"__mod",    mt_mod},
   {"__intdiv", mt_intdiv},
@@ -6875,7 +6827,6 @@ static const luaL_Reg strlib[] = {
   {"obfusxor", str_obfusxor},             /* added on January 29, 2024 */
   {"pack", str_pack},
   {"packsize", str_packsize},
-  {"phonetiqs", str_phonetiqs},           /* added on March 09, 2015 */
   {"random", str_random},                 /* added on December 15, 2018 */
   {"remove", str_remove},                 /* added on April 10, 2009 */
   {"repeat", str_repeat},
@@ -6919,6 +6870,7 @@ static const luaL_Reg strlib[] = {
   {"unpack", str_unpack},
   {"unwrap", str_unwrap},                 /* added on April 29, 2023 */
   {"upper", str_upper},                   /* added on October 11, 2024 */
+  {"var", str_var},                       /* added on October 24, 2026 */
   {"walker", str_walker},                 /* added on February 10, 2023 */
   {"words", str_words},                   /* added on April 07, 2009 */
   {"wrap", str_wrap},                     /* added on November 25, 2016 */
@@ -6929,7 +6881,7 @@ static const luaL_Reg strlib[] = {
 static void createmetatable (lua_State *L) {
   lua_createtable(L, 0, 9);        /* Allocate space for __index + 8 operators */
   /* Register all metamethod operators at once */
-  luaL_register(L, NULL, strmetals); 
+  luaL_register(L, NULL, strmeta);
   /* Set the string library table as the __index */
   lua_pushvalue(L, -2);            /* Copy string library table to top */
   lua_setfield(L, -2, "__index");  /* Metatable.__index = strlib */
@@ -6937,7 +6889,7 @@ static void createmetatable (lua_State *L) {
   lua_pushliteral(L, "");          /* Push dummy string */
   lua_pushvalue(L, -2);            /* Copy metatable to top */
   lua_setmetatable(L, -2);         /* Set string metatable */
-  lua_pop(L, 2);                   /* Pop dummy string and metatable */
+  lua_pop(L, 1);                   /* Pop metatable */
 }
 
 /*

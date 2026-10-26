@@ -8,14 +8,17 @@
 #
 # Run in ../testall folder, `./logs` must be an existing folder:
 # drmemory -no_check_uninitialized -logdir ./logs -suppress ..\src\drmemory.cfg -debug -brief -- ..\src\agena.exe
+# cmd /c "cd /d "C:\Program Files (x86)\Dr. Memory\bin" && drmemory.exe -no_check_uninitialized -logdir C:\agena\testall\logs -suppress C:\agena\src\drmemory.cfg -brief -- C:\agena\src\agena.exe"
 # See src/drmemory.cfg for more info on the call to Dr. Memory.
 
 # Compiling 32-bit Agena on msys2:
+# You may have to put "c:\msys\1.0\bin" in front of PATH, both user and system.
 # make clean && make config && make mingw -j4
 # make -f makefile.pluswin clean
 # make -f makefile.pluswin
 
 # Compiling 64-bit Agena on msys2:
+# You may have to put "c:\msys64\ucrt64\bin" in front of PATH, both user and system.
 # make clean && make config && make msys64 -j4
 # make -f makefile.pluswin clean
 # make -f makefile.pluswin
@@ -44,7 +47,7 @@ MYLDFLAGS=
 MYLIBS= -lz -lexpat -lmpfr -lpcre2-posix -lpcre2-8
 
 WINSYSLIBS= -lole32 -luuid -lgdi32 -lpowrprof -lnetapi32 -lkernel32 -lpsapi \
-            -lversion -lsetupapi -liphlpapi -lmpr -lws2_32 -lmswsock -lm -lshell32
+            -lversion -lsetupapi -liphlpapi -lmpr -lws2_32 -lmswsock -lm
 
 SOLSYSLIBS= -lm -lc -lreadline -lcurses -lkstat -lsocket -lnsl \
             -lpcre2-posix -lpcre2-8 -lz -lexpat -liconv -lrt \
@@ -205,20 +208,6 @@ Darwin macos macosx:
 		-framework CoreFoundation" \
 	MYLDFLAGS="-Wl,-force_cpusubtype_ALL -mmacosx-version-min=10.4"
 
-mingwold:
-	windres agena.rc -O coff -o agena.res
-	windres -I .. run.rc -O coff -o run.res
-	$(MAKE) "WINLUA_A=agena.dll" "WINLUA_T=agena.exe" \
-	"CC=$(CC)" \
-	"AR=$(CC) -shared -static-libgcc -o" \
-	"RANLIB=strip --strip-unneeded" \
-	"MYCFLAGS=-O3 -Wall -Wno-attributes -Wno-deprecated-declarations -fgnu89-inline \
-		-DWIN32_LEAN_AND_MEAN -DLUA_BUILD_AS_DLL -D_FILE_OFFSET_BITS=64 -DPCRE2_CODE_UNIT_WIDTH=8" \
-	"MYLIBS=$(MYLIBS) agena.res" \
-	"LIBS=$(MYLIBS) $(WINSYSLIBS)" \
-	"MYLDFLAGS=-s -Wl,--large-address-aware" agena.exe
-	$(CC) -mwindows -static -static-libgcc -o run.exe -s -Wl,--large-address-aware run.c run.res
-
 check-memory: agena.exe
 	@# If it is a 32-bit machine, verify it has the 0x032f or 0x0020 flag active
 	@if objdump -p agena.exe | grep -q "32bit machine" && ! objdump -p agena.exe | grep -q "Characteristics 0x32f"; then \
@@ -260,6 +249,7 @@ msys64:
 
 
 # Run this for analysis with Dr. Memory only. Change back to make mingw before deploying.
+# We will not use -Wl,--large-address-aware as this will make Dr. Memory fail.
 drmem:
 	windres agena.rc -O coff -o agena.res
 	windres -I .. run.rc -O coff -o run.res
@@ -270,7 +260,7 @@ drmem:
 		-DWIN32_LEAN_AND_MEAN -DLUA_BUILD_AS_DLL -D_FILE_OFFSET_BITS=64 -DPCRE2_CODE_UNIT_WIDTH=8" \
 	"MYLIBS=$(MYLIBS) agena.res" \
 	"LIBS=$(MYLIBS) $(WINSYSLIBS)" \
-	"MYLDFLAGS=-g3 -static-libgcc -Wl,--large-address-aware" agena.exe
+	"MYLDFLAGS=-g3 -static-libgcc" agena.exe
 
 mingwsse:
 	windres agena.rc -O coff -o agena.res

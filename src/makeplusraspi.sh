@@ -12,7 +12,8 @@ export EXPORTTO="../lib"
 for i in abci.o ads.o aspell.o astro.o charbuf.o com.o cordic.o curses.o \
     dcastro.o double.o fastmath.o fractals.o gmp.o iconv.o interp.o \
     luasys.o miniz.o minizip.o moon.o mpfr.o net.o phq.o skycrane.o \
-    sqlite.o sqlite3.o sunriset.o testlib.o zx.o strhash.o strmap.o
+    sqlite.o sqlite3.o sunriset.o testlib.o zx.o strhash.o strmap.o \
+    phones.o
 
 do
   if [ -f "$i" ]; then
@@ -131,13 +132,11 @@ strip net.so
 mv -f net.so $EXPORTTO
 printf "done.\n"
 
-if [ -f ../phq/phq.c ]; then
-   printf "Compiling phonetiQs ... "
-   gcc $OPTIONS -o phq.so ../phq/phq.c
-   strip phq.so
-   mv -f phq.so ../phq
-   printf "done.\n"
-fi
+printf "Compiling phones ... "
+gcc $OPTIONS -o phones.so phones.c
+strip phones.so
+mv -f phones.so $EXPORTTO
+printf "done.\n"
 
 printf "Compiling skycrane ... "
 gcc $OPTIONS -o skycrane.so skycrane.c

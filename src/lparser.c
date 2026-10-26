@@ -1016,7 +1016,7 @@ static void dataconstructor (LexState *ls, expdesc *t) {  /* 2.9.3 */
         break;
       }
       flag = 0;
-      if (ls->t.token == ',') { luaX_next(ls); continue; } /* ignore commata */
+      if (ls->t.token == ',') { luaX_next(ls); continue; } /* ignore commas */
       closelistfield(fs, &cc, 0);  /* also flushes list after LFIELDS_PER_FLUSH fields */
       if (luaX_lookahead(ls) == TK_SEP) {
         dataitem(ls, &cc);
@@ -1031,7 +1031,7 @@ static void dataconstructor (LexState *ls, expdesc *t) {  /* 2.9.3 */
     do {
       lua_assert(cc.v.k == VVOID || cc.tostore > 0);
       if (ls->t.token == TK_ATAD) break;
-      if (ls->t.token == ',') { luaX_next(ls); continue; } /* ignore commata */
+      if (ls->t.token == ',') { luaX_next(ls); continue; } /* ignore commas */
       closelistfield(fs, &cc, 0);  /* also flushes list after LFIELDS_PER_FLUSH fields */
       dataitem(ls, &cc);
     } while (1);
@@ -1057,7 +1057,7 @@ static void seqdataconstructor (LexState *ls, expdesc *t) {  /* 2.10.0 */
   do {
     lua_assert(cc.v.k == VVOID || cc.tostore > 0);
     if (ls->t.token == TK_SEQDATAEND) break;
-    if (ls->t.token == ',') { luaX_next(ls); continue; } /* ignore commata */
+    if (ls->t.token == ',') { luaX_next(ls); continue; } /* ignore commas */
     closelistfield(fs, &cc, 0);
     seqdataitem(ls, &cc);
   } while (1);
@@ -3574,7 +3574,7 @@ static void localstat (LexState *ls, int mode) {
       }
       removevars(ls, with_var);  /* release table, but don't drop it, it is still on the stack */
       return;
-    } else {  /* finalise declaration, 7.7.1 fix so that statement can be completed without an explict semicolon */
+    } else {  /* finalise declaration, 7.7.1 fix so that statement can be completed without an explicit semicolon */
       e.k = VVOID;
       nexps = 0;
     }

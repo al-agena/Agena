@@ -1350,19 +1350,21 @@ LUALIB_API double tools_time (void);
  * an array of two elements, where the first element is the real part
  * and the second element is the imaginary part.
  */
+
+/* 7.11.6, changed from "complex" to "__complex__" so that AgenaEdit will compile with FLTK 1.4.5 */
 #ifndef PROPCMPLX
 typedef union {
-  float complex f;
+  float __complex__ f;
   float a[2];
 } float_complex;
 
 typedef union {
-  agn_Complex f;
+  double __complex__ f;
   double a[2];
 } double_complex;
 
 typedef union {
-  long agn_Complex f;
+  long double __complex__ f;
   long double a[2];
 } long_double_complex;
 
@@ -1395,21 +1397,22 @@ typedef union {
 #else /* define our own cpack functions */
 
 /* Do NOT use INLINE macro as this causes trouble in OpenSUSE 10.3 and Mac OS X */
-static __inline float complex cpackf (float x, float y) {
+/* 7.11.6, changed from "complex" to "__complex__" so that AgenaEdit will compile with FLTK 1.4.5 */
+static __inline float __complex__ cpackf (float x, float y) {
   float_complex z;
   REALPART(z) = x;
   IMAGPART(z) = y;
   return z.f;
 }
 
-static __inline agn_Complex cpack (double x, double y) {  /* equals Sun's CMPLX alias */
+static __inline __complex__ cpack (double x, double y) {  /* equals Sun's CMPLX alias */
   double_complex z;
   REALPART(z) = x;
   IMAGPART(z) = y;
   return z.f;
 }
 
-static __inline long agn_Complex cpackl (long double x, long double y) {  /* equals Sun's CMPLXL alias */
+static __inline long __complex__ cpackl (long double x, long double y) {  /* equals Sun's CMPLXL alias */
   long_double_complex z;
   REALPART(z) = x;
   IMAGPART(z) = y;

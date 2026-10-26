@@ -61,7 +61,7 @@ LIB_O=  agnxlib.o lbaselib.o ldblib.o liolib.o lmathlib.o loslib.o ltablib.o lrt
 	regex.o regex_f.o regexcom.o testlib.o double.o rbtree.o vecint.o bimaps.o jbmath.o \
 	ival.o miniz.o minizip.o fifo.o lifo.o trie.o ints.o dblhash.o numcuckoo.o numfilter.o dcastro.o \
 	dd.o ddmath.o pbl.o pblhash.o pblkf.o keyfile.o abci.o strhash.o strmap.o intmap.o uintmap.o \
-	dblmap.o divsufsort.o sssort.o trsort.o suffix.o binpack.o
+	dblmap.o divsufsort.o sssort.o trsort.o suffix.o binpack.o phones.o
 
 LUA_T=  agena.exe
 LUA_O=  agena.o
@@ -240,7 +240,6 @@ linalg.o: linalg.c agena.h agnxlib.h agenalib.h
 stats.o: stats.c cephes.h jbmath.h agena.h agnxlib.h agenalib.h
 combinat.o: combinat.c agena.h agnxlib.h agenalib.h
 numtheory.o: numtheory.c agena.h agnxlib.h agenalib.h
-#phq.o: phq.c agena.h agnxlib.h agenalib.h utils.h
 ival.o:	ival.c agena.h agnxlib.h agnhlps.h agenalib.h
 ints.o:	ints.c agena.h agnxlib.h agnhlps.h agenalib.h
 mapm.o:	mapm.c agena.h agnxlib.h agenalib.h m_apm.h
@@ -251,6 +250,7 @@ gzip.o:	gzip.c agena.h agnxlib.h agenalib.h
 llist.o:	llist.c agena.h agnxlib.h agenalib.h
 cordic.o:	cordic.c agena.h agnxlib.h agenalib.h
 hashes.o:	hashes.c agena.h agnxlib.h agenalib.h
+phones.o: phones.c agena.h agnxlib.h agenalib.h
 numarray.o:	numarray.c agena.h agnxlib.h agenalib.h agnhlps.h
 registry.o: registry.c agena.h agnxlib.h agenalib.h agncmpt.h
 stack.o: stack.c agena.h agnxlib.h agenalib.h
