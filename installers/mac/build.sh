@@ -104,6 +104,8 @@ cp $AGENAHOME/lib/mpfr.agn $AGENATARGET_USR/agena/lib
 cp $AGENAHOME/lib/mpfr.so $AGENATARGET_USR/agena/lib
 cp $AGENAHOME/lib/net.agn $AGENATARGET_USR/agena/lib
 cp $AGENAHOME/lib/net.so $AGENATARGET_USR/agena/lib
+cp $AGENAHOME/lib/phones.agn $AGENATARGET_USR/agena/lib
+cp $AGENAHOME/lib/phones.so $AGENATARGET_USR/agena/lib
 cp $AGENAHOME/lib/sqlite.so $AGENATARGET_USR/agena/lib
 cp $AGENAHOME/lib/strhash.so $AGENATARGET_USR/agena/lib
 cp $AGENAHOME/lib/strmap.so $AGENATARGET_USR/agena/lib
