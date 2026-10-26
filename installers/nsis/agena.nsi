@@ -8,9 +8,9 @@ Unicode True
 
 !ifndef VERSION
   !define VER_MAJOR '7'
-  !define VER_MINOR '11'
-  !define VER_REVISION '4'
-  !define NICKNAME "Despina"
+  !define VER_MINOR '12'
+  !define VER_REVISION '0'
+  !define NICKNAME "Kerberos"
   !define VERSION '${VER_MAJOR}.${VER_MINOR}.${VER_REVISION}'
 !endif
 
@@ -1029,6 +1029,21 @@ ${MementoSection} "double" SecPluginsDouble
 
 ${MementoSectionEnd}
 
+
+${MementoSection} "phones" SecPluginsPhones
+
+  SetDetailsPrint both
+  DetailPrint "Installing Soundex and more ..."
+  SetDetailsPrint listonly
+
+  SectionIn 1
+
+  SetOutPath $INSTDIR\lib
+  File ..\..\lib\phones.dll
+  File ..\..\lib\phones.agn
+
+${MementoSectionEnd}
+
 SectionGroupEnd
 
 
@@ -1392,6 +1407,7 @@ SectionEnd
   !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsAbci} "Byte code inspector (see abci.agn for a demo)"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsTestlib} "Reference test functions"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsDouble} "Userdata demonstration"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsPhones} "Soundex and more"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsStrhash} "String hash set"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsStrmap} "String-to-number hash map"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecMisc} "Miscellaneous"
