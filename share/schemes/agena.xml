@@ -743,6 +743,7 @@
       <KEYWORD3>strings.unwrap</KEYWORD3>
       <KEYWORD3>strings.upper</KEYWORD3>
       <KEYWORD3>strings.utf8size</KEYWORD3>
+      <KEYWORD3>strings.var</KEYWORD3>
       <KEYWORD3>strings.walker</KEYWORD3>
       <KEYWORD3>strings.words</KEYWORD3>
       <KEYWORD3>strings.wrap</KEYWORD3>
@@ -3502,13 +3503,18 @@
       <KEYWORD3>numfilter.hash</KEYWORD3>
       <KEYWORD3>numfilter.include</KEYWORD3>
       <KEYWORD3>numfilter.new</KEYWORD3>
+      <KEYWORD3>keyfile.advance</KEYWORD3>
       <KEYWORD3>keyfile.allkeys</KEYWORD3>
       <KEYWORD3>keyfile.close</KEYWORD3>
       <KEYWORD3>keyfile.commit</KEYWORD3>
       <KEYWORD3>keyfile.count</KEYWORD3>
+      <KEYWORD3>keyfile.current</KEYWORD3>
+      <KEYWORD3>keyfile.exists</KEYWORD3>
+      <KEYWORD3>keyfile.first</KEYWORD3>
       <KEYWORD3>keyfile.has</KEYWORD3>
       <KEYWORD3>keyfile.isopen</KEYWORD3>
       <KEYWORD3>keyfile.iterate</KEYWORD3>
+      <KEYWORD3>keyfile.last</KEYWORD3>
       <KEYWORD3>keyfile.new</KEYWORD3>
       <KEYWORD3>keyfile.open</KEYWORD3>
       <KEYWORD3>keyfile.purge</KEYWORD3>
@@ -3601,9 +3607,16 @@
       <KEYWORD3>aspell.check</KEYWORD3>
       <KEYWORD3>aspell.close</KEYWORD3>
       <KEYWORD3>aspell.config</KEYWORD3>
+      <KEYWORD3>aspell.getdictinfo</KEYWORD3>
+      <KEYWORD3>aspell.list</KEYWORD3>
       <KEYWORD3>aspell.new</KEYWORD3>
       <KEYWORD3>aspell.path</KEYWORD3>
       <KEYWORD3>aspell.suggest</KEYWORD3>
+      <KEYWORD3>phones.getphonetiQs</KEYWORD3>
+      <KEYWORD3>phones.phonetiQs</KEYWORD3>
+      <KEYWORD3>phones.setphonetiQs</KEYWORD3>
+      <KEYWORD3>phones.soundex</KEYWORD3>
+      <KEYWORD3>phones.vowelsymbol</KEYWORD3>
     </KEYWORDS>
   </RULES>
 </MODE>

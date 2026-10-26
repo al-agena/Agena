@@ -1,4 +1,3 @@
-!
 !!
 #
 $
@@ -1772,6 +1771,7 @@ strings.unpack
 strings.unwrap
 strings.upper
 strings.utf8size
+strings.var
 strings.walker
 strings.words
 strings.wrap
@@ -3522,13 +3522,18 @@ numfilter.find
 numfilter.hash
 numfilter.include
 numfilter.new
+keyfile.advance
 keyfile.allkeys
 keyfile.close
 keyfile.commit
 keyfile.count
+keyfile.current
+keyfile.exists
+keyfile.first
 keyfile.has
 keyfile.isopen
 keyfile.iterate
+keyfile.last
 keyfile.new
 keyfile.open
 keyfile.purge
@@ -3619,7 +3624,13 @@ binpack.unpack
 aspell.check
 aspell.close
 aspell.config
+aspell.getdictinfo
+aspell.list
 aspell.new
 aspell.path
 aspell.suggest
-
+phones.getphonetiqs
+phones.phonetiqs
+phones.setphonetiqs
+phones.soundex
+phones.vowelsymbol

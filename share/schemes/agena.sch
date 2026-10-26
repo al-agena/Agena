@@ -128,9 +128,9 @@ object TPersHolder
             'isfractional,isgraph,ishex,isintegral,isisoalpha,isisolower,isisoprint,isisospace,isisoupper,islatin,islatinnumeric,' +
             'isloweralpha,islowerlatin,ismagic,ismultibyte,isnumber,isnumberspace,isnumeric,ispattern,isprintable,isspace,isspec,isstarting,' +
             'isupperalpha,isupperlatin,isutf8,isvowel,iswrapped,itouni,jaro,join,le,lcs,leven,ljustify,lower,lt,ltrim,match,matches,mfind,' +
-            'neq,ngrams,obfusxor,pack,packsize,random,repeat,replace,reverse,rjustify,rotateleft,rotateright,rtrim,seek,separate,shannon,' +
-            'strcoll,strcmp,strcspn,strftime,stricmp,strlen,strncmp,strnstr,strptime,strspn,strstr,strtoul,strverscmp,strxfrm,sub,subs,' +
-            'tobytes,tochars,tolatin,tonumber,toutf8,transform,trim,uncapitalise,unique,unpack,unwrap,upper,utf8size,walker,words,wrap,' +
+            'neq,ngrams,obfusxor,pack,packsize,phonetiqs,random,repeat,replace,reverse,rjustify,rotateleft,rotateright,rtrim,seek,separate,shannon,' +
+            'soundex,strcoll,strcmp,strcspn,strftime,stricmp,strlen,strncmp,strnstr,strptime,strspn,strstr,strtoul,strverscmp,strxfrm,sub,subs,' +
+            'tobytes,tochars,tolatin,tonumber,toutf8,transform,trim,uncapitalise,unique,unpack,unwrap,upper,utf8size,var,walker,words,wrap,' +
             'wrapmissing'
         end
         item
@@ -310,7 +310,7 @@ object TPersHolder
           FontID = 7
           Name = 'aspell'
           Keywords =
-            'aspell,check,close,config,new,path,suggest'
+            'aspell,check,close,config,getdictinfo,list,new,path,suggest'
         end
         item
           FontID = 7
@@ -563,7 +563,7 @@ object TPersHolder
           FontID = 7
           Name = 'keyfile'
           Keywords =
-            'keyfile,allkeys,close,commit,count,has,isopen,iterate,new,open,purge,read,start,sync,update,write'
+            'keyfile,advance,allkeys,close,commit,count,current,exists,first,has,isopen,iterate,last,new,open,purge,read,start,sync,update,write'
         end
         item
           FontID = 7
@@ -792,6 +792,12 @@ object TPersHolder
           Name = 'dblmap'
           Keywords =
             'dblmap,attrib,cleanse,getitem,has,include,iterate,new,purge,remap,resize,totable'
+        end
+        item
+          FontID = 7
+          Name = 'phones'
+          Keywords =
+            'phones,getphonetiQs,phonetiQs,setphonetiQs,soundex,vowelsymbol'
         end
         item
           FontID = 7

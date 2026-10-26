@@ -160,7 +160,7 @@ object TPersHolder
             'luaH_mainposition,luaH_next,agnH_nops,agnH_purge,agnH_readonly,agnH_reorder,agnH_rotatebottom,agnH_rotatetop,' +
             'luaH_set,luaH_setnum,luaH_setstr,agnH_subs,agnL_checkboolean,agnL_checkint,' +
             'agnL_checkinteger,lua_checkinteger,agnL_checknumber,agnL_checkoption,agnL_createpairofnumbers,agnL_datetosecs,agnL_debuginfo,' +
-            'agnL_debuginfo2,agnL_fillarray,agnL_fncall,agnL_fncallx,agnL_fneps,agnL_fnunicall,agnL_geti,agnL_getmetafield,' +
+            'agnL_debuginfo2,agnL_debuginfo3,agnL_fillarray,agnL_fncall,agnL_fncallx,agnL_fneps,agnL_fnunicall,agnL_geti,agnL_getmetafield,' +
             'agnL_getsetting,agnL_gettablefield,agnL_gettop,agnL_initialise,agnL_iscallable,agnL_isdlong,agnL_islinalgvector,' +
             'agnL_isvalidpattern,agnL_onexit,agnL_optboolean,agnL_optint32_t,agnL_optinteger,agnL_optnonnegative,' +
             'agnL_optnonnegint,agnL_optnumber,agnL_optoff64_t,agnL_optposint,agnL_optpositive,agnL_optstring,agnL_optuint32_t,' +
