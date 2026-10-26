@@ -1,0 +1,17 @@
+package.checkclib('phones');  # has C dynamic link library been found ?
+
+phones.initstring := 'phones v1.0.0 as of October 25, 2026\n';
+
+scope  # inject `phones` package functions into the global strings metatable
+   if getmetatable :: procedure then  # protect against sandboxing
+      local _mt := getmetatable('')..__index;
+      # get the global strings metatable safely via `..` indexing
+      if assigned _mt then
+         for i, j in phones do
+            _mt[i] := j
+         od
+      fi
+   fi
+end;
+
+

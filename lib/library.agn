@@ -9110,7 +9110,6 @@ clock.todec := proc(x :: tm) is
 end;
 
 
-
 # converts a float or `tm` value into its sexagesimal string representation of the format hh:mm:ss, 1.12.0 u1.
 clock.sgstr := proc(x, d) is
    local rtm, str;

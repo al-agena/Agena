@@ -966,7 +966,7 @@ fractals.dragon := proc(p :: nonnegint) is
       x     := x1;
       y     := y1
    end;
-   # integrating the follwoing in the loop above gives a 0.002 % increase in speed only.
+   # integrating the following in the loop above gives a 0.002 % increase in speed only.
    xmin, ymin -> infinity; xmax, ymax -> -infinity;
    for i in ps do
       if i[1] < xmin then xmin := i[1] fi;
