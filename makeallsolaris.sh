@@ -1,6 +1,18 @@
 #!/usr/bin/sh
+
+# ====================================================================
+# PERMANENT SYSTEM OVERRIDES (Forces correct binaries via PATH)
+# ====================================================================
+
+PATH=/buildpool/gcc-9/bin:/usr/local/bin:/usr/bin:/usr/sbin:/usr/ccs/bin
+export PATH
+
+LDFLAGS="-Wl,-m,elf_i386_solaris"
+export LDFLAGS
+
 cd src
-sh makesolaris.sh
+# Run using the dot (.) command so the sub-script inherits our PATH wrappers perfectly
+. ./makesolaris.sh
 cp libagena.* /usr/local/lib
 cd ..
 cd ports
@@ -43,4 +55,3 @@ cd ../fltk-1.3.8/editor
 make clean
 make
 cd ../../agena
-

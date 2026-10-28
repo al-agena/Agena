@@ -3,6 +3,7 @@
 # you may have to change file permissions before compilation:
 # chmod -R 755 .
 # chown -R <username> .
+# This script is to be run in the `root` agena folder.
 
 cd src
 sh makestretch.sh
@@ -32,7 +33,7 @@ cd gdi
 make -f makefile.stretch64 clean
 make -f makefile.stretch64
 make -f makefile.stretch64 install
-cd ../../../../fltk-1.4.4/editor
-make clean
-make
+cd ../../../../fltk-1.4.5/editor
+make -f Makefile.debian64 clean
+make -f Makefile.debian64
 cd ../..

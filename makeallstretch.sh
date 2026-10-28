@@ -58,7 +58,7 @@ cd gdi
 make -f makefile.stretch clean
 make -f makefile.stretch
 make -f makefile.stretch install
-cd ../../../../fltk-1.4.4/editor
+cd ../../../../fltk-1.4.5/editor
 make clean
 make
 cd ../..
