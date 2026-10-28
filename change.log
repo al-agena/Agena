@@ -1,3 +1,38 @@
+7.12.1 Kerberos, October 28, 2026
+
+- New `strings.remap` takes a string and exchanges every single character in it with another single character. You can define 
+  up to eight mapping tables, all defaulting to an identical 1:1 mapping, that is at start-up 'a' is mapped to 'a', 'A' to 'A', 
+  '1' to '1', '.' to '.', et cetera.
+  
+  The mappings can be queried and changed with `strings.remapconfig`. To change the mapping of 'A' to 'a' in mapping table #1,
+  issue:
+  
+  > strings.remapconfig(1, 'A', 'a');
+  
+  > strings.remapconfig(1, 'A'):
+  a
+  
+  > strings.remap('AgenA', 1):  # with mapping table 1 you can omit the second argument
+  agena
+
+  This solution is around 7 times faster than a solution purely written in Agena.
+
+- For better portability of Lua code to Agena, added the Lua 5.x function `strings.char` which returns a string with length 
+  equal to the number of arguments, in which each character has the internal numerical code equal to its corresponding argument. 
+  The result may vary across platforms.
+
+- New `strings.issplit` checks whether a string is distributed over two or more memory pages.
+
+- `phones.soundex` has been tuned by more than 33 %.
+
+- With strings, the pretty-printer no longer cuts off the output after the first embedded zero. Instead it prints embedded
+  zeros as '\\0', no longer mutilating the output.
+
+- `astro.locate` in some cases could not find its database files. This has been fixed.
+
+- Proactively improved security a bit in some underlying functions.
+
+
 7.12.0 Kerberos, October 25, 2026
 
 - The new `phones` package encodes words phonetically:
