@@ -3385,6 +3385,7 @@ environ.aux.printaux := proc(x, obj, m, escape) is  # modified and extended 2.20
          of number then
             memfile.append(m, x)
          of string then
+            x := replace(x, '\0', '\\0');  # 7.12.1 fix for embedded zeros
             if escape then
                memfile.append(m, tostringx(x, true))
             elif environ.aux.printenclosestrings :: string then
@@ -3396,7 +3397,7 @@ environ.aux.printaux := proc(x, obj, m, escape) is  # modified and extended 2.20
             elif environ.kernel('encloseback') then
                memfile.append(m, '\`' & x & '\`')
             else
-               memfile.append(m, x)
+               memfile.append(m, x);
             fi
          of 'null', boolean then
             memfile.append(m, tostring(x))

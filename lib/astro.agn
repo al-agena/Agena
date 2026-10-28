@@ -269,7 +269,7 @@ astro.aux.getdatapath := proc(pn :: string) is
    local path := os.findinpath(os.getmodulefilename(), 'data/cities.dbf', true);  # changed 7.11.3/4
    if unassigned path then  # use old locator method, 7.11.4
       for i from size mainlibname downto 1 while mainlibname[i] <> '/' do od;
-      path := mainlibname[1 to i] & 'data' & '/';
+      path := mainlibname[1 to i] & 'data';  # 7.12.1 fix: do not append trailing slash
       if not os.exists(path) then
          error('Error in `' & pn & '`: could not find data folder.')
       fi
