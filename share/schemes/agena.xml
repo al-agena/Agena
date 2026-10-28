@@ -615,6 +615,7 @@
       <KEYWORD3>strings.byte</KEYWORD3>
       <KEYWORD3>strings.c2f</KEYWORD3>
       <KEYWORD3>strings.capitalise</KEYWORD3>
+      <KEYWORD3>strings.char</KEYWORD3>
       <KEYWORD3>strings.charmap</KEYWORD3>
       <KEYWORD3>strings.charset</KEYWORD3>
       <KEYWORD3>strings.chomp</KEYWORD3>
@@ -677,6 +678,7 @@
       <KEYWORD3>strings.isprintable</KEYWORD3>
       <KEYWORD3>strings.isspace</KEYWORD3>
       <KEYWORD3>strings.isspec</KEYWORD3>
+      <KEYWORD3>strings.issplit</KEYWORD3>
       <KEYWORD3>strings.isstarting</KEYWORD3>
       <KEYWORD3>strings.isupperalpha</KEYWORD3>
       <KEYWORD3>strings.isupperlatin</KEYWORD3>
@@ -705,6 +707,8 @@
       <KEYWORD3>strings.pack</KEYWORD3>
       <KEYWORD3>strings.packsize</KEYWORD3>
       <KEYWORD3>strings.random</KEYWORD3>
+      <KEYWORD3>strings.remap</KEYWORD3>
+      <KEYWORD3>strings.remapconfig</KEYWORD3>
       <KEYWORD3>strings.remove</KEYWORD3>
       <KEYWORD3>strings.repeat</KEYWORD3>
       <KEYWORD3>strings.reverse</KEYWORD3>

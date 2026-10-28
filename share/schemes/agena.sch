@@ -122,16 +122,16 @@ object TPersHolder
           FontID = 7
           Name = 'strings'
           Keywords =
-            'strings,a64,advance,align,appendmissing,between,bigrams,byte,c2f,capitalise,charmap,charset,chomp,chop,compare,contains,cut,' +
+            'strings,a64,advance,align,appendmissing,between,bigrams,byte,c2f,capitalise,char,charmap,charset,chomp,chop,compare,contains,cut,' +
             'diamap,dice,diffs,dleven,dump,eq,f2c,fields,find,format,fuzzy,ge,glob,gmatch,gmatches,gseparate,gsub,gt,hextodec,hirschberg,hits,' +
             'isalpha,isalphanumeric,isalphaspace,isalphaspec,isascii,isblank,iscenumeric,iscomplex,isconsonant,iscontrol,isdia,isending,' +
             'isfractional,isgraph,ishex,isintegral,isisoalpha,isisolower,isisoprint,isisospace,isisoupper,islatin,islatinnumeric,' +
-            'isloweralpha,islowerlatin,ismagic,ismultibyte,isnumber,isnumberspace,isnumeric,ispattern,isprintable,isspace,isspec,isstarting,' +
-            'isupperalpha,isupperlatin,isutf8,isvowel,iswrapped,itouni,jaro,join,le,lcs,leven,ljustify,lower,lt,ltrim,match,matches,mfind,' +
-            'neq,ngrams,obfusxor,pack,packsize,phonetiqs,random,repeat,replace,reverse,rjustify,rotateleft,rotateright,rtrim,seek,separate,shannon,' +
-            'soundex,strcoll,strcmp,strcspn,strftime,stricmp,strlen,strncmp,strnstr,strptime,strspn,strstr,strtoul,strverscmp,strxfrm,sub,subs,' +
-            'tobytes,tochars,tolatin,tonumber,toutf8,transform,trim,uncapitalise,unique,unpack,unwrap,upper,utf8size,var,walker,words,wrap,' +
-            'wrapmissing'
+            'isloweralpha,islowerlatin,ismagic,ismultibyte,isnumber,isnumberspace,isnumeric,ispattern,isprintable,isspace,isspec,issplit,' +
+            'isstarting,isupperalpha,isupperlatin,isutf8,isvowel,iswrapped,itouni,jaro,join,le,lcs,leven,ljustify,lower,lt,ltrim,' +
+            'match,matches,mfind,neq,ngrams,obfusxor,pack,packsize,phonetiqs,random,remap,remapconfig,repeat,replace,reverse,rjustify,' +
+            'rotateleft,rotateright,rtrim,seek,separate,shannon,soundex,strcoll,strcmp,strcspn,strftime,stricmp,strlen,strncmp,' +
+            'strnstr,strptime,strspn,strstr,strtoul,strverscmp,strxfrm,sub,subs,tobytes,tochars,tolatin,tonumber,toutf8,transform,trim,' +
+            'uncapitalise,unique,unpack,unwrap,upper,utf8size,var,walker,words,wrap,wrapmissing'
         end
         item
           FontID = 7

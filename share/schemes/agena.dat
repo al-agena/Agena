@@ -1642,6 +1642,7 @@ strings.bigrams
 strings.byte
 strings.c2f
 strings.capitalise
+strings.char
 strings.charmap
 strings.charset
 strings.chomp
@@ -1705,6 +1706,7 @@ strings.ispattern
 strings.isprintable
 strings.isspace
 strings.isspec
+strings.issplit
 strings.isstarting
 strings.isupperalpha
 strings.isupperlatin
@@ -1733,6 +1735,8 @@ strings.obfusxor
 strings.pack
 strings.packsize
 strings.random
+strings.remap
+strings.remapconfig
 strings.remove
 strings.repeat
 strings.reverse
