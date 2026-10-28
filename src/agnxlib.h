@@ -174,6 +174,8 @@ LUALIB_API int agnL_newldblarray (lua_State *L, size_t n, const char *procname);
 LUALIB_API void agnL_pushcoeffs (lua_State *L, LongDoubleArray *a, size_t nops, const char *procname);
 LUALIB_API void agnL_pushhex (lua_State *L, int idx, int classic);
 
+LUALIB_API int agnL_getfrommappingtable (lua_State *L, int offset, int tolowercase, const unsigned char *maparray, const char *procname);
+LUALIB_API int agnL_settomappingtable (lua_State *L, int offset, int uppercasetoo, unsigned char *maparray, const char *procname);
 
 /* Some macros, we use agnL_pushvstring only to prevent -Wformat-security warnings about missing format strings in Debian */
 #define agnL_debuginfo(debug, string1) { \

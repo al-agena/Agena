@@ -1235,9 +1235,9 @@ static void addquoted (lua_State *L, luaL_Buffer *b, char *buff, char *form, int
     if (isint) addintlen(form);
     addquote(b, lua);
     if (isint)  /* do NOT contract this into one statement with (isint) ? ... */
-      sprintf(buff, form, (LUA_INTFRM_T)agn_tonumber(L, arg));
+      xsprintf(buff, form, (LUA_INTFRM_T)agn_tonumber(L, arg));
     else
-      sprintf(buff, form, agn_tonumber(L, arg));
+      xsprintf(buff, form, agn_tonumber(L, arg));
     luaL_addstring(b, buff);
     addquote(b, lua);
   } else {
@@ -1345,14 +1345,14 @@ static void numcurlocale (lua_State *L, char *buff, char *form, int arg, char fr
   changemodito(form, to);
   setlocale(LC_ALL, "");
   if (from == 'n')
-    sprintf(buff, form, num_val);
+    xsprintf(buff, form, num_val);
   else {
     int isnumber = lua_isnumber(L, arg);
     changespec(form, isnumber);
     if (isnumber)
-      sprintf(buff, form, (double)agn_tonumber(L, arg));
+      xsprintf(buff, form, (double)agn_tonumber(L, arg));
     else
-      sprintf(buff, form, (double)AGN_NAN);
+      xsprintf(buff, form, (double)AGN_NAN);
   }
   /* restore the original locale */
   setlocale(LC_ALL, saved_locale);
@@ -1378,7 +1378,7 @@ static void monamount (lua_State *L, char *buff, char *form, int arg) {
   else
     changemodito(form, 'f');
   /* snprintf(result, sizeof(result), form, x); */
-  sprintf(result, form, x);
+  xsprintf(result, form, x);
   while (*result_p != '\0' && *result_p != *decpoint) result_p++;
   tail = result + sizeof(result) - result_p;
   c = 0;
@@ -1502,21 +1502,21 @@ static int str_format (lua_State *L) {
       strfrmt = scanformat(L, strfrmt, form);
       switch (*strfrmt++) {
         case 'c': {
-          sprintf(buff, form, (int)agn_checknumber(L, arg));
+          xsprintf(buff, form, (int)agn_checknumber(L, arg));
           break;
         }
         case 'd':  case 'i': {
           addintlen(form);
-          sprintf(buff, form, (LUA_INTFRM_T)agn_checknumber(L, arg));
+          xsprintf(buff, form, (LUA_INTFRM_T)agn_checknumber(L, arg));
           break;
         }
         case 'o': case 'u': case 'x': case 'X': {
           addintlen(form);
-          sprintf(buff, form, (unsigned LUA_INTFRM_T)agn_checknumber(L, arg));
+          xsprintf(buff, form, (unsigned LUA_INTFRM_T)agn_checknumber(L, arg));
           break;
         }
         case 'e': case 'E': case 'f': case 'g': case 'G': {
-          sprintf(buff, form, (double)agn_checknumber(L, arg));
+          xsprintf(buff, form, (double)agn_checknumber(L, arg));
           break;
         }
         case 'l': {  /* 2.33.4, note that in C99 'f' = 'lf' */
@@ -1527,14 +1527,14 @@ static int str_format (lua_State *L) {
             if (tools_streq(form, "%f")) {
               strcpy(form, "%.16f\0");
             } /* maximum length */
-            sprintf(buff, form, (double)agn_checknumber(L, arg));
+            xsprintf(buff, form, (double)agn_checknumber(L, arg));
           } else if (*strfrmt == 'e') {  /* 2.41.2 */
             form[l - 1] = 'e';
             strfrmt++;
             if (tools_streq(form, "%e")) {
               strcpy(form, "%.16e\0");
             } /* maximum length */
-            sprintf(buff, form, (double)agn_checknumber(L, arg));
+            xsprintf(buff, form, (double)agn_checknumber(L, arg));
           } else if (*strfrmt == 'd') {
             form[l - 1] = 'L';
             form[l - 0] = 'F';
@@ -1542,11 +1542,7 @@ static int str_format (lua_State *L) {
             if (tools_streq(form, "%LF")) strcpy(form, "%.19LF\0");  /* maximum length */
             strfrmt++;
             /* long doubles, we have to call __mingw_sprintf in MinGW, as standard sprintf is buggy there */
-#ifdef __MINGW32__
-            __mingw_sprintf(buff, form, checkandgetdlong(L, arg));
-#else
-            sprintf(buff, form, checkandgetdlong(L, arg));
-#endif
+            xsprintf(buff, form, checkandgetdlong(L, arg));
           } else {
             return luaL_error(L,
               "invalid option " LUA_QL("%%%c%c") " to " LUA_QL("format") ".", *(strfrmt - 1), *strfrmt);
@@ -1572,7 +1568,7 @@ static int str_format (lua_State *L) {
           if (getWindowsVersion(&winversion) > MS_WINXP) {
 #endif
             changemodito(form, 'a');
-            sprintf(buff, form, (double)agn_checknumber(L, arg));
+            xsprintf(buff, form, (double)agn_checknumber(L, arg));
 #ifdef _WIN32
           } else {
             return luaL_error(L, /* 2.18.1/2 fix */
@@ -1584,7 +1580,7 @@ static int str_format (lua_State *L) {
         case 'H': {  /* 2.10.0 */
           /* Print a floating-point number in a hexadecimal fractional notation which the exponent to base 2 represented in decimal digits. */
           changemodito(form, 'A');
-          sprintf(buff, form, (double)agn_checknumber(L, arg));
+          xsprintf(buff, form, (double)agn_checknumber(L, arg));
           break;
         }
 #endif
@@ -1593,23 +1589,23 @@ static int str_format (lua_State *L) {
           changespec(form, isnumber);
           addintlen(form);
           if (isnumber)
-            sprintf(buff, form, (LUA_INTFRM_T)agn_tonumber(L, arg));
+            xsprintf(buff, form, (LUA_INTFRM_T)agn_tonumber(L, arg));
           else
-            sprintf(buff, form, (double)AGN_NAN);
+            xsprintf(buff, form, (double)AGN_NAN);
           break;
         }
         case 'F': {  /* 2.4.5 */
           int isnumber = lua_isnumber(L, arg);
           changespec(form, isnumber);
           if (isnumber)
-            sprintf(buff, form, (double)agn_tonumber(L, arg));
+            xsprintf(buff, form, (double)agn_tonumber(L, arg));
           else
-            sprintf(buff, form, (double)AGN_NAN);
+            xsprintf(buff, form, (double)AGN_NAN);
           break;
         }
         case 'p': {
           addpercent(form);
-          sprintf(buff, form, (double)agn_checknumber(L, arg)*100);
+          xsprintf(buff, form, (double)agn_checknumber(L, arg)*100);
           break;
         }
         case 'P': {
@@ -1653,7 +1649,7 @@ static int str_format (lua_State *L) {
           if (!formstr) {
             luaL_error(L, "Error in " LUA_QS ": memory allocation failed.", "strings.format");
           }
-          sprintf(buff, formstr, (LUA_INTFRM_T)x);
+          xsprintf(buff, formstr, (LUA_INTFRM_T)x);
           xfree(formstr);
           break;
         }
@@ -1690,7 +1686,7 @@ static int str_format (lua_State *L) {
             continue;  /* skip `addsize' at the end */
           }
           else {
-            sprintf(buff, form, s);
+            xsprintf(buff, form, s);
             break;
           }
         }
@@ -4207,8 +4203,8 @@ static int str_diffs (lua_State *L) {
 
 
 /* Returns the number of differences between two strings s, t: substitutions, transpositions, insertions and deletions.
-   It is around 45 percent faster than `strings.dleven`, and has O(1) vs. O(min(N, M)) memory complexity, but because it 
-   looks ahead only one character, it can easily get stuck or miscount edits on complex string differences where 
+   It is around 45 percent faster than `strings.dleven`, and has O(1) vs. O(min(N, M)) memory complexity, but because it
+   looks ahead only one character, it can easily get stuck or miscount edits on complex string differences where
    the Levenshtein algorithm would find the mathematically optimal shortest path.
    Originally written July 24, 2007. Published 7.11.6 */
 static int str_var (lua_State *L) {
@@ -6225,6 +6221,21 @@ static int str_byte (lua_State *L) {  /* taken from Lua 5.4.6, 3.0.0 */
 }
 
 
+static int str_char (lua_State *L) {
+  int n = lua_gettop(L);  /* number of arguments */
+  int i;
+  luaL_Buffer b;
+  luaL_buffinit(L, &b);
+  for (i=1; i <= n; i++) {
+    int c = luaL_checkint(L, i);
+    luaL_argcheck(L, uchar(c) == c, i, "invalid value");
+    luaL_addchar(&b, uchar(c));
+  }
+  luaL_pushresult(&b);
+  return 1;
+}
+
+
 static int str_sub (lua_State *L) {  /* taken from Lua 5.4.6, 3.1.0 */
   size_t l;
   const char *s = luaL_checklstring(L, 1, &l);
@@ -6564,10 +6575,70 @@ static int is_string_split (const char *str, size_t len) {
   return (start_addr & ~PAGE_SIZE_MASK) != (end_addr & ~PAGE_SIZE_MASK);
 }
 
-static int str_issplit (lua_State *L) {
+static int str_issplit (lua_State *L) {  /* documented in 7.12.1 */
   size_t l;
   const char *str = luaL_checklstring(L, 1, &l);
   lua_pushboolean(L, is_string_split(str, l));
+  return 1;
+}
+
+
+/* A single unified 2D array: 8 maps of 256 bytes each */
+
+#define NUMBEROFCHARMAPS 8
+static unsigned char strings_maps[NUMBEROFCHARMAPS][256];
+
+/* Lua signature: val = string.map_getset(map_id, char_or_byte [, new_val]) */
+static int str_remapconfig (lua_State *L) {  /* 7.12.1, created by Gemini AI */
+  /* 1. Validate and convert map ID (1 to 8 -> 0 to 7) */
+  int nargs = lua_gettop(L);
+  if (nargs < 2)
+    luaL_error(L, "Error in " LUA_QS ": need at least two arguments.", "strings.remapconfig");
+  int map_id = (int)luaL_checkinteger(L, 1);
+  if (map_id < 1 || map_id > NUMBEROFCHARMAPS) {
+    luaL_error(L, 
+      "Error in " LUA_QS ": map %d does not exist, there are %d maps altogether.", 
+      "strings.remapconfig", map_id, NUMBEROFCHARMAPS);
+    return 1;
+  }
+  /* Index directly into the 2D array matrix */
+  unsigned char *target_map = strings_maps[map_id - 1];
+  if ((nargs == 2 && lua_istable(L, 2)) ||
+      (nargs == 3 && (
+        (agn_isinteger(L, 2) && agn_isinteger(L, 3)) ||
+        (agn_isinteger(L, 2) && agn_isstring(L, 3)) ||
+        (agn_isstring(L, 2) && agn_isinteger(L, 3)) ||
+        (agn_isstring(L, 2) && agn_isstring(L, 3))))) {
+    return agnL_settomappingtable(L, 1, 0, target_map, "strings.remapconfig");
+  }
+  return agnL_getfrommappingtable(L, 1, 0, target_map, "strings.remapconfig");
+}
+
+
+/* Lua signature: output_string = string.remap(map_id, input_string) */
+static int str_remap (lua_State *L) {  /* 7.12.1, created by Gemini AI */
+  size_t source_len, i;
+  const char *source = luaL_checklstring(L, 1, &source_len);
+  if (source_len == 0) {
+    lua_pushliteral(L, "");
+    return 1;
+  }
+  int map_id = (int)agnL_optinteger(L, 2, 1);
+  if (map_id < 1 || map_id > NUMBEROFCHARMAPS) {
+    luaL_error(L, 
+      "Error in " LUA_QS ": map %d does not exist, there are %d maps altogether.", 
+      "strings.remap", map_id, NUMBEROFCHARMAPS);
+    return 1;
+  }
+  const unsigned char *selected_map = strings_maps[map_id - 1];
+  luaL_Buffer b;
+  luaL_buffinit(L, &b);
+  char *dest = luaL_prepbuffsize(&b, source_len);
+  for (i=0; i < source_len; i++) {
+    dest[i] = (char)selected_map[uchar(source[i])];
+  }
+  luaL_addsize(&b, source_len);
+  luaL_pushresult(&b);
   return 1;
 }
 
@@ -6734,6 +6805,7 @@ static const luaL_Reg strlib[] = {
   {"bigrams", str_bigrams},               /* added on January 25, 2024 */
   {"byte", str_byte},                     /* added on July 04, 2023 */
   {"capitalise", str_capitalise},         /* added on February 28, 2013 */
+  {"char", str_char},                     /* added on October 28, 2026 */
   {"charmap", str_charmap},               /* added on February 10, 2017 */
   {"charset", str_charset},               /* added on May 06, 2018 */
   {"chomp", str_chomp},                   /* added on November 25, 2016 */
@@ -6828,6 +6900,8 @@ static const luaL_Reg strlib[] = {
   {"pack", str_pack},
   {"packsize", str_packsize},
   {"random", str_random},                 /* added on December 15, 2018 */
+  {"remap", str_remap},                   /* added on October 28, 2026 */
+  {"remapconfig", str_remapconfig},       /* added on October 28, 2026 */
   {"remove", str_remove},                 /* added on April 10, 2009 */
   {"repeat", str_repeat},
   {"replace", str_replace},               /* added November 28, 2022 */
@@ -6896,6 +6970,12 @@ static void createmetatable (lua_State *L) {
 ** Open string library
 */
 LUALIB_API int luaopen_strings (lua_State *L) {
+  int i, m;
+  for (m=0; m < NUMBEROFCHARMAPS; m++) {
+    for (i=0; i < 256; i++) {
+      strings_maps[m][i] = (unsigned char)i;
+    }
+  }
   luaL_register(L, LUA_STRLIBNAME, strlib);
   createmetatable(L);
   return 1;

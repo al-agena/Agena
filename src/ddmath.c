@@ -1336,7 +1336,7 @@ const char *dd_to_str (dd_pair a) {
   static char buffer[128];
   int i, decimal_exp;
   if (isinf(a.hi) || isnan(a.hi)) {
-    sprintf(buffer, "%g", a.hi);
+    xsprintf(buffer, "%g", a.hi);
     return buffer;
   }
   if (a.hi == 0.0 && a.lo == 0.0)
@@ -1376,7 +1376,7 @@ const char *dd_to_str (dd_pair a) {
     scaled.hi = m_hi + m_lo;
     scaled.lo = m_lo - (scaled.hi - m_hi);
   }
-  sprintf(buffer + pos, "e%+03d", decimal_exp);
+  xsprintf(buffer + pos, "e%+03d", decimal_exp);
   return buffer;
 }
 

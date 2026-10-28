@@ -23,6 +23,11 @@
 # make -f makefile.pluswin clean
 # make -f makefile.pluswin
 
+# Linux, just in case:
+# sudo chmod -R 755 .
+# sudo chown -R <username> .
+# valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./agena
+
 # == CHANGE THE SETTINGS BELOW TO SUIT YOUR ENVIRONMENT =======================
 
 # Your platform. See PLATS for possible values.

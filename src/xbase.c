@@ -302,7 +302,7 @@ DBFHandle SHPAPI_CALL DBFOpen (const char *pszFilename, const char *pszAccess) {
     xfree(pszBasename);
     return NULL;
   }
-  sprintf(pszFullname, "%s.dbf", pszBasename);
+  xsprintf(pszFullname, "%s.dbf", pszBasename);
   psDBF = (DBFHandle)calloc(1, sizeof(DBFInfo));
   if (!psDBF) {  /* 7.3.4 fix */
     xfreeall(pszFullname, pszBasename);
@@ -310,7 +310,7 @@ DBFHandle SHPAPI_CALL DBFOpen (const char *pszFilename, const char *pszAccess) {
   }
   psDBF->fp = fopen(pszFullname, pszAccess);
   if (psDBF->fp == NULL) {
-    sprintf(pszFullname, "%s.DBF", pszBasename);
+    xsprintf(pszFullname, "%s.DBF", pszBasename);
     psDBF->fp = fopen(pszFullname, pszAccess);
   }
   free(pszBasename);
@@ -370,7 +370,7 @@ DBFHandle SHPAPI_CALL DBFOpen (const char *pszFilename, const char *pszAccess) {
     xfree(psDBF);
     return NULL;
   }
-  sprintf(psDBF->pszCodePage, "LDID/%d", psDBF->iLanguageDriver);  /* a codepage of 0x00 means `invalid` or `undetermined` */
+  xsprintf(psDBF->pszCodePage, "LDID/%d", psDBF->iLanguageDriver);  /* a codepage of 0x00 means `invalid` or `undetermined` */
   psDBF->lastmodified = (pabyBuf[1] + 1900)*10000 + pabyBuf[2]*100 + pabyBuf[3];  /* added 0.32.5 */
   /* Read in Field Definitions */
   pabyBuf = (unsigned char *)SfRealloc(pabyBuf, nHeadLen);
@@ -896,7 +896,7 @@ DBFHandle SHPAPI_CALL DBFCreate (const char *pszFilename) {
     xfree(pszBasename);
     return NULL;
   }
-  sprintf(pszFullname, "%s.dbf", pszBasename);
+  xsprintf(pszFullname, "%s.dbf", pszBasename);
   free(pszBasename);
   /* Create the file. */
   fp = fopen(pszFullname, "wb");
@@ -2110,8 +2110,8 @@ static int DBFWriteAttribute (DBFHandle psDBF, int hEntity, int iField, void *pV
         int  nWidth = psDBF->panFieldSize[iField];
         if (sizeof(szSField) - 2 < nWidth)
           nWidth = sizeof(szSField) - 2;
-        sprintf(szFormat, "%%%dd", nWidth);
-        sprintf(szSField, szFormat, (int)*((double *)pValue));
+        xsprintf(szFormat, "%%%dd", nWidth);
+        xsprintf(szSField, szFormat, (int)*((double *)pValue));
         if ((int)tools_strlen(szSField) > psDBF->panFieldSize[iField]) {  /* 2.17.8 tweak */
           szSField[psDBF->panFieldSize[iField]] = '\0';
           nRetResult = FALSE;
@@ -2121,9 +2121,9 @@ static int DBFWriteAttribute (DBFHandle psDBF, int hEntity, int iField, void *pV
         int nWidth = psDBF->panFieldSize[iField];
         if (sizeof(szSField) - 2 < nWidth)
           nWidth = sizeof(szSField) - 2;
-        sprintf(szFormat, "%%%d.%df",
+        snprintf(szFormat, sizeof(szFormat), "%%%d.%df",
           nWidth, psDBF->panFieldDecimals[iField]);
-        sprintf(szSField, szFormat, *((double *)pValue));
+        xsprintf(szSField, szFormat, *((double *)pValue));
         if ((int)tools_strlen(szSField) > psDBF->panFieldSize[iField]) {  /* 2.17.8 tweak */
           szSField[psDBF->panFieldSize[iField]] = '\0';
           nRetResult = FALSE;

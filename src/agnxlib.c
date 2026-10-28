@@ -11,18 +11,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-//#include <string.h>
-
-
-#if defined(__OS2__) && !defined(os2_swab_workaround_done)
-#define os2_swab_workaround_done
-#define swab os2_swab_workaround
 #include <string.h>
-#include <unistd.h>
-#undef swab
-#else
-#include <unistd.h>
-#endif
 
 #if defined(__unix__) || defined(__OS2__) || defined(__APPLE__) || defined(__HAIKU__)
 #include <unistd.h>   /* for access */
@@ -52,6 +41,7 @@
 #include "charbuf.h"
 #include "long.h"
 #include "lstrlib.h"  /* for SPECIALS, match() */
+#include "lucase.def"
 #include "numarray.h"
 
 #if defined(LUA_USE_READLINE)
@@ -1360,7 +1350,7 @@ LUALIB_API void agnL_setLibname (lua_State *L, int warning, int debug, int skipa
   path = tools_getenv("AGENAPATH");  /* 2.37.1 change */
   agnL_debuginfo(debug, (path == NULL) ? "unassigned.\n" : "found.\n");
   if (path != NULL) {  /* 2.37.4 fix */
-    if (!tools_exists(path)) {  /* 7.11.6 fix */
+    if (!tools_exists(path)) {  /* 7.12.0 fix */
       agnL_debuginfo(debug, "      AGENAPATH points to invalid folder and will be ignored:\n");
       agnL_debuginfo3(debug, "      ", path, "\n");
     } else {
@@ -2443,6 +2433,101 @@ LUALIB_API void agnL_pushhex (lua_State *L, int idx, int classic) {
   charbuf_finish(&buf);  /* better sure than sorry */
   lua_pushlstring(L, buf.data, buf.size);
   charbuf_free(&buf);
+}
+
+
+LUALIB_API int agnL_settomappingtable (lua_State *L, int offset, int uppercasetoo, unsigned char *maparray, const char *procname) {  /* 7.12.0, created by Gemini AI */
+  /* Handle Case 1: A Lua table is passed as the first argument */
+  if (lua_istable(L, offset + 1)) {
+    lua_pushnil(L);  /* first key */
+    while (lua_next(L, offset + 1) != 0) {
+      size_t klen, vlen;
+      int key_byte = -1;
+      int val_byte = -1;
+      /* Extract the key byte (supports integer index or string key) */
+      if (agn_isnonnegint(L, -2)) {
+        key_byte = (int)agn_tointeger(L, -2);
+      } else if (agn_isstring(L, -2)) {
+        const char *kstr = lua_tolstring(L, -2, &klen);
+        key_byte = (klen > 0) ? uchar(kstr[0]) : uchar('\0');
+      } else {
+        luaL_error(L, "Error in " LUA_QS ": expected an integer or string.", procname);
+      }
+      /* Extract the value byte (supports integer byte or string character) */
+      if (agn_isnonnegint(L, -1)) {
+        val_byte = (int)agn_tointeger(L, -1);
+      } else if (agn_isstring(L, -1)) {
+        const char *vstr = lua_tolstring(L, -1, &vlen);
+        val_byte = (vlen > 0) ? uchar(vstr[0]) : uchar('\0');
+      } else {
+        luaL_error(L, "Error in " LUA_QS ": expected an integer or string.", procname);
+      }
+      /* Apply boundary checks before writing to avoid buffer corruption */
+      if (key_byte >= 0 && key_byte <= 255 && val_byte >= 0 && val_byte <= 255) {
+        if (uppercasetoo) maparray[tools_uppercase[key_byte]] = uchar(val_byte);
+        maparray[key_byte] = uchar(val_byte);
+      }
+      lua_pop(L, 1);  /* removes 'value'; keeps 'key' for next iteration */
+    }
+    return 0;
+  }
+  /* Handle Case 2: Direct key-value arguments are passed instead of a table */
+  if (lua_gettop(L) >= offset + 2) {
+    size_t klen, vlen;
+    int key_byte = -1;
+    int val_byte = -1;
+    if (agn_isnonnegint(L, offset + 1)) {
+      key_byte = (int)agn_tointeger(L, offset + 1);
+    } else if (agn_isstring(L, offset + 1)) {
+      const char *kstr = lua_tolstring(L, offset + 1, &klen);
+      key_byte = (klen > 0) ? uchar(kstr[0]) : uchar('\0');
+    } else {
+      luaL_error(L, "Error in " LUA_QS ": expected an integer or string.", procname);
+    }
+    if (agn_isnonnegint(L, offset + 2)) {
+      val_byte = (int)agn_tointeger(L, offset + 2);
+    } else if (agn_isstring(L, offset + 2)) {
+      const char *vstr = lua_tolstring(L, offset + 2, &vlen);
+      val_byte = (vlen > 0) ? uchar(vstr[0]) : uchar('\0');
+    } else {
+      luaL_error(L, "Error in " LUA_QS ": expected an integer or string.", procname);
+    }
+    if (key_byte < 0 || key_byte > 255) { return luaL_error(L, "Error in " LUA_QS
+      ": expected an integer 0 .. 255 or a non-empty character\n   for the key.", procname);
+    }
+    if (val_byte < 0 || val_byte > 255) { return luaL_error(L, "Error in " LUA_QS
+      ": expected an integer 0 .. 255 or a non-empty character\n   for the value.", procname);
+    }
+    if (uppercasetoo) maparray[tools_uppercase[key_byte]] = uchar(val_byte);
+    maparray[key_byte] = uchar(val_byte);
+    return 0;
+  }
+  luaL_error(L, "Error in " LUA_QS ": expected either a table or a key and a value.", procname);
+  return 1;
+}
+
+
+LUALIB_API int agnL_getfrommappingtable (lua_State *L, int offset, int tolowercase, const unsigned char *maparray, const char *procname) {  /* 7.12.1 */
+  size_t klen;
+  char result_char;
+  int key_byte = -1;
+  /* Read the input argument (supports integer byte or string character) */
+  if (agn_isinteger(L, offset + 1)) {
+    key_byte = (int)agn_tointeger(L, offset + 1);
+  } else if (agn_isstring(L, offset + 1)) {
+    const char *kstr = lua_tolstring(L, offset + 1, &klen);
+    key_byte = (klen > 0) ? uchar(kstr[0]) : uchar('\0');
+  }
+  if (key_byte < 0 || key_byte > 255) {
+    return luaL_error(L, "Error in " LUA_QS
+      ": expected an integer 0 .. 255 or a non-empty character\n   for the value.", procname);
+  }
+  if (tolowercase)
+    result_char = (char)maparray[tools_lowercase[key_byte]];
+  else
+    result_char = (char)maparray[key_byte];
+  lua_pushlstring(L, &result_char, 1);
+  return 1;
 }
 
 

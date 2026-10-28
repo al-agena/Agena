@@ -19,7 +19,6 @@
 #include "agncmpt.h"
 #include "agnconf.h"  /* for uchar */
 #include "agnxlib.h"
-#include "lucase.def"
 
 
 #if !(defined(__DJGPP__) || defined(__OS2__) || defined(LUA_ANSI))
@@ -38,13 +37,21 @@ LUALIB_API int (luaopen_open) (lua_State *L);
 
 static unsigned char phQmap[256] = {
    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,  /* 0 .. 7*/
+/* 00NUL 01SOH 02STX 03ETX 04EOT 05ENQ 06ACK 07BEL */
    0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,  /* 8 .. 15 */
+/* 08BS  09HT  10LF  11VT  12FF  13CR  14SO  15SI */
    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,  /* 16 .. 23 */
+/* 16DLE 17DC1 18DC2 19DC3 20DC4 21NAK 22SYN 23ETB */
    0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,  /* 24 .. 31 */
+/* 24CAN 25EM  26SUB 27ESC 28FS  29GS  30RS  31US */
    0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27,  /* 32 .. 39 */
+/* 32    33!   34"   35#   36$   37%   38&   39' */
    0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f,  /* 40 .. 47 */
+/* 40(   41)   42*   43+   44,   45-   46.   47/ */
    0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,  /* 48 .. 55 */
+/* 480   491   502   513   524   535   546   557 */
    0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f,  /* 56 .. 63 */
+/* 568   579   58:   59;   60<   61=   62>   63? */
    0x40, 0x23, 0x42, 0x43, 0x44, 0x23, 0x46, 0x47,  /* 64 .. 71 */
 /* 64@   65A   66B   67C   68D   69E   70F   71G */
    0x23, 0x23, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x23,  /* 72 .. 79 */
@@ -97,17 +104,23 @@ static unsigned char phQmap[256] = {
 
 static unsigned char vowelsign = '#';
 
-
-#ifdef DONOTCOMPILE
 static unsigned char sdxMap[256] = {
    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,  /* 0 .. 7 */
+/* 00NUL 01SOH 02STX 03ETX 04EOT 05ENQ 06ACK 07BEL */
    0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,  /* 8 .. 15 */
+/* 08BS  09HT  10LF  11VT  12FF  13CR  14SO  15SI */
    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,  /* 16 .. 23 */
+/* 16DLE 17DC1 18DC2 19DC3 20DC4 21NAK 22SYN 23ETB */
    0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,  /* 24 .. 31 */
+/* 24CAN 25EM  26SUB 27ESC 28FS  29GS  30RS  31US */
    0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27,  /* 32 .. 39 */
+/* 32    33!   34"   35#   36$   37%   38&   39' */
    0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f,  /* 40 .. 47 */
+/* 40(   41)   42*   43+   44,   45-   46.   47/ */
    0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,  /* 48 .. 55 */
+/* 480   491   502   513   524   535   546   557 */
    0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f,  /* 56 .. 63 */
+/* 568   579   58:   59;   60<   61=   62>   63? */
    0x40,  '0',  '1',  '2',  '3',  '0',  '1',  '2',  /* 64 .. 71 */
 /* 64@   65A   66B   67C   68D   69E   70F   71G */
     '.',  '0',  '2',  '2',  '4',  '5',  '5',  '0',  /* 72 .. 79 */
@@ -158,6 +171,7 @@ static unsigned char sdxMap[256] = {
 /* 248°  249¨  250·  251¹  252³  253²  254¦  255  */
 };
 
+#ifdef DONOTCOMPILE
 /* Do not remap characters > ASCII code 127 */
 static unsigned char phQmap7bit[256] = {
    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,  /* 0 .. 7*/
@@ -335,106 +349,21 @@ static int phones_phonetiQs (lua_State *L) {
 }
 
 
+static int phones_getphonetiQs (lua_State *L) {  /* 7.11.6, created by Gemini AI */
+  return agnL_getfrommappingtable(L, 0, 1, phQmap, "phones.getphonetiQs");
+}
+
 static int phones_setphonetiQs (lua_State *L) {  /* 7.11.6, created by Gemini AI */
-  /* Handle Case 1: A Lua table is passed as the first argument */
-  if (lua_istable(L, 1)) {
-    lua_pushnil(L);  /* first key */
-    while (lua_next(L, 1) != 0) {
-      size_t klen, vlen;
-      int key_byte = -1;
-      int val_byte = -1;
-      /* Extract the key byte (supports integer index or string key) */
-      if (agn_isnonnegint(L, -2)) {
-        key_byte = (int)agn_tointeger(L, -2);
-      } else if (agn_isstring(L, -2)) {
-        const char *kstr = lua_tolstring(L, -2, &klen);
-        if (klen > 0) key_byte = uchar(kstr[0]);
-      } else {
-        luaL_error(L, "Error in " LUA_QS ": expected an integer or string.",
-          "phones.setphonetiQs");
-      }
-      /* Extract the value byte (supports integer byte or string character) */
-      if (agn_isnonnegint(L, -1)) {
-        val_byte = (int)agn_tointeger(L, -1);
-      } else if (agn_isstring(L, -1)) {
-        const char *vstr = lua_tolstring(L, -1, &vlen);
-        if (vlen > 0) val_byte = uchar(vstr[0]);
-      } else {
-        luaL_error(L, "Error in " LUA_QS ": expected an integer or string.",
-          "phones.setphonetiQs");
-      }
-      /* Apply boundary checks before writing to avoid buffer corruption */
-      if (key_byte >= 0 && key_byte <= 255 && val_byte >= 0 && val_byte <= 255) {
-        phQmap[tools_uppercase[key_byte]] = uchar(val_byte);
-        phQmap[key_byte] = uchar(val_byte);
-      }
-      /* removes 'value'; keeps 'key' for next iteration */
-      lua_pop(L, 1);
-    }
-    return 0;
-  }
-  /* Handle Case 2: Direct key-value arguments are passed instead of a table */
-  if (lua_gettop(L) >= 2) {
-    size_t klen, vlen;
-    int key_byte = -1;
-    int val_byte = -1;
-    if (agn_isnonnegint(L, 1)) {
-      key_byte = (int)agn_tointeger(L, 1);
-    } else if (agn_isstring(L, 1)) {
-      const char *kstr = lua_tolstring(L, 1, &klen);
-      if (klen > 0) {
-        key_byte = uchar(kstr[0]);
-      }
-    } else {
-      luaL_error(L, "Error in " LUA_QS ": expected an integer or string.",
-        "phones.setphonetiQs");
-    }
-    if (agn_isnonnegint(L, 2)) {
-      val_byte = (int)agn_tointeger(L, 2);
-    } else if (agn_isstring(L, 2)) {
-      const char *vstr = lua_tolstring(L, 2, &vlen);
-      if (vlen > 0) val_byte = uchar(vstr[0]);
-    } else {
-      luaL_error(L, "Error in " LUA_QS ": expected an integer or string.",
-        "phones.setphonetiQs");
-    }
-    if (key_byte < 0 || key_byte > 255) { return luaL_error(L, "Error in " LUA_QS
-      ": expected an integer 0-255 or a non-empty character\n   for the key.",
-      "phones.setphonetiqs");
-    }
-    if (val_byte < 0 || val_byte > 255) { return luaL_error(L, "Error in " LUA_QS
-      ": expected an integer 0-255 or a non-empty character\n   for the value.",
-      "phones.setphonetiqs");
-    }
-    phQmap[tools_uppercase[key_byte]] = uchar(val_byte);
-    phQmap[key_byte] = uchar(val_byte);
-    return 0;
-  }
-  return luaL_error(L, "Error in " LUA_QS ": expected either a table or a key and a value.",
-    "phones.setphonetiqs");
+  return agnL_settomappingtable(L, 0, 1, phQmap, "phones.setphonetiQs");
 }
 
 
-static int phones_getphonetiQs (lua_State *L) {  /* 7.11.6, created by Gemini AI */
-  size_t klen;
-  int key_byte = -1;
-  /* Read the input argument (supports integer byte or string character) */
-  if (lua_isnumber(L, 1)) {
-    key_byte = (int)lua_tointeger(L, 1);
-  } else if (lua_isstring(L, 1)) {
-    const char *kstr = lua_tolstring(L, 1, &klen);
-    if (klen > 0) {
-      key_byte = uchar(kstr[0]);
-    }
-  }
-  if (key_byte < 0 || key_byte > 255) {
-    return luaL_error(L, "Error in " LUA_QS
-      ": expected an integer 0-255 or a non-empty character\n   for the value.",
-      "phones.getphonetiqs");
-  }
-  char result_char = (char)phQmap[tools_lowercase[key_byte]];
-  lua_pushlstring(L, &result_char, 1);
-  return 1;
+static int phones_getsoundex (lua_State *L) {  /* 7.12.1 */
+  return agnL_getfrommappingtable(L, 0, 1, sdxMap, "phones.getsoundex");
+}
+
+static int phones_setsoundex (lua_State *L) {  /* 7.11.6, created by Gemini AI */
+  return agnL_settomappingtable(L, 0, 1, sdxMap, "phones.setsoundex");
 }
 
 
@@ -477,7 +406,7 @@ finale:
 /* Helper macro to map characters to official Soundex codes.
    Returns '0' for skipped vowels/characters (A, E, I, O, U, Y).
    Returns '.' for ignored separators (H, W).
-   Returns -1 for invalid non-alphabetical characters. Created by Gemini AI, 7.11.6 */
+   Returns -1 for invalid non-alphabetical characters. Created by Gemini AI, 7.11.6
 static char getsoundexcode (unsigned char c) {
   c = toupper(c);
   if (c < 'A' || c > 'Z') return -1;
@@ -488,11 +417,11 @@ static char getsoundexcode (unsigned char c) {
     case 'L': return '4';
     case 'M': case 'N': return '5';
     case 'R': return '6';
-    case 'A': case 'E': case 'I': case 'O': case 'U': case 'Y': return '0'; /* Vowels */
-    case 'H': case 'W': return '.'; /* Separators */
+    case 'A': case 'E': case 'I': case 'O': case 'U': case 'Y': return '0';  // Vowels
+    case 'H': case 'W': return '.';  // Separators
     default: return -1;
   }
-}
+} */
 
 /* Following the National Archives (NARA) rules, this function implements the original, official
    Soundex algorithm. It takes a string s and returns its 4-character phonetic code. 7.11.6 */
@@ -513,10 +442,10 @@ static int phones_soundex (lua_State *L) {
   char out[4] = {'0', '0', '0', '0'};
   unsigned char first_raw = str[start];
   out[0] = toupper(first_raw);
-  char last_code = getsoundexcode(first_raw);
+  char last_code = sdxMap[first_raw];
   out_pos = 1;
   for (i=start + 1; i < len && out_pos < 4; i++) {
-    char cur_code = getsoundexcode(str[i]);
+    char cur_code = sdxMap[uchar(str[i])];
     /* Ignore non-alphabetical characters entirely */
     if (cur_code == -1) continue;
     if (cur_code == '.') {
@@ -543,7 +472,9 @@ static int phones_soundex (lua_State *L) {
 
 static const luaL_Reg phoneslib[] = {
   {"getphonetiQs", phones_getphonetiQs},   /* added on October 25, 2026 */
+  {"getsoundex",   phones_getsoundex},     /* added on October 28, 2026 */
   {"setphonetiQs", phones_setphonetiQs},   /* added on October 25, 2026 */
+  {"setsoundex",   phones_setsoundex},     /* added on October 25, 2026 */
   {"phonetiQs",    phones_phonetiQs},      /* added on October 25, 2026 */
   {"soundex",      phones_soundex},        /* added on October 25, 2026 */
   {"vowelsymbol",  phones_vowelsymbol},    /* added on October 26, 2026 */

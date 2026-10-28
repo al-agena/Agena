@@ -5018,7 +5018,7 @@ LUALIB_API size_t tools_optstrlen (size_t l, size_t *chunks) {
 LUALIB_API char *tools_dtoa (double x) {
   char *buf = malloc(MAXNUMBER2STR*sizeof(char));
   if (!buf) return NULL;  /* 2.16.5 */
-  sprintf(buf, "%.14g", x);
+  xsprintf(buf, "%.14g", x);
   return buf;
 }
 
@@ -5486,7 +5486,7 @@ LUALIB_API char *tools_dirorfilename (const char *path0, size_t l, int what, siz
  *               or NULL if not found. Caller must free().
  * Created by Gemini AI, 7.11.3 */
 LUALIB_API char *tools_findinpath (const char *path, const char *what, size_t *outlen) {
-  size_t i;
+  size_t i, l = 0;
   char *current_dir, *target_norm, *result_path, *last_sep, *test_path;
   if (!path || !what || path[0] == '\0' || what[0] == '\0') return NULL;
   *outlen = 0;
@@ -5532,11 +5532,17 @@ LUALIB_API char *tools_findinpath (const char *path, const char *what, size_t *o
     const char *dir_to_check = (strlen(current_dir) == 0) ? "/" : current_dir;
     /* Allocate buffer for the potential target path: dir + '/' + target + null terminator */
     size_t needed = strlen(dir_to_check) + 1 + strlen(target_norm) + 1;
-    test_path = (char* )malloc(needed);
+    test_path = (char *)tools_strallocx(needed, &l);  /* 7.12.1 change */
     if (!test_path) break;
     /* Construct the test path using explicit POSIX formatting */
     /* Root structures like "/" or "C:" */
-    sprintf(test_path, (tools_streq(dir_to_check, "/")) ? "%s%s" : "%s/%s" , dir_to_check, target_norm);  /* 7.11.5 fix, no double slash in front */
+    const char *fmt_string;  /* attempt to silence Valgrind in OpenIndiana */
+    if (tools_streq(dir_to_check, "/")) {
+      fmt_string = "%s%s";
+    } else {
+      fmt_string = "%s/%s";
+    }
+    snprintf(test_path, l, fmt_string, dir_to_check, target_norm);
     /* Check for existence using the low-level OS API layer */
     if (tools_exists(test_path) ) {
       result_path = test_path;
@@ -22301,6 +22307,22 @@ LUALIB_API char *tools_stralloc (size_t len) {
 }
 
 
+LUALIB_API char *tools_strallocx (size_t len, size_t *l) {
+  char *buf;
+  size_t rem;
+  *l = len;
+  /* determine optimal size, including terminating \0 */
+  rem = (++(*l)) & AGN_ALIGNMASK;  /* length including \0, 2.17.2 optimisation */
+  *l += (rem != 0)*(AGN_BLOCKSIZE - rem);
+  /* now commit memory */
+  buf = (char *)malloc((*l)*sizeof(char));
+  if (buf == NULL) { *l = 0; return NULL; };
+  tools_bzero(buf + len, *l - len);  /* only zero the bytes that will not be filled by characters later on */
+  *l = (*l)*sizeof(char);
+  return buf;
+}
+
+
 /* Returns the reverse of a string with the given length excluding the terminating \0. FREE IT ! 5.4.2 */
 LUALIB_API char *str_reverse (const char *s, size_t len) {
   size_t i;
@@ -27480,9 +27502,16 @@ LUALIB_API long double tools_zeroinl (long double x, long double eps) {  /* 3.16
 
 LUALIB_API int tools_ndigplaces (double x, int *overflow) {  /* int, not size_t to prevent overflows with very large numbers */
   int r;
+  char *ptr_zero, *ptr_dot;
   char str[128];
-  sprintf(str, "%.25f", x);
-  r = strchr(str, '0') - strchr(str, '.') - 1;
+  snprintf(str, sizeof(str), "%.25f", x);
+  ptr_zero = strchr(str, '0');
+  ptr_dot  = strchr(str, '.');
+  if (ptr_zero == NULL || ptr_dot == NULL) {  /* 7.12.1 security fix */
+    *overflow = 1;
+    return 0;
+  }
+  r = (int)(ptr_zero - ptr_dot - 1);
   if (r < 0) {
     r = 0;  /* we might have an overflow with very large x */
     *overflow = 1;

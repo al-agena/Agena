@@ -1,4 +1,4 @@
-/*
+#/*
 ** $Id: agnhlps.h $
 ** C Helper routines
 ** See Copyright Notice in agena.h
@@ -387,6 +387,7 @@ LUALIB_API char          *tools_itoa (int64_t val, int base);
 LUALIB_API INLINE ptrdiff_t tools_posrelat (ptrdiff_t pos, size_t len);
 LUALIB_API INLINE size_t tools_optstrlen (size_t l, size_t *chunks);
 LUALIB_API INLINE char   *tools_stralloc (size_t len);
+LUALIB_API char          *tools_strallocx (size_t len, size_t *l);
 LUALIB_API INLINE char   *tools_strdup (const char *s);
 LUALIB_API INLINE char   *tools_strndup (const char *s, size_t l);
 LUALIB_API char          *tools_strnstr (const char *s, const char *p, size_t slen);
@@ -555,9 +556,11 @@ LUALIB_API int tools_anykey (void);  /* 2.12.4 */
 LUALIB_API int tools_isintenum (int x, const int *a, size_t n);
 LUALIB_API int tools_isinushortarray (unsigned short int x, const unsigned short int *a, size_t n);
 
+/* standard Windows sprintf() does not understand many common modern C format specifiers, so define: */
 #ifdef _WIN32
 #define xsprintf(buf,fmt,x)  __mingw_sprintf((buf), (fmt), (x))
 #else
+/* for reasons unknown, at least in Linux, we cannot redefine to snprintf((buf), sizeof((buf)), (fmt), (x)) */
 #define xsprintf(buf,fmt,x)  sprintf((buf), (fmt), (x))
 #endif
 
