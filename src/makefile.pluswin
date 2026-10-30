@@ -88,8 +88,8 @@ endif
 # --- Target Lists ---
 DLLS = abci.dll ads.dll aspell.dll astro.dll com.dll cordic.dll curses.dll \
 	ddhash.dll double.dll fastmath.dll fractals.dll gmp.dll gzip.dll iconv.dll \
-	ival.dll mapm.dll minizip.dll mpfr.dll net.dll skycrane.dll strhash.dll \
-	strmap.dll testlib.dll zx.dll phones.dll
+	ival.dll mapm.dll minizip.dll mpfr.dll net.dll phones.dll skycrane.dll \
+	strhash.dll strmap.dll testlib.dll zx.dll
 
 OBJS = abci.o ads.o agnt64.o astro.o cordic.o curses.o dcastro.o ival.o \
 	miniz.o moon.o net.o network.o sdncal.o sofa.o sunriset.o vecoff64.o

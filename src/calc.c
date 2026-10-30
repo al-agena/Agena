@@ -1393,7 +1393,7 @@ static int calc_intdeo64 (lua_State *L) {
   luaL_checktype(L, 1, LUA_TFUNCTION);
   a = agnL_checknumber(L, 2);
   omega = length = 1.0L;
-  eps = INTEG_EPS;  /* 3.12.0 change */
+  eps = INTEG_EPS64;  /* 3.12.0 change, 7.12.2 fix */
   aux_fcheckoptions(L, 3, &nargs, &eps, &omega, &samples, &length, &adjust, &delta, &iters, "calc.intdeo64");
   if (omega == 0)  /* 3.11.5 fix */
     luaL_error(L, "Error in " LUA_QS ": omega value must not be zero.", "calc.intdeo64");
@@ -6544,7 +6544,7 @@ static int calc_savgol (lua_State *L) {  /* 2.10.4, 2.34.10 */
 
 static int calc_savgol64 (lua_State *L) {  /* 7.4.0 */
   int i, npoints, nleft, nright, polydeg, isadaptive, deriv, nops, nargs;
-  long double eps, factor;
+  long double eps, factor;  /* we need long double for call to aux_checksavgol */
   LongDoubleArray *a;
   eps = 1e-5;      /* distance between sample points */
   npoints = 31;    /* number of neighbouring points to be examined */

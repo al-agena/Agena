@@ -51,17 +51,17 @@ LUA_A=  libagena.a
 CORE_O= lapi.o lcode.o ldebug.o ldo.o ldump.o lfunc.o lgc.o llex.o lmem.o lobject.o lopcodes.o \
 	lparser.o lstate.o lstring.o ltable.o ltm.o lundump.o lvm.o lzio.o lset.o lseq.o lpair.o \
 	agnhlps.o iniparse.o lreg.o
-LIB_O=  agnxlib.o lbaselib.o ldblib.o liolib.o lmathlib.o loslib.o ltablib.o lrtable.o agnt64.o \
-	lenviron.o lstrlib.o utils.o units.o loadlib.o linit.o stats.o combinat.o numtheory.o ads.o \
-	fractals.o bags.o lookup.o cephes.o calc.o linalg.o binio.o mapm.o sqlite.o xbase.o sofa.o interp.o \
-	moon.o sunriset.o sdncal.o astro.o curses.o skycrane.o gzip.o llist.o cordic.o lreglib.o xml.o \
-	hashes.o numarray.o registry.o zx.o stack.o intvec.o dblvec.o vecoff64.o bloom.o cuckoo.o clock.o \
-	factory.o bytes.o fastmath.o semalib.o sema.o dual.o utf8.o iconv.o gmp.o mpfr.o charbuf.o memfile.o \
-	luasys.o com.o heaps.o lseqlib.o lsetlib.o bfield.o long.o ints.o tuples.o jwent.o fzy.o \
-	regex.o regex_f.o regexcom.o testlib.o double.o rbtree.o vecint.o bimaps.o jbmath.o \
-	ival.o miniz.o minizip.o fifo.o lifo.o trie.o ints.o dblhash.o numcuckoo.o numfilter.o dcastro.o \
-	dd.o ddmath.o pbl.o pblhash.o pblkf.o keyfile.o abci.o strhash.o strmap.o intmap.o uintmap.o \
-	dblmap.o divsufsort.o sssort.o trsort.o suffix.o binpack.o phones.o
+LIB_O=  agnxlib.o  mybuffer.o lbaselib.o ldblib.o liolib.o lmathlib.o loslib.o ltablib.o lrtable.o \
+	agnt64.o lenviron.o lstrlib.o utils.o units.o loadlib.o linit.o stats.o combinat.o numtheory.o \
+	ads.o fractals.o bags.o lookup.o cephes.o calc.o linalg.o binio.o mapm.o sqlite.o xbase.o sofa.o \
+	interp.o moon.o sunriset.o sdncal.o astro.o curses.o skycrane.o gzip.o llist.o cordic.o lreglib.o \
+	xml.o hashes.o numarray.o registry.o zx.o stack.o intvec.o dblvec.o vecoff64.o bloom.o cuckoo.o \
+	clock.o factory.o bytes.o fastmath.o semalib.o sema.o dual.o utf8.o iconv.o gmp.o mpfr.o charbuf.o \
+	memfile.o luasys.o com.o heaps.o lseqlib.o lsetlib.o bfield.o long.o ints.o tuples.o jwent.o fzy.o \
+	regex.o regex_f.o regexcom.o testlib.o double.o rbtree.o vecint.o bimaps.o jbmath.o ival.o miniz.o \
+	minizip.o fifo.o lifo.o trie.o ints.o dblhash.o numcuckoo.o numfilter.o dcastro.o dd.o ddmath.o \
+	pbl.o pblhash.o pblkf.o keyfile.o abci.o strhash.o strmap.o intmap.o uintmap.o dblmap.o \
+	divsufsort.o sssort.o trsort.o suffix.o binpack.o phones.o
 
 LUA_T=  agena.exe
 LUA_O=  agena.o
@@ -143,6 +143,7 @@ lapi.o: lapi.c agena.h agncmpt.h agnconf.h agnhlps.h lapi.h lobject.h llimits.h 
 	ldebug.h lstate.h ltm.h lundump.h lzio.h lmem.h ldo.h lfunc.h lgc.h lstring.h \
 	ltable.h agenalib.h
 agnxlib.o: agnxlib.c agena.h agnconf.h agnxlib.h agnhlps.h
+mybuffer.o: mybuffer.c mybuffer.h
 lbaselib.o: lbaselib.c agena.h agnconf.h agncmpt.h agnxlib.h agenalib.h
 lcode.o: lcode.c agena.h agnconf.h lcode.h llex.h lobject.h llimits.h \
   lzio.h lmem.h lopcodes.h lparser.h ldebug.h lstate.h ltm.h ldo.h lgc.h \

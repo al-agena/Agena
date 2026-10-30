@@ -2,7 +2,7 @@
 rem To build and install the additional libraries, execute this file in the \agena\src subfolder
 rem in a plain NT shell, and not in MinGW.
 
-set gccfileopts=-pipe -O3 -DLUA_BUILD_AS_DLL -fgnu89-inline -Wno-attributes
+set gccfileopts=-pipe -O3 -DLUA_BUILD_AS_DLL -fgnu89-inline -Wno-attributes -Wno-stringop-overread
 set gccfinalopts=-pipe -O3 -shared -static-libgcc -fpic -fgnu89-inline -Wno-attributes
 
 set OLDPATH=%PATH%

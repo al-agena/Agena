@@ -8,6 +8,7 @@
 #include <limits.h>  /* CHAR_BIT */
 #include <stddef.h>  /* size_t */
 #include <stdlib.h>
+#include <string.h>  /* for memcpy */
 
 /* instead of time.h: */
 #include "agnt64.h"
@@ -23,46 +24,88 @@
 #include "agnconf.h"  /* for uchar */
 
 #include "lseq.h"     /* for agnSeq_bestsize */
+#include "numarray.h"
 #include "rfc3339.h"
 #include "utils.h"    /* typedefs and checkarray macro */
+#include "mybuffer.h"
+
 
 static int utils_singlesubs (lua_State *L) {  /* Agena 1.5.0 */
   int rc;
   size_t i, l;
   unsigned char token;
-  luaL_Buffer b;
+  MyBuffer b;
   const char *s = luaL_checklstring(L, 1, &l);
-  luaL_buffinit(L, &b);
-  if (lua_istable(L, 2)) {  /* new 6.1.0 */
-    for (i=0; i < l; i++) {
-      lua_rawgeti(L, 2, uchar(s[i]));
-      if (agn_isinteger(L, -1)) {
-        luaL_addchar(&b, agn_tointeger(L, -1));
-      } else if (agn_isstring(L, -1)) {
-        size_t len;
-        const char *str = lua_tolstring(L, -1, &len);
-        luaL_addlstring(&b, str, len);
-      } else {
-        luaL_addchar(&b, uchar(s[i]));
+  my_buffinit(L, &b);  /* changed 7.12.2: use Gemini AI buffer that is 
+    1 to 2 % faster than Lua's luaL_buffer with strings < 1024 chars and 
+    7 % faster with longer strings */
+  switch(lua_type(L, 2)) {
+    case LUA_TTABLE: {  /* new 6.1.0 */
+      for (i=0; i < l; i++) {
+        lua_rawgeti(L, 2, uchar(s[i]));
+        if (agn_isinteger(L, -1)) {
+          my_addchar(&b, agn_tointeger(L, -1));
+        } else if (agn_isstring(L, -1)) {
+          size_t len;
+          const char *str = lua_tolstring(L, -1, &len);
+          my_addlstring(&b, str, len);
+        } else {  /* mostly null */
+          my_addchar(&b, uchar(s[i]));
+        }
+        agn_poptop(L);
       }
-      agn_poptop(L);
+      break;
     }
-  } else if (lua_isseq(L, 2)) {
-    for (i=0; i < l; i++) {
-      token = agn_seqrawgetiinteger(L, 2, uchar(s[i]) + 1, &rc);
-      luaL_addchar(&b, rc ? token : uchar(s[i]));
+    case LUA_TSEQ: {
+      for (i=0; i < l; i++) {
+        token = agn_seqrawgetiinteger(L, 2, uchar(s[i]) + 1, &rc);
+        my_addchar(&b, rc ? token : uchar(s[i]));
+      }
+      break;
     }
-  } else if (lua_isreg(L, 2)) {  /* new 6.1.0 */
-    for (i=0; i < l; i++) {
-      token = agn_regrawgetiinteger(L, 2, uchar(s[i]) + 1, &rc);
-      luaL_addchar(&b, rc ? token : uchar(s[i]));
+    case LUA_TREG: {  /* new 6.1.0 */
+      for (i=0; i < l; i++) {
+        token = agn_regrawgetiinteger(L, 2, uchar(s[i]) + 1, &rc);
+        my_addchar(&b, rc ? token : uchar(s[i]));
+      }
+      break;
     }
-  } else
-    luaL_error(L, "Error in " LUA_QS ": table, sequence or register expected, got %s.", "utils.singlesubs",
-                  luaL_typename(L, 2));
-  luaL_pushresult(&b);
+    case LUA_TUSERDATA: {  /* 7.12.2 */
+      if (!isnumarray(L, 2)) {
+        my_cleanup(&b);
+        luaL_error(L, "Error in " LUA_QS ": expected an uchar numarray (unsigned characters).", "utils.singlesubs");
+      }
+      NumArray *uc = lua_touserdata(L, 2);
+      if (uc->datatype != NAUCHAR || uc->size != 256) {
+        my_cleanup(&b);
+        luaL_error(L, "Error in " LUA_QS ": expected an uchar numarray of 256 unsigned characters.", "utils.singlesubs");
+      }
+      const unsigned char *uchararray = uc->data.c;
+      for (i=0; i < l; i++) {
+        unsigned char c = uchar(s[i]);
+        my_addchar(&b, uchararray[c]);
+      }
+      break;
+    }
+    default: {
+      my_cleanup(&b);
+      luaL_error(L, "Error in " LUA_QS ": table, sequence, register or numarray expected, got %s.", 
+        "utils.singlesubs", luaL_typename(L, 2));
+    }
+  }
+  my_pushresult(&b);
   return 1;
 }
+
+/*
+  Charbuf buf;
+  charbuf_init(L, &buf, 0, l, 1);
+  charbuf_appendchar(L, &buf, a_character);
+  charbuf_append(L, &buf, s, l - (s - olds));
+  charbuf_finish(&buf);
+  lua_pushlstring(L, charbuf_get(&buf), l);
+  charbuf_free(&buf);
+*/
 
 /*
 ----------------------------------------------------------------------------

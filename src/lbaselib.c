@@ -2169,9 +2169,11 @@ static int agnB_readlib (lua_State *L) {
         " is not a string, must be a path to the main\nAgena folder.", procname, "libname");
     }
     rc = 0;
-    /* is mainlibname included in libname ? -> no need to check twice, 5.0.1 */
+    /* is mainlibname included in libname ? -> no need to check mainlibname twice, 5.0.1 */
     if (strstr(agn_tostring(L, -1), agn_tostring(L, -3)) != NULL) {
-      lua_pop(L, 2); rc = 1;
+      lua_remove(L, -2);  /* remove LUA_PATHSEP, 7.12.2 fix */
+      lua_remove(L, -2);  /* remove "mainlibname" */
+      rc = 1;
     }
     lua_concat(L, 5 - 2*rc);
     path = agn_tostring(L, -1);
@@ -11509,8 +11511,8 @@ static void base_open (lua_State *L) {
     lua_pushnumber(L, base_constants[i].value);
     lua_setglobal(L, base_constants[i].name);
   }
-  /* Due to DJGPP/DOS bailing out otherwise: DJGPP's headers define HUGE_VAL and NAN 
-     as runtime expressions rather than compile-time constants, so define them here 
+  /* Due to DJGPP/DOS bailing out otherwise: DJGPP's headers define HUGE_VAL and NAN
+     as runtime expressions rather than compile-time constants, so define them here
      and not in the base_constants table. */
   lua_pushnumber(L, HUGE_VAL);
   lua_setglobal(L, "infinity");

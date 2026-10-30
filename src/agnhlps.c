@@ -22561,8 +22561,6 @@ static char *fourbyte_strstr (const unsigned char *h, const unsigned char *n) {
   return *h ? (char *)h-3 : 0;
 }
 
-#define MAX(a,b) ((a)>(b)?(a):(b))
-#define MIN(a,b) ((a)<(b)?(a):(b))
 
 #define BITOP(a,b,op) \
  ((a)[(size_t)(b)/(8*sizeof *(a))] op (size_t)1<<((size_t)(b)%(8*sizeof *(a))))
@@ -22617,7 +22615,7 @@ static char *twoway_strstr (const unsigned char *h, const unsigned char *n) {
   /* Periodic needle? */
   if (tools_memcmp(n, n + p, ms + 1)) {
     mem0 = 0;
-    p = MAX(ms, l - ms - 1) + 1;
+    p = fMax(ms, l - ms - 1) + 1;
   } else mem0 = l - p;
   mem = 0;
   /* Initialize incremental end-of-haystack pointer */
@@ -22649,7 +22647,7 @@ static char *twoway_strstr (const unsigned char *h, const unsigned char *n) {
       continue;
     }
     /* Compare right half */
-    for (k=MAX(ms + 1,mem); n[k] && n[k] == h[k]; k++);
+    for (k=fMax(ms + 1,mem); n[k] && n[k] == h[k]; k++);
     if (n[k]) {
       h += k-ms;
       mem = 0;

@@ -6585,19 +6585,23 @@ static int str_issplit (lua_State *L) {  /* documented in 7.12.1 */
 
 /* A single unified 2D array: 8 maps of 256 bytes each */
 
-#define NUMBEROFCHARMAPS 8
+#define NUMBEROFCHARMAPS 16  /* 7.12.2: changed from 8 to 16, where maps 9 to 16 are reserved
+  for the interpreter.
+  Gemini AI: Arrays declared outside of any function or with the static keyword don't touch 
+  the C stack or heap at all. It slightly increases the memory footprint of the executable 
+  when it launches, but has zero effect on runtime stack or heap limits. */
 static unsigned char strings_maps[NUMBEROFCHARMAPS][256];
 
 /* Lua signature: val = string.map_getset(map_id, char_or_byte [, new_val]) */
 static int str_remapconfig (lua_State *L) {  /* 7.12.1, created by Gemini AI */
-  /* 1. Validate and convert map ID (1 to 8 -> 0 to 7) */
+  /* 1. Validate and convert map ID (1 to 16 -> 0 to 15) */
   int nargs = lua_gettop(L);
   if (nargs < 2)
     luaL_error(L, "Error in " LUA_QS ": need at least two arguments.", "strings.remapconfig");
   int map_id = (int)luaL_checkinteger(L, 1);
   if (map_id < 1 || map_id > NUMBEROFCHARMAPS) {
-    luaL_error(L, 
-      "Error in " LUA_QS ": map %d does not exist, there are %d maps altogether.", 
+    luaL_error(L,
+      "Error in " LUA_QS ": map %d does not exist, there are %d maps altogether.",
       "strings.remapconfig", map_id, NUMBEROFCHARMAPS);
     return 1;
   }
@@ -6625,8 +6629,8 @@ static int str_remap (lua_State *L) {  /* 7.12.1, created by Gemini AI */
   }
   int map_id = (int)agnL_optinteger(L, 2, 1);
   if (map_id < 1 || map_id > NUMBEROFCHARMAPS) {
-    luaL_error(L, 
-      "Error in " LUA_QS ": map %d does not exist, there are %d maps altogether.", 
+    luaL_error(L,
+      "Error in " LUA_QS ": map %d does not exist, there are %d maps altogether.",
       "strings.remap", map_id, NUMBEROFCHARMAPS);
     return 1;
   }

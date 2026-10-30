@@ -79,17 +79,17 @@ CORE_O= lapi.o lcode.o ldebug.o ldo.o ldump.o lfunc.o lgc.o llex.o lmem.o \
   lobject.o lopcodes.o lparser.o lstate.o lstring.o ltable.o ltm.o \
   lundump.o lvm.o lzio.o lset.o lseq.o lpair.o lreg.o
 
-LIB_O= agnxlib.o lbaselib.o ldblib.o liolib.o lmathlib.o loslib.o ltablib.o \
-  agnt64.o lrtable.o lenviron.o lstrlib.o utils.o units.o loadlib.o linit.o \
-  cephes.o binio.o xml.o sofa.o sdncal.o iniparse.o lreglib.o registry.o binpack.o \
-  stack.o intvec.o dblvec.o charbuf.o memfile.o lseqlib.o lsetlib.o agnhlps.o \
-  pbl.o pblhash.o pblkf.o keyfile.o bfield.o jwent.o fzy.o tuples.o long.o ints.o \
-  interp.o calc.o linalg.o stats.o combinat.o numtheory.o dual.o xbase.o utf8.o \
-  llist.o bags.o lookup.o numarray.o factory.o bytes.o sema.o semalib.o vecint.o \
-  jbmath.o trie.o regex.o regex_f.o regexcom.o hashes.o bloom.o cuckoo.o fifo.o \
-  lifo.o rbtree.o clock.o bimaps.o heaps.o dblhash.o numcuckoo.o numfilter.o \
-  dd.o ddmath.o network.o uintmap.o intmap.o dblmap.o suffix.o divsufsort.o \
-  sssort.o trsort.o
+LIB_O= agnxlib.o mybuffer.o lbaselib.o ldblib.o liolib.o lmathlib.o loslib.o \
+  ltablib.o agnt64.o lrtable.o lenviron.o lstrlib.o utils.o units.o loadlib.o \
+  linit.o cephes.o binio.o xml.o sofa.o sdncal.o iniparse.o lreglib.o registry.o \
+  binpack.o stack.o intvec.o dblvec.o charbuf.o memfile.o lseqlib.o lsetlib.o \
+  agnhlps.o pbl.o pblhash.o pblkf.o keyfile.o bfield.o jwent.o fzy.o tuples.o \
+  long.o ints.o interp.o calc.o linalg.o stats.o combinat.o numtheory.o dual.o \
+  xbase.o utf8.o llist.o bags.o lookup.o numarray.o factory.o bytes.o \
+  sema.o semalib.o vecint.o jbmath.o trie.o regex.o regex_f.o regexcom.o hashes.o \
+  bloom.o cuckoo.o fifo.o lifo.o rbtree.o clock.o bimaps.o heaps.o dblhash.o \
+  numcuckoo.o numfilter.o dd.o ddmath.o network.o uintmap.o intmap.o dblmap.o \
+  suffix.o divsufsort.o sssort.o trsort.o
 
 LUA_T= agena
 LUA_O= agena.o
@@ -327,6 +327,7 @@ lapi.o: lapi.c agena.h agnconf.h lapi.h lobject.h llimits.h ldebug.h \
 	lstate.h ltm.h lzio.h lmem.h ldo.h lfunc.h lgc.h lstring.h ltable.h \
 	lundump.h lvm.h
 agnxlib.o: agnxlib.c agena.h agnconf.h agnxlib.h llimits.h
+mybuffer.o: mybuffer.c mybuffer.h
 lbaselib.o: lbaselib.c lbaselib.h agena.h agnconf.h agnxlib.h agenalib.h agnhlps.h
 lcode.o: lcode.c agena.h agnconf.h lcode.h llex.h lobject.h llimits.h \
 	lzio.h lmem.h lopcodes.h lparser.h ldebug.h lstate.h ltm.h ldo.h lgc.h \

@@ -31,7 +31,7 @@
 #define agena_h
 
 #define AGENA_VERSION     "agena 7.12"
-#define AGENA_EDITION     "7.12.1"
+#define AGENA_EDITION     "7.12.2"
 #define AGENA_MOTTO       "kerberos"
 #define AGENA_NAME        "agena"
 #define AGENA_LOGO        ">>"
