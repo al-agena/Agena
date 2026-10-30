@@ -1,24 +1,37 @@
+7.12.2 Kerberos, October 29, 2026
+
+- `utils.singlesubs` now accepts an unsigned character numarray (see `numarray.uchar`) of exactly 256 ASCII codes. This
+  speeds up singe-character character replacement by a factor of 31, also benefitting `strings.diamap` which has become
+  21 times faster in non-'ascii7' modes.
+
+- When loading external packages with `import`, `readlib` or `initialise`, Agena in most cases did not check the paths
+  stored in the `libname` system variable, instead searching only the main Agena library folder for packages. This has
+  been fixed.
+
+- The `sqlite` package was either missing or not usable in the 64-bit Windows edition. This has been fixed.
+
+
 7.12.1 Kerberos, October 28, 2026
 
-- New `strings.remap` takes a string and exchanges every single character in it with another single character. You can define 
-  up to eight mapping tables, all defaulting to an identical 1:1 mapping, that is at start-up 'a' is mapped to 'a', 'A' to 'A', 
+- New `strings.remap` takes a string and exchanges every single character in it with another single character. You can define
+  up to eight mapping tables, all defaulting to an identical 1:1 mapping, that is at start-up 'a' is mapped to 'a', 'A' to 'A',
   '1' to '1', '.' to '.', et cetera.
-  
+
   The mappings can be queried and changed with `strings.remapconfig`. To change the mapping of 'A' to 'a' in mapping table #1,
   issue:
-  
+
   > strings.remapconfig(1, 'A', 'a');
-  
+
   > strings.remapconfig(1, 'A'):
   a
-  
+
   > strings.remap('AgenA', 1):  # with mapping table 1 you can omit the second argument
   agena
 
   This solution is around 7 times faster than a solution purely written in Agena.
 
-- For better portability of Lua code to Agena, added the Lua 5.x function `strings.char` which returns a string with length 
-  equal to the number of arguments, in which each character has the internal numerical code equal to its corresponding argument. 
+- For better portability of Lua code to Agena, added the Lua 5.x function `strings.char` which returns a string with length
+  equal to the number of arguments, in which each character has the internal numerical code equal to its corresponding argument.
   The result may vary across platforms.
 
 - New `strings.issplit` checks whether a string is distributed over two or more memory pages.
