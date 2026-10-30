@@ -1455,14 +1455,15 @@ end;
 
 # The C version is twice as fast, but with this Agena function, at least the mapping tables
 # can be changed easily if Agena is not run on codepage 1252. Rewritten September 08, 2011;
-# patched 21.08.2012; changed 6.1.0
-
+# patched 21.08.2012; changed 6.1.0; tuned 7.12.2 by 31 times, the `strings.remap` solution
+# is just slightly faster, so we do not use it here.
 strings.diamap := proc(str :: string, option) is
    if nargs = 1 then
       # one argument ? -> assume that arg has been read from a file
       # Mapping table for codepage 1252 (Windows Latin-1), maps characters in a file to console layout
       if unassigned(strings.f2c) then
-         strings.f2c := // from 140 insert
+         local f2c := tables.new(0, 139);
+         for i in //
             153 141 142 143 144 145 146 147 148 149  # 140 .. 149
             150 151 152 153 154 155 148 157 158 159  # 150 .. 159
             160 161 162 163 164 165 166 245 168 169  # 160 .. 169
@@ -1475,7 +1476,8 @@ strings.diamap := proc(str :: string, option) is
             145 135 138 130 136 137 141 161 140 139  # 230 .. 239
             208 164 149 162 147 228 148 247 155 151  # 240 .. 249
             163 150 129 236 231 152                  # 250 .. 255
-         \\
+         \\ do insert i into f2c od;
+         strings.f2c := numarray.toarray(f2c, 'uchar')  # 31x boost, 7.12.2
       fi;
       return utils.singlesubs(str, strings.f2c)
    elif option = 'ascii7' then
@@ -1505,7 +1507,8 @@ strings.diamap := proc(str :: string, option) is
       # more than one argument ?  -> assume that you want to write to a file
       # Mapping table for codepage 1252 (Windows Latin-1), maps characters from console to file format
       if unassigned(strings.c2f) then
-         strings.c2f := // from 128 insert  199 252  # 128 .. 129
+         local c2f := tables.new(0, 127);
+         for i in //                        199 252  # 128 .. 129
             233 226 228 224 229 231 234 235 232 239  # 130 .. 139
             238 236 196 197 201 230 198 244 246 242  # 140 .. 149
             251 249 255 214 220 248 156 216 158 159  # 150 .. 159
@@ -1519,9 +1522,10 @@ strings.diamap := proc(str :: string, option) is
             230 254 222 218 219 217 253 221 238 239  # 230 .. 239
             240 241 242 243 244 167 246 247 248 249  # 240 .. 249
             250 251 252 253 254 255                  # 250 .. 255
-         \\
+         \\ do insert i into c2f od;
+         strings.c2f := numarray.toarray(c2f, 'uchar');
       fi;
-      return utils.singlesubs(str, strings.c2f)
+      return utils.singlesubs(str, strings.c2f)  # 31x boost, 7.12.2
    fi
 end;
 
