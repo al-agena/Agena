@@ -4482,10 +4482,12 @@ LUAI_FUNC void luaV_substring (lua_State *L, StkId string, StkId inds, StkId idx
   if (stop < 0) stop = len + stop + 1;
   if (start < 1 || start > len)  /* 2.1.1 */
     luaG_runerror(L, "Error in %s: left index %d out of range.", "substring op", start);
-  else if (stop < 1)
-    luaG_runerror(L, "Error in %s: right index %d out of range.", "substring op", stop);
+  else if (stop <= 0) {
+    if (stop < 0) luaG_runerror(L, "Error in %s: right index %d out of range.", "substring op", stop);
+    start = 1;  /* 7.12.3: if stop is 0, return the empty string */
+  }
   else if (stop > len) stop = len;  /* behave like Lua's string.sub, 3.0.0 */
-  if (start > stop)
+  if (stop != 0 && start > stop)
     luaG_runerror(L, "Error in %s: left index (%d) > right index (%d).", "substring op", start, stop);
   /* delete indices, keep substring */
   setnilvalue(inds);

@@ -1152,9 +1152,22 @@ static int f_flush (lua_State *L) {  /* 4.3.0 */
    patched 0.27.2, October 13, 2009 to fix the long-known `cannot read more than 2048
    chars per line` bug.
    extended 0.27.2, October 14, 2009 to accept file handles. */
+
+static int tools_skipline (const char *line, const char *pattern, size_t l) {
+  /* 7.12.3; scan for empty lines: we have to do it like this, so do not delete, as strstr() will fail there: */
+  if (pattern[0] == '\0' ||
+     (l == 1 && pattern[0] == '\n') ||
+     (l == 2 && pattern[0] == '\r' && pattern[1] == '\n') ||
+     (l == 2 && pattern[0] == '\n' && pattern[1] == '\r')) {
+    return (line[0] == '\0');
+  } else {
+    return strstr(line, pattern) == line;
+  }
+}
+
 static int io_readlines (lua_State *L) {
-  int hasoption, hasfunction, r;
-  size_t i, linelength, bufsize, maxbufsize;
+  int r, hasoption, hasfunction, hasset = 0;
+  size_t i, l, linelength, bufsize, maxbufsize;
   unsigned int c, convert;
   char *line;  /* 2.34.9 adaption */
   const char *skip, *filename;
@@ -1162,15 +1175,19 @@ static int io_readlines (lua_State *L) {
   bufsize = agn_getbuffersize(L);
   char buf[bufsize];
   skip = "";
+  l = 0;
   maxbufsize = convert = hasoption = hasfunction = c = 0;
   for (i=2; i <= lua_gettop(L); i++) {
     if (agn_isstring(L, i)) {
-      skip = agn_tostring(L, i);
+      skip = lua_tolstring(L, i, &l);
       hasoption = 1;
     } else if (lua_isboolean(L, i)) {  /* Agena 1.6.0 */
       convert = lua_toboolean(L, i);
-    } else if (lua_isfunction(L, i))
+    } else if (lua_isfunction(L, i)) {
       hasfunction = i;
+    } else if (lua_isset(L, i)) {
+      hasset = i;
+    }
   }
   line = NULL;
   filename = NULL;
@@ -1188,11 +1205,25 @@ static int io_readlines (lua_State *L) {
     /* delete \r in DOS files */
     if (0 && linelength > 0 && line[linelength - 1] == '\r')  /* 1.6.11 Valgrind, changed 2.14.12 */
       line[linelength - 1] = '\0';
-    if (!hasoption || (strstr(line, skip) != line)) {
+    if (hasset) {  /* 7.12.3 */
+      int skip = 0;
+      luaL_checkstack(L, 2, "not enough stack space");
+      lua_pushnil(L);
+      while (!skip && lua_usnext(L, hasset)) {
+        if (agn_isstring(L, -1)) {
+          const char *pattern = lua_tolstring(L, -1, &l);
+          skip = tools_skipline(line, pattern, l);
+        }
+        lua_pop(L, 1 + skip);
+      }
+      if (skip) continue;
+    }
+    if (!hasoption || !tools_skipline(line, skip, l)) {
       /* if line begins with the optional second string skip it */
       if (!hasfunction) {
         lua_rawsetilstring(L, -1, ++c, line, linelength);
       } else {  /* apply a function before table insertion, 2.14.8 */
+        luaL_checkstack(L, 2, "not enough stack space");  /* 7.12.3 fix */
         lua_pushvalue(L, hasfunction);
         lua_pushlstring(L, line, linelength);
         lua_call(L, 1, 1);

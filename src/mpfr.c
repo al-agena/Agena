@@ -4398,12 +4398,6 @@ static int nopened = 0;
 */
 
 LUALIB_API int luaopen_mpfr (lua_State *L) {
-  /* #if defined(_WIN32) && !defined(WINLEGACY)
-  struct WinVer winversion;
-  if (getWindowsVersion(&winversion) < MS_WINS2008) {
-    luaL_error(L, "Error in " LUA_QS " package: need at least Windows 7 or 2008 Server or later.\nYou may download and install the Agena Legacy version instead.", "mpfr");
-  }
-  #endif */
   luaL_checkstack(L, 3, "not enough stack space");  /* 3.18.4 fix */
   nopened++;
   Mpfr_set_default_prec;
