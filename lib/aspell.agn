@@ -1,3 +1,15 @@
+
+# aspell --lang=en --local-data-dir=c:/agena/data/aspell soundslike
+
+/*
+import aspell
+en := aspell.rules('c:/agena/phq/phonetiqs.cfg', true);
+aspell.norm('Scheibenwischer', en):
+
+en := aspell.rules('c:/agena/data/aspell/en_phonet.dat');
+aspell.norm('Scheibenwischer', en):
+*/
+
 package.checkclib('aspell');  # has C dynamic link library been found ?
 
 aspell.languages := [
@@ -144,7 +156,9 @@ local aspellparserule := proc(pattern, replacement) is
    if cleanpat@@find('<') then rule.rewind := true; cleanpat := cleanpat@@gsub('<', '') fi;
    # 2. Extract End Anchor: If '$' exists, flag it and remove the symbol
    if cleanpat@@find('%$') then rule.anchorend := true; cleanpat := cleanpat@@gsub('%$', '') fi;
-   # 3. Extract Carets: '^^' means isolate suffix, '^' means start of word boundary
+   # 3. Extract Carets: '^^' means isolate suffix, '^' means start of word boundary, or in other words:
+   # If a word starts with this specific prefix, cut it off, translate it to its sound, and then completely
+   # reset to process the rest of the word as if it were a brand-new word.
    if cleanpat@@find('%^%^') then
       rule.doublecaret, rule.anchorstart -> true;
       cleanpat := cleanpat@@gsub('%^%^', '')
@@ -175,20 +189,95 @@ local aspellparserule := proc(pattern, replacement) is
    # Assign the fully cleaned native search pattern back to the object configuration
    rule.pattern := cleanpat;
    return rule
-end
+end;
 
-aspell.rules := proc(obj :: {string, table}) is
+aspell.Segment :=
+   # vowels and consonants
+   ['V' ~ ['a', 'e', 'i', 'y', 'o', 'u', 'h'],
+    'C' ~ ['b', 'p', 'w', 'v', 'f', 'd', 't', 'j', 'l', 'm', 'n', 'r',
+           'c', 'g', 'k', 'q', 's', 'x', 'z', '@']
+   ];
+
+local phqparserule := proc(pattern, replacement) is
+   # Initialize the rule object with default metadata flags
+   local rule := [
+      original    ~ pattern,      # Stores the unparsed pattern string for debugging
+      replacement ~ replacement,  # The target text to substitute into the word
+      rewind      ~ false,        # Set to true if the rule contains '<'
+      doublecaret ~ false,        # Set to true if the rule contains '^^'
+      anchorstart ~ false,        # Set to true if the pattern applies only to the start of a word
+      anchorend   ~ false,        # Set to true if the pattern applies only to the end of a word
+      priority    ~ 0,            # Dictates when this rule executes relative to others
+      slicelimit  ~ null,         # Tracks partial replacement limits (e.g., German Y(AOU)-<7)
+      phonetiQs   ~ true
+   ];
+   # This working copy will be stripped down step-by-step into a pure matching string
+   local cleanpat := pattern;
+   # 1. Extract Rewind Flag: If '<' exists, enable rewind and remove the symbol
+   if cleanpat@@find('<rewind>') then rule.rewind := true; cleanpat := cleanpat@@gsub('<rewind>', '') fi;
+   # 2. Extract End Anchor: If '$' exists, flag it and remove the symbol
+   if cleanpat@@find('<end>') then
+      rule.anchorend := true;
+      cleanpat := cleanpat@@gsub('<end>', '')
+   fi;
+   # 3. Extract Carets: '^^' means isolate suffix, '^' means start of word boundary, or in other words:
+   # If a word starts with this specific prefix, cut it off, translate it to its sound, and then completely
+   # reset to process the rest of the word as if it were a brand-new word.
+   if cleanpat@@find('<isolate>') then
+      rule.doublecaret, rule.anchorstart -> true;
+      cleanpat := cleanpat@@gsub('<isolate>', '')
+   fi;
+   if cleanpat@@find('<begin>') then
+      rule.anchorstart := true;
+      cleanpat := cleanpat@@gsub('<begin>', '')
+   fi;
+   # 4. Convert Bracket Groups: Translate formatting '<:ABC:>' into a Lua set class '[ABC]'
+   cleanpat := cleanpat@@gsub('<:(.-):>', '[%1]');
+   # 5. Vowel placeholder
+   cleanpat := cleanpat@@gsub('<vowel>', '([' & join(aspell.Segment.V) & '])');
+   # 6. Consonant placeholder
+   cleanpat := cleanpat@@gsub('<cons>', '([' & join(aspell.Segment.C) & '])');
+   # 7. Letters
+   cleanpat := cleanpat@@gsub('<alpha>', '([' & join(aspell.Segment.C) & join(aspell.Segment.V) & '])');
+   # 8. ASCII placeholder
+   cleanpat := cleanpat@@gsub('<char%((.-)%)>', char);
+   # 9. Blanks
+   cleanpat := cleanpat@@gsub('<blank>', ' ');
+   # 10. Control characters
+   cleanpat := cleanpat@@gsub('%%', '%');
+   # Assign the fully cleaned native search pattern back to the object configuration
+   rule.pattern := upper(cleanpat);
+   # Treatment of replacement strings:
+   rule.replacement := strings.gsub(rule.replacement, "<%%(%d+)>", "%%%1");
+   for i in ['<empty>', '<begin>', '<end>'] do
+      # <begin> and <end> in the replacement seem to not make sense anyway
+      rule.replacement := replace(rule.replacement, i, '')
+   od;
+   for i in ['<blank>'] do
+      rule.replacement := replace(rule.replacement, i, ' ')
+   od;
+   rule.replacement := upper(rule.replacement@@gsub('<char%((.-)%)>', char));
+   return rule
+end;
+
+aspell.rules := proc(obj :: {string, table}, option) is
    local compiled, rawrules := [], obj;
    if obj :: string then
-      rawrules := io.readlines(obj,
-         {'#', '\n', '\n\r', 'version', 'followup', 'collapse_result', 'remove_accents'},
-         <: x -> totable(strings.trim(x) split ' ') :>, true)
+      if option then
+         rawrules := io.readlines(obj, {'#', '\0', '\n', '['},
+            <: x -> totable(strings.trim(x) split ' ') :>, true)
+      else
+         rawrules := io.readlines(obj,
+            {'#', '\0', '\n', '\n\r', 'version', 'followup', 'collapse_result', 'remove_accents'},
+            <: x -> totable(strings.trim(x) split ' ') :>, true)
+      fi
    fi;
    # Iterate sequentially through every raw array entry in the list
    # rawrules[i, 1] is the raw string pattern, rawrules[i, 2] is the replacement text
+   local parserule := if option then phqparserule else aspellparserule fi;
    for i to size rawrules do
       # Store the generated configuration table into the master tracking array
-      insert aspellparserule(op(rawrules[i])) into compiled
+      insert parserule(op(rawrules[i])) into compiled
    od;
    # Sort the entire array table deterministically using a custom rule matrix
    sort(compiled, proc(a, b) is
@@ -198,15 +287,12 @@ aspell.rules := proc(obj :: {string, table}) is
       return size a.pattern > size b.pattern
    end);
    return compiled
-end
+end;
 
 aspell.norm := proc(word :: string, rules :: table) is
    # buffer: The active text canvas being mutated (starts as the input word)
    # cursor: The pointer tracking which character position we are currently evaluating
    local buffer, cursor := upper(word), 1;  # upper: prevent the function from going into infinite
-   /* if not strings.isascii(buffer) then
-        error('Error in `aspell.norm`: input contains at least one character with ASCII code > 127.")
-      fi; */
    # Main Loop: Step character by character across the entire length of the mutable buffer
    while cursor <= size buffer do
       local matched := false;
@@ -220,7 +306,18 @@ aspell.norm := proc(word :: string, rules :: table) is
          local isvalid := not(rule.anchorstart and cursor > 1);
          if isvalid then
             # Search the snapshot. Adding '^' forces Lua to evaluate strictly at the first index of the snapshot
-            local s, e := curslice@@find('^' & rule.pattern);
+            local s, e, rulepattern;
+            rulepattern := rule.pattern;
+            if rulepattern = '\0' then next fi;  # get rid of stray NULLs
+            if rule.phonetiQs and size rulepattern = 1 and rulepattern in '%()' then  # avoid invalid capture
+               rulepattern := '%' & rulepattern[1]
+            fi;
+/*
+import aspell
+en := aspell.rules('c:/agena/phq/phonetiqs.cfg', true);
+aspell.norm('Scheibenwischer', en):
+*/
+            s, e := curslice@@find('^' & rulepattern);
             # Verify the match aligns perfectly at index 1 of the snapshot (directly under our active tracking cursor)
             if s = 1 then
                # Validate End-of-Word Constraints
@@ -244,9 +341,13 @@ aspell.norm := proc(word :: string, rules :: table) is
                   # 2. Grab all text sitting safely AFTER our calculated pattern overwrite zone
                   local after := buffer@@sub(cursor + cutlength);
                   # 3. Construct the new word layout sandwich with the replacement string in the middle
-                  if rule.replacement = '*' then  # put the letter into the result
-                     buffer := before & matchedstr & after
-                  elif rule.replacement = '_' then  # do not add letter to result
+                  if rule.phonetiQs then
+                     if strings.find(rule.pattern, '%(%[.-%]%)') then
+                        buffer := before & strings.gsub(matchedstr, rule.pattern, rule.replacement) & after
+                     else
+                        buffer := before & rule.replacement & after
+                     fi
+                  elif rule.replacement = '_' then  # do not add matched substring to result
                      buffer := before & after
                   else
                      buffer := before & rule.replacement & after
