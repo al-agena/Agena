@@ -2,7 +2,7 @@
 # ! build Agena in /home/proglang/agena !
 Summary: Agena Programming Language
 Name: agena
-Version: 7.11.2
+Version: 7.12.4
 Release: 1
 # change Release number in build.sh file, as well.
 #Source0: %{name}-%{version}-src.tar.gz
@@ -66,6 +66,7 @@ cp /home/proglang/agena/installers/rpmsuse/agena.pc $RPM_BUILD_ROOT/usr/lib/pkgc
 cp /home/proglang/agena/data/langreg.csv $RPM_BUILD_ROOT/usr/agena/data
 cp /home/proglang/agena/data/viking2.csv $RPM_BUILD_ROOT/usr/agena/data
 cp /home/proglang/agena/data/viking2.txt $RPM_BUILD_ROOT/usr/agena/data
+cp /home/proglang/agena/data/hotel.sav $RPM_BUILD_ROOT/usr/agena/data
 cp /home/proglang/agena/data/airlines.csv $RPM_BUILD_ROOT/usr/agena/data
 cp /home/proglang/agena/data/airlines.txt $RPM_BUILD_ROOT/usr/agena/data
 cp /home/proglang/agena/data/gothic.csv $RPM_BUILD_ROOT/usr/agena/data
@@ -117,6 +118,8 @@ cp /home/proglang/agena/lib/mpfr.agn $RPM_BUILD_ROOT/usr/agena/lib
 cp /home/proglang/agena/lib/mpfr.so $RPM_BUILD_ROOT/usr/agena/lib
 cp /home/proglang/agena/lib/net.agn $RPM_BUILD_ROOT/usr/agena/lib
 cp /home/proglang/agena/lib/net.so $RPM_BUILD_ROOT/usr/agena/lib
+cp /home/proglang/agena/lib/readstat.agn $RPM_BUILD_ROOT/usr/agena/lib
+cp /home/proglang/agena/lib/readstat.so $RPM_BUILD_ROOT/usr/agena/lib
 cp /home/proglang/agena/lib/skycrane.agn $RPM_BUILD_ROOT/usr/agena/lib
 cp /home/proglang/agena/lib/skycrane.so $RPM_BUILD_ROOT/usr/agena/lib
 cp /home/proglang/agena/lib/strhash.so $RPM_BUILD_ROOT/usr/agena/lib
@@ -308,13 +311,13 @@ cp /home/proglang/agena/src/libagena.a $RPM_BUILD_ROOT/usr/local/lib
 cp /home/proglang/agena/src/libagena.so $RPM_BUILD_ROOT/usr/local/lib
 cp /home/proglang/agena/src/licence $RPM_BUILD_ROOT/usr/agena
 # Srglue/Sragena
-#cp /home/proglang/agena/ports/sragena-105/src/srglue $RPM_BUILD_ROOT/usr/local/bin
-#cp /home/proglang/agena/ports/sragena-105/src/sragena $RPM_BUILD_ROOT/usr/local/bin
-#cp /home/proglang/agena/ports/sragena-105/README.srglue $RPM_BUILD_ROOT/usr/agena
+cp /home/proglang/agena/ports/sragena-105/src/srglue $RPM_BUILD_ROOT/usr/local/bin
+cp /home/proglang/agena/ports/sragena-105/src/sragena $RPM_BUILD_ROOT/usr/local/bin
+cp /home/proglang/agena/ports/sragena-105/README.srglue $RPM_BUILD_ROOT/usr/agena
 chmod -R 755 $RPM_BUILD_ROOT/usr/agena
 chmod 755 $RPM_BUILD_ROOT/usr/local/bin/agena
-#chmod 755 $RPM_BUILD_ROOT/usr/local/bin/srglue
-#chmod 755 $RPM_BUILD_ROOT/usr/local/bin/sragena
+chmod 755 $RPM_BUILD_ROOT/usr/local/bin/srglue
+chmod 755 $RPM_BUILD_ROOT/usr/local/bin/sragena
 chmod 755 $RPM_BUILD_ROOT/usr/local/lib/libagena.a
 chmod 755 $RPM_BUILD_ROOT/usr/local/lib/libagena.so
 chmod 755 $RPM_BUILD_ROOT/usr/lib/pkgconfig/agena.pc
@@ -332,6 +335,7 @@ rm -rf $RPM_BUILD_ROOT
 /usr/agena/data/langreg.csv
 /usr/agena/data/viking2.csv
 /usr/agena/data/viking2.txt
+/usr/agena/data/hotel.sav
 /usr/agena/data/airlines.csv
 /usr/agena/data/airlines.txt
 /usr/agena/data/gothic.csv
@@ -383,6 +387,8 @@ rm -rf $RPM_BUILD_ROOT
 /usr/agena/lib/mpfr.so
 /usr/agena/lib/net.agn
 /usr/agena/lib/net.so
+/usr/agena/lib/readstat.agn
+/usr/agena/lib/readstat.so
 /usr/agena/lib/strhash.so
 /usr/agena/lib/strmap.so
 /usr/agena/lib/skycrane.agn
@@ -397,8 +403,8 @@ rm -rf $RPM_BUILD_ROOT
 /usr/local/lib/libagena.so
 /usr/lib/pkgconfig/agena.pc
 /usr/local/bin/agena
-#/usr/local/bin/srglue
-#/usr/local/bin/sragena
+/usr/local/bin/srglue
+/usr/local/bin/sragena
 #/usr/local/bin/agenaedit
 #%doc /usr/local/info/agena.info
 #%doc %attr(0444,root,root) /usr/local/man/man1/indent.1
