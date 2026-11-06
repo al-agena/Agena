@@ -52,6 +52,7 @@ cp $AGENAHOME/doc/SQLite.agn $AGENATARGET_DOCS
 cp $AGENAHOME/data/langreg.csv $AGENATARGET_USR/agena/data
 cp $AGENAHOME/data/viking2.csv $AGENATARGET_USR/agena/data
 cp $AGENAHOME/data/viking2.txt $AGENATARGET_USR/agena/data
+cp $AGENAHOME/data/hotel.sav $AGENATARGET_USR/agena/data
 cp $AGENAHOME/data/airlines.csv $AGENATARGET_USR/agena/data
 cp $AGENAHOME/data/airlines.txt $AGENATARGET_USR/agena/data
 cp $AGENAHOME/data/gothic.csv $AGENATARGET_USR/agena/data
@@ -106,6 +107,8 @@ cp $AGENAHOME/lib/net.agn $AGENATARGET_USR/agena/lib
 cp $AGENAHOME/lib/net.so $AGENATARGET_USR/agena/lib
 cp $AGENAHOME/lib/phones.agn $AGENATARGET_USR/agena/lib
 cp $AGENAHOME/lib/phones.so $AGENATARGET_USR/agena/lib
+cp $AGENAHOME/lib/readstat.agn $AGENATARGET_USR/agena/lib
+cp $AGENAHOME/lib/readstat.so $AGENATARGET_USR/agena/lib
 cp $AGENAHOME/lib/sqlite.so $AGENATARGET_USR/agena/lib
 cp $AGENAHOME/lib/strhash.so $AGENATARGET_USR/agena/lib
 cp $AGENAHOME/lib/strmap.so $AGENATARGET_USR/agena/lib
@@ -116,7 +119,6 @@ cp $AGENAHOME/lib/telex.agn $AGENATARGET_USR/agena/lib
 cp $AGENAHOME/lib/testlib.so $AGENATARGET_USR/agena/lib
 cp $AGENAHOME/lib/unimath.agn $AGENATARGET_USR/agena/lib
 cp $AGENAHOME/lib/zx.so $AGENATARGET_USR/agena/lib
-
 
 # Scheme files
 cp $AGENAHOME/share/schemes/agena.lang $AGENATARGET_USR/agena/share/schemes
