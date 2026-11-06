@@ -137,6 +137,15 @@ gcc $OPTFINAL -o phones.so phones.o
 rm -f phones.o
 printf "done.\n"
 
+printf "Compiling readstat ... "
+READSTAT_INCLUDES="-I/usr/local/include -I/export/home/proglang/agena/src"
+# Follow your exact pattern: static for readstat and zlib, dynamic for system/iconv libraries
+READSTAT_LIBS="-Wl,-Bstatic -L/usr/local/lib -lreadstat -Wl,-Bdynamic /usr/lib/libz.so -liconv -lm"
+gcc $OPTIONS $READSTAT_INCLUDES -c -o readstat.o readstat.c
+gcc $OPTFINAL -o readstat.so readstat.o $READSTAT_LIBS
+rm -f readstat.o
+printf "done.\n"
+
 printf "Compiling skycrane ... "
 gcc $OPTIONS -c -o skycrane.o skycrane.c
 gcc $OPTFINAL -o skycrane.so skycrane.o
@@ -190,11 +199,11 @@ mv fractals.so ../lib
 mv gmp.so ../lib
 mv gzip.so ../lib
 mv iconv.so ../lib
-mv intmap.so ../lib
 mv minizip.so ../lib
 mv mpfr.so ../lib
 mv net.so ../lib
 mv phones.so ../lib
+mv readstat.so ../lib
 mv skycrane.so ../lib
 mv strhash.so ../lib
 mv strmap.so ../lib

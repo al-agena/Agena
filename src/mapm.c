@@ -31,6 +31,7 @@
 #include "mapm.h"
 #include "m_apm.h"
 #include "m_apm_lc.h"
+#include "lstate.h"  /* for L->mapmopened */
 #include "prepdefs.h"  /* FORCE_INLINE */
 
 /* #define AGENA_LIBVERSION	"MAPM 4.9.5a binding, version 2.0.2 as of November 05, 2023\n" */
@@ -2502,16 +2503,16 @@ static int mapm_ctostring (lua_State *L) {
 
 static FORCE_INLINE void Ctorealnumbers (lua_State *L, int idx, lua_Number *real, lua_Number *imag) {
   char *s;
-  int overflow;
+  int overflow = 0, rc = 0;
   M_APM re, im;
   Cgetrealimag(L, idx, re, im);  /* 3.5.1 fix */
   /* real part */
   s = m_apm_to_fixpt_stringexp(IEEEPRECISION, re, '.', 0, 0);
-  *real = luaL_str2d(L, s, &overflow);
+  *real = luaL_str2d(L, s, &overflow, &rc);
   xfree(s);
   /* imaginary part */
   s = m_apm_to_fixpt_stringexp(IEEEPRECISION, im, '.', 0, 0);
-  *imag = luaL_str2d(L, s, &overflow);
+  *imag = luaL_str2d(L, s, &overflow, &rc);
   xfree(s);
 }
 
@@ -4602,6 +4603,7 @@ static const luaL_Reg mapmlib[] = {
 static void clearmapm (void) {  /* 2.9.6 */
   m_apm_free_all_mem();
 }
+
 
 static int nopened = 0;
 

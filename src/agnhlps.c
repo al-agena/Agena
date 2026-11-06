@@ -96,7 +96,6 @@
 #include <sys/ioctl.h>  /* for ioctl */
 #include <dpmi.h>       /* for get_dos_ticks */
 #include <crt0.h>       /* for __crt0_argv */
-//extern char * __crt0_argv;
 #endif
 
 #include "agncfg.h"    /* read in endianness */
@@ -112,7 +111,7 @@
 #include "lucase.def"  /* for tools_lowercase */
 #include "md5.h"
 #include "sofa.h"      /* for iauJd2cal */
-
+#include "sunpro.h"      /* for iauJd2cal */
 
 #define BASE_MOVELEN  16384L     /* number of bytes in index section to be moved in a write or delete operation */
 #define BASE_OFFSET     256L     /* first position of an index to a key */
@@ -24743,6 +24742,7 @@ static long double stirfl (long double x) {
 
 LUALIB_API long double tools_gammal (long double x) {
   long double p, q, z;
+  ENFORCE_80BIT_FPU();
   if (!isfinite(x))
     return x + INFINITY;
   else if (x == 0.0L)  /* 6.7.3 change, do not return infinity */

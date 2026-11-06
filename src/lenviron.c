@@ -176,7 +176,7 @@ static void package_cleanse (lua_State *L, const char *pkgname) {
     lua_pop(L, 2);
     return;
   }
-  /* 2. Sever the reference safely by removing pkg_name from from package.loaded without 
+  /* 2. Sever the reference safely by removing pkg_name from from package.loaded without
         touching any metamethods */
   lua_pushstring(L, pkgname);
   lua_pushnil(L);
@@ -186,8 +186,8 @@ static void package_cleanse (lua_State *L, const char *pkgname) {
         The first call runs the __gc metamethods on the orphaned userdata objects.
         The second call actually sweeps up and frees the memory. */
   lua_gc(L, LUA_GCCOLLECT, 0);
-  lua_gc(L, LUA_GCCOLLECT, 0); 
-}    
+  lua_gc(L, LUA_GCCOLLECT, 0);
+}
 
 int environ_restart (lua_State *L) {  /* added 0.4.0 */
   const char *path, *obj;

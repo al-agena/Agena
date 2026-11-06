@@ -1896,11 +1896,13 @@ static int tonumber (lua_State *L, int idx) {
 #else
         agn_createcomplex(L, c[0], c[1]);
 #endif
-      else
+      else {  /* 7.12.4: try extended conversion function, else return input string unchanged */
+        agnL_strtonumber(L, idx);
         lua_pushvalue(L, idx);
-    }
-    else
+      }
+    } else {
       lua_pushnumber(L, n);
+    }
   } else if (type == LUA_TCOMPLEX) {
     lua_pushvalue(L, idx);
   } else {

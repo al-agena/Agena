@@ -29,7 +29,7 @@ PLAT= none
 # ncurses can only be compiled along with ltinfo. First pass -lncurses and immediately thereafter -ltinfo, not vice versa !
 # See: https://stackoverflow.com/questions/3514852/statically-link-ncurses-to-program
 OS2SYSLIBS= -lm -lmapm -lz -lreadline -lncurses -ltinfo -lhistory -liconv -lexpat -lmpfr -lgmp -lg2 -lgd -lsqlite3 \
-	-lpcre2-posix -lpcre2-8 -lfi_lib -lsocket -pthread
+	-lreadstat -lpcre2-posix -lpcre2-8 -lfi_lib -lsocket -pthread
 OS2ZFLAGS= -Zdll -Zomf -Zmt
 OS2DFLAGS= -DLUA_BUILD_AS_DLL -D_FILE_OFFSET_BITS=64 -D_DIRENT_HAVE_D_TYPE -DPCRE2_CODE_UNIT_WIDTH=8 -D__ST_MT_ERRNO__ \
 	-DLUA_USE_LINUX -DINCL_BASE -DHAVE_NCURSES_H -DSTDC_HEADERS -DHAVE_STDLIB_H
@@ -72,7 +72,7 @@ LIB_O=  agnxlib.o mybuffer.o lbaselib.o ldblib.o liolib.o lmathlib.o loslib.o lt
 	vecint.o bloom.o bimaps.o fzy.o jbmath.o ival.o miniz.o minizip.o fifo.o lifo.o trie.o ints.o \
 	dblhash.o numcuckoo.o numfilter.o dcastro.o dd.o ddmath.o getaddrinfo.o pbl.o pblhash.o pblkf.o \
 	keyfile.o abci.o strhash.o strmap.o intmap.o uintmap.o dblmap.o iniparse.o divsufsort.o sssort.o \
-	trsort.o suffix.o binpack.o phones.o
+	trsort.o suffix.o binpack.o phones.o readstat.o
 
 LUA_T=  agena.exe
 LUA_O=  agena.o
@@ -322,5 +322,6 @@ intmap.o:	intmap.c agena.h agnxlib.h agenalib.h agnhlps.h khash.h
 uintmap.o:	uintmap.c agena.h agnxlib.h agenalib.h agnhlps.h khash.h
 dblmap.o:	dblmap.c agena.h agnxlib.h agenalib.h agnhlps.h khash.h
 aspell.o:	aspell.c agena.h agnxlib.h agenalib.h agnhlps.h
+readstat.o:	readstat.c agena.h agnxlib.h agenalib.h agnhlps.h
 
 # (end of Makefile)

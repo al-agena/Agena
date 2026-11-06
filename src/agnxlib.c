@@ -2053,15 +2053,14 @@ LUALIB_API const char *agnL_tolstringx (lua_State *L, int idx, size_t *len, cons
 }
 
 
-/* Tries to convert the string at stack position idx (idx < 0) to a number and if successful replaces the string with that number,
-   otherwise leaves the stack unchanged. Returns 1 if it could convert the string, and 0 otherwise. */
+/* Tries to convert the string at stack position idx (idx < 0 or > 0) to a number and if successful replaces the string with
+   that number, otherwise leaves the stack unchanged. Returns 1 if it could convert the string, and 0 otherwise. */
 LUALIB_API int agnL_strtonumber (lua_State *L, int idx) {  /* 2.12.0 RC 4/2.39.1 */
-  int rc, overflow;
   lua_Number num;
-  rc = 0;
+  int rc = 0, overflow = 0;
   if (agn_isstring(L, idx) && luaO_str2d(agn_tostring(L, idx), &num, &overflow)) {
     lua_pushnumber(L, num);
-    lua_replace(L, idx - 1);
+    lua_replace(L, idx - (idx < 0));
     rc = 1;
   }  /* else leave value untouched */
   return rc;
@@ -2312,11 +2311,11 @@ LUALIB_API int agnL_iscallable (lua_State *L, int idx) {  /* 3.1.0 */
 }
 
 
-LUALIB_API lua_Number luaL_str2d (lua_State *L, const char *s, int *overflow) {  /* 3.5.1, 3.6.0 added L param due to whatever
+LUALIB_API lua_Number luaL_str2d (lua_State *L, const char *s, int *overflow, int *rc) {  /* 3.5.1, 3.6.0 added L param due to whatever
   missing entry point problem sometimes observed in Windows 11. */
-  lua_Number r;
+  lua_Number r = 0.0;
   (void)L;
-  luaO_str2d(s, &r, overflow);
+  *rc = luaO_str2d(s, &r, overflow);  /* rc = 0: failure, rc = 1: success; 7.12.4 extension */
   return r;
 }
 

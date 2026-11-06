@@ -167,7 +167,7 @@ LUALIB_API void (luaL_aux_nstructure) (lua_State *L, const char *fn, size_t *nar
 LUALIB_API char *(agnL_strmatch) (lua_State *L, const char *data, int datalen, const char *pattern, int patternlen);
 LUALIB_API int  (agnL_isvalidpattern) (lua_State *L, const char *p, size_t l, int *hasspecials, int pusherror);
 
-LUALIB_API lua_Number (luaL_str2d) (lua_State *L, const char *s, int *overflow);
+LUALIB_API lua_Number (luaL_str2d) (lua_State *L, const char *s, int *overflow, int *rc);
 
 LUALIB_API int agnL_newdblarray (lua_State *L, size_t n, const char *procname);
 LUALIB_API int agnL_newldblarray (lua_State *L, size_t n, const char *procname);

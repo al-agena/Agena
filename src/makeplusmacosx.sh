@@ -18,12 +18,24 @@ for i in abci.o ads.o aspell.o astro.o charbuf.o com.o cordic.o curses.o \
     dcastro.o double.o fastmath.o fractals.o gmp.o iconv.o interp.o \
     luasys.o miniz.o minizip.o moon.o mpfr.o net.o phq.o \
     skycrane.o sqlite.o sqlite3.o sunriset.o testlib.o zx.o \
-    strhash.o strmap.o phones.o
+    strhash.o strmap.o phones.o readstat.o
 do
   if [ -f "$i" ]; then
     rm "$i"
   fi
 done
+
+
+printf "Compiling readstat ... "
+READSTAT_INC="-I/usr/local/include -I../src"
+# Follow the exact Mac pattern: force-load the static library, link system zlib and iconv dynamically
+READSTAT_STATIC="-Wl,-all_load /usr/local/lib/libreadstat.a -lz -liconv -lm"
+gcc $OPTIONS1 $READSTAT_INC -o readstat.o readstat.c
+gcc $OPTIONS2 -o readstat.so readstat.o $READSTAT_STATIC
+rm -f readstat.o
+mv -f readstat.so $EXPORTTO
+printf "done.\n"
+
 
 printf "Compiling abci ... "
 gcc $OPTIONS1 -o abci.o abci.c
@@ -42,7 +54,7 @@ mv -f ads.so $EXPORTTO
 printf "done.\n"
 
 printf "Compiling aspell ... "
-ASPELL_INC="-I/usr/local/include -I/export/home/proglang/agena/src"
+ASPELL_INC="-I/usr/local/include -I../src"
 ASPELL_STATIC="-Wl,-all_load /usr/local/lib/libaspell.a -lstdc++ -lm"
 gcc $OPTIONS1 $ASPELL_INC -o aspell.o aspell.c
 gcc $OPTIONS2 -o aspell.so aspell.o $ASPELL_STATIC

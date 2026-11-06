@@ -17,15 +17,16 @@ export EXPORTTO="../lib"
 
 # delete *.o files not deleted by make clean
 for i in abci.o ads.o aspell.o astro.o charbuf.o com.o cordic.o curses.o \
-    dcastro.o double.o fastmath.o fractals.o gmp.o iconv.o interp.o \
-    luasys.o miniz.o minizip.o moon.o mpfr.o net.o phq.o skycrane.o \
-    sqlite.o sqlite3.o sunriset.o testlib.o zx.o ddhash.o strhash.o \
-    strmap.o phones.o
+    ddhash.o  dcastro.o double.o fastmath.o fractals.o gmp.o iconv.o \
+    interp.o luasys.o miniz.o minizip.o moon.o mpfr.o net.o phones.o \
+    phq.o readstat.o skycrane.o sqlite.o sqlite3.o strhash.o sunriset.o \
+    strmap.o testlib.o zx.o
 do
   if [ -f "$i" ]; then
     rm "$i"
   fi
 done
+
 
 printf "Compiling abci ... "
 gcc $OPTIONS -o abci.so abci.c
@@ -151,6 +152,15 @@ printf "Compiling phones ... "
 gcc $OPTIONS -o phones.so phones.c
 strip phones.so
 mv -f phones.so $EXPORTTO
+printf "done.\n"
+
+printf "Compiling readstat ... "
+READSTAT_INCLUDES="-I/usr/local/include -I../src"
+READSTAT_LIBS="-Wl,-Bstatic -L/usr/local/lib -lreadstat -lz -Wl,-Bdynamic -liconv"
+gcc $MYFLAGS $READSTAT_INCLUDES -c -o readstat.o readstat.c
+gcc -shared $MYFLAGS -o readstat.so readstat.o $READSTAT_LIBS
+rm -f readstat.o
+mv -f readstat.so $EXPORTTO
 printf "done.\n"
 
 printf "Compiling skycrane ... "

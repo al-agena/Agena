@@ -2655,23 +2655,31 @@ LUA_API void agn_trim (lua_State *L, int idx, int nargs) {  /* 4.3.3 */
 
 
 LUA_API void agn_char (lua_State *L, int idx) {  /* 4.3.3 */
+  char s[1];
+  lua_Number nb;
   StkId base = index2adr(L, idx);
   lua_lock(L);
   luaC_checkGC(L);  /* collect garbage _before_ calling "VM", see lua_concat */
   if (ttisnumber(base)) {
-    char s[1];
-    lua_Number nb = nvalue(base);
-    if (nb < 0 || nb > 255 || tools_isfrac(nb)) {
-      luaL_error(L, "Error in " LUA_QS ": invalid value %lf.", "char", nb);
-    } else {
-      s[0] = uchar(nb);  /* better sure than sorry, 1.5.0 */
-      setsvalue(L, base, luaS_newlstr(L, s, 1));
-    }
+    nb = nvalue(base);
+  } else if (ttisstring(base)) {  /* 7.12.4 */
+    int exception = 0;
+    nb = agn_tonumberx(L, idx, &exception);
+    if (exception) goto erroneous;
   } else {
-    luaL_error(L, "Error in " LUA_QS ": number expected, got %s.", "char", luaL_typename(L, idx));
+    goto erroneous;
+  }
+  if (nb < 0 || nb > 255 || tools_isfrac(nb)) {
+    luaL_error(L, "Error in " LUA_QS ": invalid value %f, must be an integer in [0, 255].", "char", nb);
+  } else {
+    s[0] = uchar(nb);
+    setsvalue(L, base, luaS_newlstr(L, s, 1));
   }
   L->top = base + 1;
   lua_unlock(L);
+  return;
+erroneous:
+  luaL_error(L, "Error in " LUA_QS ": number expected, got %s.", "char", luaL_typename(L, idx));
 }
 
 

@@ -12,8 +12,7 @@
 
 #include <aspell.h>
 #include <string.h>
-#include <unistd.h>
-
+#include <unistd.h>   /* for access */
 
 #if defined(_WIN32) || defined(__MSVCRT__)
 #include <windows.h>
@@ -351,31 +350,31 @@ static int l_speller_list_dicts (lua_State *L) {
   int index = 1;
   while ((dict = aspell_dict_info_enumeration_next(elements)) != NULL) {
     lua_newtable(L);
-    /* The "name" field is the exact identifier you must pass to aspell.new() to open that specific 
-       dictionary file. It combines the language code with regional dialects, spelling reforms, 
+    /* The "name" field is the exact identifier you must pass to aspell.new() to open that specific
+       dictionary file. It combines the language code with regional dialects, spelling reforms,
        or vocabulary sizes. */
     lua_pushstring(L, dict->name);
     lua_setfield(L, -2, "name");
     /* The "code" field represents the root language using the standard ISO 639 code. */
     lua_pushstring(L, dict->code);
     lua_setfield(L, -2, "code");
-    /* The jargon field represents extra descriptive information used to distinguish between different 
+    /* The jargon field represents extra descriptive information used to distinguish between different
        variants or sub-types of dictionaries for the exact same language and size. */
     lua_pushstring(L, dict->jargon);
     lua_setfield(L, -2, "jargon");
-    /* The "size" field represents the relative vocabulary size (or density) of that specific 
+    /* The "size" field represents the relative vocabulary size (or density) of that specific
          dictionary variant:
-       - 10 to 40 (Small): Contains only the most common words. Great for minimal resource 
+       - 10 to 40 (Small): Contains only the most common words. Great for minimal resource
          environments or specialized, small-vocabulary tasks.
-       - 50 (Standard/Default): The normal, recommended size for daily spellchecking 
+       - 50 (Standard/Default): The normal, recommended size for daily spellchecking
          (roughly equivalent to a standard desk dictionary).
-       - 60 to 70 (Large): Includes specialized terms, less common variants, and 
+       - 60 to 70 (Large): Includes specialized terms, less common variants, and
          technical jargon.
-       - 80+ (Huge/Insane): Contains archaic words, rare regional variants, and massive 
+       - 80+ (Huge/Insane): Contains archaic words, rare regional variants, and massive
          permutations of word forms. */
     lua_pushinteger(L, dict->size);
     lua_setfield(L, -2, "size");
-    /* The "module" field indicates the underlying spelling engine backend that is responsible for 
+    /* The "module" field indicates the underlying spelling engine backend that is responsible for
        loading and processing that specific dictionary. */
     lua_pushstring(L, dict->module->name);
     lua_setfield(L, -2, "module");

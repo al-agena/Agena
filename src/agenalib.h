@@ -258,16 +258,16 @@ LUALIB_API int (luaopen_testlib) (lua_State *L);   /* 3.1.3 */
 LUALIB_API int (luaopen_double) (lua_State *L);
 
 #define AGENA_ABCILIBNAME "abci"
-LUALIB_API int (luaopen_abci) (lua_State *L);     /* 7.7.1 addition */
+LUALIB_API int (luaopen_abci) (lua_State *L);      /* 7.7.1 addition */
 
 #define AGENA_STRHASHLIBNAME "strhash"
-LUALIB_API int (luaopen_strhash) (lua_State *L);  /* 7.7.2 */
+LUALIB_API int (luaopen_strhash) (lua_State *L);   /* 7.7.2 */
 
 #define AGENA_STRMAPLIBNAME "strmap"
-LUALIB_API int (luaopen_strmap) (lua_State *L);   /* 7.7.2 */
+LUALIB_API int (luaopen_strmap) (lua_State *L);    /* 7.7.2 */
 
 #define AGENA_PHONESLIBNAME "phones"
-LUALIB_API int (luaopen_phones) (lua_State *L);  /* 7.11.6 */
+LUALIB_API int (luaopen_phones) (lua_State *L);    /* 7.11.6 */
 
 #endif
 
@@ -300,6 +300,9 @@ LUALIB_API int (luaopen_net) (lua_State *L);
 
 #define AGENA_GDILIBNAME "gdi"
 LUALIB_API int (luaopen_gdi) (lua_State *L);       /* 2.21.11 ArcaOS change */
+
+#define AGENA_READSTATLIBNAME "readstat"
+LUALIB_API int (luaopen_readstat) (lua_State *L);  /* 7.12.4 */
 
 #endif
 

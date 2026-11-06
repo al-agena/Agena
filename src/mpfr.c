@@ -24,6 +24,7 @@
 
 #include "agenalib.h"
 #include "agnxlib.h"
+#include "lstate.h"  /* for L->mpfropened */
 
 #if !(defined(__DJGPP__) || defined(__OS2__) || defined(LUA_ANSI))
 #define AGENA_MPFRLIBNAME "mpfr"  /* change linalg.c if you change that name */
@@ -4391,16 +4392,22 @@ static const luaL_Reg mpfrlib[] = {
 };
 
 
-static int nopened = 0;
-
 /*
 ** Open mpf library
 */
 
+static int nopened = 0;
+
 LUALIB_API int luaopen_mpfr (lua_State *L) {
   luaL_checkstack(L, 3, "not enough stack space");  /* 3.18.4 fix */
-  nopened++;
-  Mpfr_set_default_prec;
+  if (nopened++ == 0) {
+    /* 7.12.4: "Mpfr_set_default_prec;" moved into the if block to prevent corrupted math at second invocation 
+       of the package in the same Agena session */
+    Mpfr_set_default_prec;
+    gmp_randinit_default(randomstate);  /* 3.4.2 fix, initialise only once or space will not be cleaned up */
+    atexit(mpfcleanup);
+    signal(SIGTERM, mpfsigcleanup);  /* for CTRL+c */
+  }
   luaL_newmetatable(L, "mpfr");
   luaL_register(L, NULL, mt_mpfrlib);  /* associate __gc method */
   lua_pop(L, 1);   /* 7.11.2 fix */
@@ -4419,11 +4426,6 @@ LUALIB_API int luaopen_mpfr (lua_State *L) {
   Mpf_Catalan(L);
   lua_setfield(L, -2, "Catalan");
   /* clean-up at exit */
-  if (nopened == 1) {
-    gmp_randinit_default(randomstate);  /* 3.4.2 fix, initialise only once or space will not be cleaned up */
-    atexit(mpfcleanup);
-    signal(SIGTERM, mpfsigcleanup);  /* for CTRL+c */
-  }
   return 1;
 }
 
