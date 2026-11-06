@@ -2,7 +2,7 @@
 
 # 1. Configuration
 set -e
-export AGENAVER="7.12.0"
+export AGENAVER="7.12.4"
 export BUILD_USER="alex"
 export AGENAHOME="/home/$BUILD_USER/agena"
 
@@ -52,7 +52,8 @@ for libfile in abci.so abci.agn iconv.agn iconv.so ads.agn ads.so agenaini.spl \
   gzip.so ival.so ival.agn kiss.agn library.agn maple.agn mapm.agn mapm.so \
   minizip.so gmp.agn gmp.so mpfr.agn mpfr.so net.agn net.so skycrane.agn \
   skycrane.so sqlite.so tar.agn telex.agn testlib.so unimath.agn zx.so \
-  strhash.so strmap.so aspell.so aspell.agn phones.agn phones.so;
+  strhash.so strmap.so aspell.so aspell.agn phones.agn phones.so \
+  readstat.agn readstat.so;
 do
   if [ -f "$AGENAHOME/lib/$libfile" ]; then
     cp -p "$AGENAHOME/lib/$libfile" "$AGENATARGET_LIB/"
