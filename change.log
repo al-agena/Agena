@@ -1,8 +1,117 @@
+7.12.4 Kerberos, November 06, 2026
+
+- The new `readstat` package reads and writes SPSS sav files:
+
+  > import readstat
+
+  > L := readstat.read('../data/hotel.sav');
+
+  > for i, j in L do print(i, j) od
+  data    [[4, 2, 3, 4, 1], [1, 1, 4, 1, 1], [4, 2, 2, 3, 4], [3, 1, 3, 1, 2], [5, 3, 1, 4, 3], etc. ]
+  value_labels    [labels0 ~ [Strongly Disagree, Disagree, No Opinion, Agree, Strongly Agree]]
+  variables       [[label ~ I am satisfied with the level of service, name ~ v1, type ~ numeric, value_labels ~ labels0],
+                   [label ~ The value for money was good, name ~ v2, type ~ numeric, value_labels ~ labels0], etc.]
+  rows    17
+  columns 5
+
+  Save it back to a new file:
+
+  readstat.save(L, 'hotelnew.sav');
+
+  The package is supported on OS/2, Windows, macOS, Intel Debian and Solaris 10.
+
+- `tonumber` and `stats.tovals` can now convert strings representing binary or octal constants, degrees and a variety of
+  expressions like 90d (= Pi/2), 1k (= 1,000), 1M (= 1,048,576) et cetera to Agena numbers. For all supported formats see
+  Chapter 4.6.1 in the Primer.
+
+  > tonumber('0xa23p-4'):
+  162.1875
+
+- You can now pass a number string directly into `char` to get an ASCII character. The string may represent a decimal or
+  hexadecimal integer. Example:
+
+  > char(65), char('65'), char('0x41'):
+  A    A    A
+
+- `aspell.norm` now treats an asterisk in *_phonet.dat files as a literal character, removing its previous special functionality.
+  This change ensures the output more closely matches Aspell when called with the 'soundslike' option.
+
+- The 64-bit `gdi` package and an underlying dependency have been recompiled, and hence the 64-bit Windows installers have
+  become much smaller.
+
+- The 64-bit Windows edition of Agena now fully runs on Windows 7 and 8.1, including the `gdi` and `fractals` packages.
+
+- On 64-bit Windows, implemented a hotfix to force the physical CPU into 80-bit mode whenever 80-bit arithmetic is requested.
+  This helped solve the problem of corrupt math when the regression test is being run a second time in the same session, but may
+  not be a comprehensive solution. Specifically, the hotfix has been added to an underlying function computing the Gamma function 
+  in 80-bit precision for fractional arguments, and which is used by quite a lot of Agena arithmetic functions. This solved 
+  problems with 32-bit Agena running on Windows 2003 Server 64-bit, and 64-bit Agena running on Windows 10 64-bit and Windows 11.
+
+
+7.12.3 Kerberos, November 01, 2026
+
+- The substring operator, when given 0 as the second operand, now returns the empty string instead of issuing an error.
+  This matches the behaviour of `strings.sub` in this case.
+
+  > ('alex')[1 to 0] = '':
+  true
+
+- You can now pass a set of strings to `io.readlines`. If a line starts with any of these strings, the function skips it
+  and moves to the next line. Assume we have the following eleven lines in a file:
+
+  version 0.1-2002.12.15-3
+
+  # Koder:
+  #  ^ = start på ord
+  #  $ = slut på ord
+  #  < = kør rettelsen tilbage i bufferen
+
+  AA<                  Å
+  ACTION               AKSJON
+  DIG^$                DAJ
+  D                    D
+
+  We will get:
+
+  > io.readlines('c:/agena/archive/danish.dat',
+  >    {'#', '', 'version'},
+  >    <: x -> totable(strings.trim(x) split ' ') :>,
+  >    true):
+  [[AA<, Å], [ACTION, AKSJON], [DIG^$, DAJ], [D, D]]
+
+- `io.readlines` now skips empty lines when given '' or '\n' as an argument.
+
+- New `aspell.norm' normalises a string according to Aspell transformation rules:
+
+  > import aspell
+
+  > rawrules := [
+  >     [ 'IND^<',          'IN' ],
+  >     [ 'MIG^$',          'MAJ' ],
+  >     [ 'BEA(BCMNRU)-^',  'BÆ' ],
+  >     [ 'AUTO^^',         'ØTO' ],
+  >     [ 'ATIA(NS)--',     'ASJ' ],
+  >     [ 'FE(LMNRST)-3^',  'FÆ' ]
+  > ]
+
+  > rules := aspell.rules(rawrules)
+
+  > aspell.norm('Mig', rules):
+  MAJ
+
+  > aspell.norm('Beable', rules):
+  BÆLE
+
+  You can import replacement rules defined in Aspell *_phonet.dat files with `aspell.rules`, as well.
+
+- Aspell package functions `aspell.check`, `aspell.norm` and `aspell.suggest` can be used OOP-style.
+
+
 7.12.2 Kerberos, October 29, 2026
 
 - `utils.singlesubs` now accepts an unsigned character numarray (see `numarray.uchar`) of exactly 256 ASCII codes. This
-  speeds up singe-character character replacement by a factor of 31, also benefitting `strings.diamap` which has become
-  21 times faster in non-'ascii7' modes.
+  speeds up single-character replacement by a factor of 31, also benefitting `strings.diamap` which has become 21 times
+  faster in non-'ascii7' modes.
 
 - When loading external packages with `import`, `readlib` or `initialise`, Agena in most cases did not check the paths
   stored in the `libname` system variable, instead searching only the main Agena library folder for packages. This has
