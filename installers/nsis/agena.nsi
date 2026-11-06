@@ -9,7 +9,7 @@ Unicode True
 !ifndef VERSION
   !define VER_MAJOR '7'
   !define VER_MINOR '12'
-  !define VER_REVISION '0'
+  !define VER_REVISION '4'
   !define NICKNAME "Kerberos"
   !define VERSION '${VER_MAJOR}.${VER_MINOR}.${VER_REVISION}'
 !endif
@@ -896,6 +896,27 @@ ${MementoSection} "minizip" SecPluginsMinizip
 ${MementoSectionEnd}
 
 
+${MementoSection} "readstat" SecPluginsReadstat
+
+  SetDetailsPrint both
+  DetailPrint "Installing plus package readstat ..."
+  SetDetailsPrint listonly
+
+  SectionIn 1
+
+  SetOutPath $INSTDIR\lib
+  File ..\..\lib\readstat.dll
+  File ..\..\lib\readstat.agn
+
+  SetOutPath $INSTDIR\bin
+  File ..\..\ports\gdwin32\bin\libreadstat-1.dll
+
+  SetOutPath "$INSTDIR\data"
+  File "..\..\data\hotel.sav"
+
+${MementoSectionEnd}
+
+
 ${MementoSection} "tar" SecPluginsTar
 
   SetDetailsPrint both
@@ -1400,6 +1421,7 @@ SectionEnd
   !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsADS} "Agena Database System package, a small text data base"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsGzip} "UNIX gzip compression library"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsMinizip} "ZIP compression library"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsReadstat} "SPSS file import/export readstat library"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsTar} "UNIX tape archive library"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsSqlite} "SQLite3 database library"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsSkycrane} "Auxiliary Functions"
@@ -1623,6 +1645,7 @@ Section "Uninstall"
   Delete $INSTDIR\data\langreg.csv
   Delete $INSTDIR\data\viking2.csv
   Delete $INSTDIR\data\viking2.txt
+  Delete $INSTDIR\data\hotel.sav
   Delete $INSTDIR\data\airlines.csv
   Delete $INSTDIR\data\airlines.txt
   Delete $INSTDIR\data\sunspots.csv

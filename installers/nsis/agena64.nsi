@@ -9,7 +9,7 @@ Unicode True
 !ifndef VERSION
   !define VER_MAJOR '7'
   !define VER_MINOR '12'
-  !define VER_REVISION '0'
+  !define VER_REVISION '4'
   !define NICKNAME "Kerberos"
   !define VERSION '${VER_MAJOR}.${VER_MINOR}.${VER_REVISION}'
 !endif
@@ -765,15 +765,10 @@ ${MementoSection} "gdi" SecPluginsGdi
   File ..\..\lib\gdi.dll
 
   SetOutPath $INSTDIR\bin
-  File ..\..\ports\gdwin64\libaom.dll
-  File ..\..\ports\gdwin64\libavif-16.dll
   File ..\..\ports\gdwin64\libbrotlicommon.dll
   File ..\..\ports\gdwin64\libbrotlidec.dll
   File ..\..\ports\gdwin64\libbrotlienc.dll
   File ..\..\ports\gdwin64\libbz2-1.dll
-  File ..\..\ports\gdwin64\libcryptopp.dll
-  File ..\..\ports\gdwin64\libdav1d-7.dll
-  File ..\..\ports\gdwin64\libde265-0.dll
   File ..\..\ports\gdwin64\libdeflate.dll
   File ..\..\ports\gdwin64\libfontconfig-1.dll
   File ..\..\ports\gdwin64\libfreetype-6.dll
@@ -781,26 +776,11 @@ ${MementoSection} "gdi" SecPluginsGdi
   File ..\..\ports\gdwin64\libglib-2.0-0.dll
   File ..\..\ports\gdwin64\libgraphite2.dll
   File ..\..\ports\gdwin64\libharfbuzz-0.dll
-  File ..\..\ports\gdwin64\libheif.dll
-  File ..\..\ports\gdwin64\libimagequant.dll
-  File ..\..\ports\gdwin64\libjbig-0.dll
   File ..\..\ports\gdwin64\libjpeg-8.dll
-  File ..\..\ports\gdwin64\libkvazaar-7.dll
-  File ..\..\ports\gdwin64\libLerc.dll
   File ..\..\ports\gdwin64\liblzma-5.dll
-  File ..\..\ports\gdwin64\libopenh264-7.dll
-  File ..\..\ports\gdwin64\libopenjp2-7.dll
-  File ..\..\ports\gdwin64\libopenjph-0.32.dll
   File ..\..\ports\gdwin64\libpng16-16.dll
-  File ..\..\ports\gdwin64\librav1e.dll
-  File ..\..\ports\gdwin64\libsharpyuv-0.dll
-  File ..\..\ports\gdwin64\libSvtAv1Enc-4.dll
-  File ..\..\ports\gdwin64\libtiff-6.dll
   File ..\..\ports\gdwin64\libwebp-7.dll
-  File ..\..\ports\gdwin64\libx264-165.dll
-  File ..\..\ports\gdwin64\libx265-217.dll
   File ..\..\ports\gdwin64\libXpm-noX4.dll
-  File ..\..\ports\gdwin64\libyuv.dll
   File ..\..\ports\gdwin64\libzstd.dll
 ${MementoSectionEnd}
 
@@ -913,6 +893,27 @@ ${MementoSection} "minizip" SecPluginsMinizip
 
   SetOutPath $INSTDIR\lib
   File ..\..\lib\minizip.dll
+
+${MementoSectionEnd}
+
+
+${MementoSection} "readstat" SecPluginsReadstat
+
+  SetDetailsPrint both
+  DetailPrint "Installing plus package readstat ..."
+  SetDetailsPrint listonly
+
+  SectionIn 1
+
+  SetOutPath $INSTDIR\lib
+  File ..\..\lib\readstat.dll
+  File ..\..\lib\readstat.agn
+
+  SetOutPath $INSTDIR\bin
+  File ..\..\ports\gdwin64\libreadstat-0.dll
+
+  SetOutPath "$INSTDIR\data"
+  File "..\..\data\hotel.sav"
 
 ${MementoSectionEnd}
 
@@ -1426,6 +1427,7 @@ SectionEnd
   !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsADS} "Agena Database System package, a small text data base"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsGzip} "UNIX gzip compression library"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsMinizip} "ZIP compression library"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsReadstat} "SPSS file import/export readstat library"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsTar} "UNIX tape archive library"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsSqlite} "SQLite3 database library"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsSkycrane} "Auxiliary Functions"
@@ -1649,6 +1651,7 @@ Section "Uninstall"
   Delete $INSTDIR\data\langreg.csv
   Delete $INSTDIR\data\viking2.csv
   Delete $INSTDIR\data\viking2.txt
+  Delete $INSTDIR\data\hotel.sav
   Delete $INSTDIR\data\airlines.csv
   Delete $INSTDIR\data\airlines.txt
   Delete $INSTDIR\data\sunspots.csv
