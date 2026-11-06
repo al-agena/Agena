@@ -105,10 +105,10 @@ aspell.list := proc() is
             if jargon = '' then jargon := null fi;
             local module := entry.module;
             if module = 'default' then module := null fi;
-            tables.include(r, entry.code, 
-               [jargon = jargon,
-                module = module,
-                name   = entry.name,
+            tables.include(r, entry.code,
+               [jargon ~ jargon,
+                module ~ module,
+                name   ~ entry.name,
                 'size' ~ entry['size']])
          od;
          for i, j in r do
@@ -120,3 +120,202 @@ aspell.list := proc() is
    od;
    return null
 end;
+
+
+# aspell.norm: Takes a string and an Aspell substitution table, the latter read in by aspell.rules from
+# an Aspell *phonet.dat file or created manually, and normalises the string. Written by Gemini AI for
+# Lua 5.1, ported to Agena by A. Walz, put to the public domain. 7.12.3.
+
+local aspellparserule := proc(pattern, replacement) is
+   # Initialize the rule object with default metadata flags
+   local rule := [
+      original    ~ pattern,      # Stores the unparsed pattern string for debugging
+      replacement ~ replacement,  # The target text to substitute into the word
+      rewind      ~ false,        # Set to true if the rule contains '<'
+      doublecaret ~ false,        # Set to true if the rule contains '^^'
+      anchorstart ~ false,        # Set to true if the pattern applies only to the start of a word
+      anchorend   ~ false,        # Set to true if the pattern applies only to the end of a word
+      priority    ~ 0,            # Dictates when this rule executes relative to others
+      slicelimit  ~ null          # Tracks partial replacement limits (e.g., German Y(AOU)-<7)
+   ];
+   # This working copy will be stripped down step-by-step into a pure matching string
+   local cleanpat := pattern;
+   # 1. Extract Rewind Flag: If '<' exists, enable rewind and remove the symbol
+   if cleanpat@@find('<') then rule.rewind := true; cleanpat := cleanpat@@gsub('<', '') fi;
+   # 2. Extract End Anchor: If '$' exists, flag it and remove the symbol
+   if cleanpat@@find('%$') then rule.anchorend := true; cleanpat := cleanpat@@gsub('%$', '') fi;
+   # 3. Extract Carets: '^^' means isolate suffix, '^' means start of word boundary
+   if cleanpat@@find('%^%^') then
+      rule.doublecaret, rule.anchorstart -> true;
+      cleanpat := cleanpat@@gsub('%^%^', '')
+   elif cleanpat@@find('%^') then
+      rule.anchorstart := true;
+      cleanpat := cleanpat@@gsub('%^', '')
+   fi
+   # 4. Extract Explicit Priorities or Slice Limits (e.g., -3^ or -7)
+   # Check if a minus sign followed by a digit exists (like -3 or -7)
+   if pattern@@find('%-%d+%^') or pattern@@find('%-%d+%$') then
+      # If attached directly to a boundary anchor, it represents execution priority
+      local p_num := pattern@@match('%-(%d+)');
+      rule.priority := -tonumber(p_num);
+      cleanpat := cleanpat@@gsub('%-%d+', '')
+   else
+      # If it is an unattached trailing number, it represents a partial slice limit
+      local s_num := cleanpat@@match('%-(%d+)');
+      if s_num then
+         rule.slicelimit := tonumber(s_num);
+         cleanpat := cleanpat@@gsub('%-%d+', '')
+      fi
+   fi;
+   # 5. Extract Low Priority Markers: '--' sets priority to -2, single '-' sets it to -1
+   if cleanpat@@find('%-%-') then rule.priority := -2; cleanpat := cleanpat@@gsub('%-%-', '') fi;
+   if cleanpat@@find('%-') then rule.priority := -1; cleanpat := cleanpat@@gsub('%-', '') fi;
+   # 6. Convert Bracket Groups: Translate Aspell formatting '(ABC)' into a Lua set class '[ABC]'
+   cleanpat := cleanpat@@gsub('%((.-)%)', '[%1]');
+   # Assign the fully cleaned native search pattern back to the object configuration
+   rule.pattern := cleanpat;
+   return rule
+end
+
+aspell.rules := proc(obj :: {string, table}) is
+   local compiled, rawrules := [], obj;
+   if obj :: string then
+      rawrules := io.readlines(obj,
+         {'#', '\n', '\n\r', 'version', 'followup', 'collapse_result', 'remove_accents'},
+         <: x -> totable(strings.trim(x) split ' ') :>, true)
+   fi;
+   # Iterate sequentially through every raw array entry in the list
+   # rawrules[i, 1] is the raw string pattern, rawrules[i, 2] is the replacement text
+   for i to size rawrules do
+      # Store the generated configuration table into the master tracking array
+      insert aspellparserule(op(rawrules[i])) into compiled
+   od;
+   # Sort the entire array table deterministically using a custom rule matrix
+   sort(compiled, proc(a, b) is
+      # First Level Sort: Higher numerical execution priority always runs first
+      if a.priority <> b.priority then return a.priority > b.priority fi;
+      # Tie-Breaker Sort: Longer, more specific search patterns take precedence over shorter ones
+      return size a.pattern > size b.pattern
+   end);
+   return compiled
+end
+
+aspell.norm := proc(word :: string, rules :: table) is
+   # buffer: The active text canvas being mutated (starts as the input word)
+   # cursor: The pointer tracking which character position we are currently evaluating
+   local buffer, cursor := upper(word), 1;  # upper: prevent the function from going into infinite
+   /* if not strings.isascii(buffer) then
+        error('Error in `aspell.norm`: input contains at least one character with ASCII code > 127.")
+      fi; */
+   # Main Loop: Step character by character across the entire length of the mutable buffer
+   while cursor <= size buffer do
+      local matched := false;
+      # Extract a temporary lookahead snapshot of the word remaining from the cursor to the end
+      local curslice := buffer@@sub(cursor);
+      # Rule Evaluation Loop: Test every sorted rule configuration against the current lookahead snapshot
+      for i to size rules do
+         local rule := rules[i];
+         # Validate Start-of-Word Constraints
+         # If a pattern requires a start-of-word anchor (^), it is illegal if we have already stepped forward
+         local isvalid := not(rule.anchorstart and cursor > 1);
+         if isvalid then
+            # Search the snapshot. Adding '^' forces Lua to evaluate strictly at the first index of the snapshot
+            local s, e := curslice@@find('^' & rule.pattern);
+            # Verify the match aligns perfectly at index 1 of the snapshot (directly under our active tracking cursor)
+            if s = 1 then
+               # Validate End-of-Word Constraints
+               if rule.anchorend and (cursor + e - 1) <> size buffer then
+                  # If a pattern requires an end-of-word anchor ($), it is illegal if it does not span to the last index
+                  isvalid := false
+               fi;
+               if isvalid then
+                  # to cope with out-of-range cases, and there will be many, we use strings.sub instead of the substring operator
+                  local matchedstr := curslice@@sub(s, e);
+                  # Partial Replacement (Slice Limit) Calculation
+                  local limit := rule.slicelimit or 0;
+                  local cutlength := size matchedstr;
+                  # If a slice limit is specified, restrict how much of the matched text gets overwritten
+                  if 0 < limit < size matchedstr then
+                     cutlength := size matchedstr - limit
+                  fi;
+                  # String Splicing Execution Matrix
+                  # 1. Grab all text sitting safely BEFORE our active cursor position
+                  local before := buffer@@sub(1, cursor - 1);
+                  # 2. Grab all text sitting safely AFTER our calculated pattern overwrite zone
+                  local after := buffer@@sub(cursor + cutlength);
+                  # 3. Construct the new word layout sandwich with the replacement string in the middle
+                  if rule.replacement = '*' then  # put the letter into the result
+                     buffer := before & matchedstr & after
+                  elif rule.replacement = '_' then  # do not add letter to result
+                     buffer := before & after
+                  else
+                     buffer := before & rule.replacement & after
+                  fi;
+                  matched := true;
+                  # Double Caret Split Optimization Rule
+                  if rule.doublecaret then
+                     return before & rule.replacement & procname(after, rules)
+                  fi;
+                  # Rewind Management Rule
+                  if not rule.rewind then
+                     # Normal behavior: slide the tracking cursor completely past the newly inserted replacement string
+                     local offset := size rule.replacement;
+                     cursor +:= if offset > 0 then offset else 1 fi
+                  fi;
+                  # Break out of the inner rule testing loop immediately to apply changes and continue scanning
+                  break
+               fi
+            fi
+         fi
+      od;
+      # Linear Traversal Rule: If no rules match the text at the current cursor, step forward 1 character space
+      cursor +:= not matched
+   od;
+   # Return the fully transformed final text sequence
+   return buffer
+end;
+
+
+scope  # inject some `aspell` package functions into the global strings metatable
+   if getmetatable :: procedure then  # protect against sandboxing
+      local _mt := getmetatable('')..__index;
+      # get the global strings metatable safely via `..` indexing
+      if assigned _mt then
+         for i, j in aspell do
+            if i in {'check', 'norm', 'suggest'} then
+               _mt[i] := j
+            fi
+         od
+      fi
+   fi
+end;
+
+
+/*
+rawrules := [
+    [ "IND^<",          "IN" ],
+    [ "MIG^$",          "MAJ" ],
+    [ "BEA(BCMNRU)-^",  "BÆ" ],
+    [ "AUTO^^",         "ØTO" ],
+    [ "ATIA(NS)--",     "ASJ" ],
+    [ "FE(LMNRST)-3^",  "FÆ" ]
+]
+
+import aspell
+
+rule := aspell.rules(rawrules)
+rule := aspell.rules('c:/agena/phq/aspell/en_phonet.dat')
+
+surnames := 'c:/agena/phq/data/surnames.txt'
+surnames := 'c:/agena/phq/data/citynames.txt'
+
+L := io.readlines(surnames);
+for i in L do
+   print(i)
+   print(aspell.norm(i, rule))
+od;
+
+print(aspell.norm('INDRE', rule))    #--> "INRE"
+print(aspell.norm('MIG', rule))      #--> "MAJ"
+print(aspell.norm('AUTOPLOT', rule)) #--> "ØTOPLOT"
+*/
