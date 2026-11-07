@@ -8490,19 +8490,9 @@ static int mathB_fma (lua_State *L) {  /* 0.29.0, patched 2.4.0 & 2.8.4, see agn
 }
 
 
-#ifdef _WIN32
-#define ENFORCE_80BIT_FPU() do { \
-    unsigned short safe_fpu_cw = 0x037f; \
-    __asm__ __volatile__("fldcw %0" : : "m" (safe_fpu_cw)); \
-} while(0)
-#else
-#define ENFORCE_80BIT_FPU()
-#endif
-
 static int mathB_fact (lua_State *L) {  /* 3.16.2, partially based on mathB_gamma */
   switch (lua_type(L, 1)) {
     case LUA_TNUMBER: {
-ENFORCE_80BIT_FPU();
       lua_Number x = agn_tonumber(L, 1);
       lua_pushnumber(L, tools_isint(x) ? cephes_factorial(x) : tools_gammal(x + 1));
       break;

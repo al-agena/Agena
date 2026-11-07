@@ -24740,9 +24740,16 @@ static long double stirfl (long double x) {
   return y;
 }
 
+
+#ifdef _WIN32
+static unsigned int counter = 0U;
+#endif
+
 LUALIB_API long double tools_gammal (long double x) {
   long double p, q, z;
-  ENFORCE_80BIT_FPU();
+#ifdef _WIN32
+  ENFORCE_80BIT_FPU(counter, 31U);
+#endif
   if (!isfinite(x))
     return x + INFINITY;
   else if (x == 0.0L)  /* 6.7.3 change, do not return infinity */

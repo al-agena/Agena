@@ -1,14 +1,19 @@
+/*
+** $Id: readstat.c, initiated November 04, 2026 $
+** SPSS sav readstat binding
+** See Copyright Notice in agena.h
+** Created mostly by Gemini AI.
+*/
+
 #define readstat_c
 #define LUA_LIB
 
 /*
-
 import readstat
 L := readstat.read('../data/hotel.sav');
 for i, j in L do print(i, j) od
 
 readstat.save(L, 'hotelnew.sav');
-
 */
 
 #ifndef _WIN64
