@@ -1,6 +1,13 @@
+7.12.4 Kerberos, November 07, 2026
+
+- In Windows only, the factorial function `fact` has been unnecessarily slowed down. This has been fixed. The Windows
+  80-bit math CPU reset will now also only be triggered every 32th time the internal Gamma function is called, also
+  speeding up arithmetic functions that use it.
+
+
 7.12.4 Kerberos, November 06, 2026
 
-- The new `readstat` package reads and writes SPSS sav files:
+- The new `readstat` package reads and writes SPSS Statistics Data files:
 
   > import readstat;
 
@@ -41,12 +48,12 @@
 
 - The 64-bit Windows edition of Agena now fully runs on Windows 7 and 8.1, including the `gdi` and `fractals` packages.
 
-- On Windows, implemented a hotfix to force the CPU into 80-bit mode whenever 80-bit arithmetic is requested. This helped solve 
+- On Windows, implemented a hotfix to force the CPU into 80-bit mode whenever 80-bit arithmetic is requested. This helped solve
   the problem of corrupt math when the regression test is being run a second time in the same session and the MPFR, GMP and/or
-  MAPM packages are re-invoked, but may not be a comprehensive solution. Specifically, the hotfix has been added to an underlying 
-  function computing the Gamma function in 80-bit precision for fractional arguments, and which is used by quite a lot of Agena 
-  arithmetic functions. The main VM execution loop has deliberately not been changed as this would slow down the interpreter by 
-  15 %. The fix has solved problems with 32-bit Agena running on Windows 2003 Server 64-bit, and 64-bit Agena running on 
+  MAPM packages are re-invoked, but may not be a comprehensive solution. Specifically, the hotfix has been added to an underlying
+  function computing the Gamma function in 80-bit precision for fractional arguments, and which is used by quite a lot of Agena
+  arithmetic functions. The main VM execution loop has deliberately not been changed as this would slow down the interpreter by
+  15 %. The fix has solved problems with 32-bit Agena running on Windows 2003 Server 64-bit, and 64-bit Agena running on
   Windows 10 64-bit and Windows 11.
 
 
