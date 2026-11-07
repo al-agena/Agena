@@ -133,15 +133,6 @@ strip minizip.so
 mv -f minizip.so $EXPORTTO
 printf "done.\n"
 
-printf "Compiling aspell ... "
-ASPELL_INCLUDES="-I/usr/local/include -I../src"
-ASPELL_LIBS="-Wl,-Bstatic -L/usr/local/lib -laspell -Wl,-Bdynamic -lstdc++ -lm"
-gcc $MYFLAGS $ASPELL_INCLUDES -c -o aspell.o aspell.c
-gcc -shared $MYFLAGS -o aspell.so aspell.o $ASPELL_LIBS
-rm -f aspell.o
-mv -f aspell.so $EXPORTTO
-printf "done.\n"
-
 printf "Compiling net ... "
 gcc $OPTIONS -shared -fPIC -o net.so net.c
 strip net.so
