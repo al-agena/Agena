@@ -1189,6 +1189,7 @@ os.chown
 os.clock
 os.codepage
 os.computername
+os.control87
 os.countcore
 os.cpuid
 os.cpuinfo
@@ -3631,10 +3632,15 @@ aspell.config
 aspell.getdictinfo
 aspell.list
 aspell.new
+aspell.norm
 aspell.path
+aspell.rules
 aspell.suggest
 phones.getphonetiqs
 phones.phonetiqs
 phones.setphonetiqs
 phones.soundex
 phones.vowelsymbol
+readstat.fillmissing
+readstat.read
+readstat.save

@@ -25,7 +25,7 @@
     -->
     <PROPERTY NAME="doubleBracketIndent" VALUE="true"/>
   </PROPS>
-  <RULES IGNORE_CASE="FALSE" NO_WORD_SEP="_:." HIGHLIGHT_DIGITS="TRUE"
+  <RULES IGNORE_CASE="FALSE" NO_WORD_SEP="_:." HIGHLIGHT_DIGITS="TRUE"08/11/2026
          DIGIT_RE="[\p{Digit}]*(\.[\p{Digit}]*)?([eE][+-]?[\p{Digit}]*)?">
     <!-- Multiline comments -->
     <SPAN TYPE="COMMENT1">
@@ -1393,6 +1393,7 @@
       <KEYWORD3>os.clock</KEYWORD3>
       <KEYWORD3>os.codepage</KEYWORD3>
       <KEYWORD3>os.computername</KEYWORD3>
+      <KEYWORD3>os.control87</KEYWORD3>
       <KEYWORD3>os.countcore</KEYWORD3>
       <KEYWORD3>os.cpuid</KEYWORD3>
       <KEYWORD3>os.cpuinfo</KEYWORD3>
@@ -3614,13 +3615,18 @@
       <KEYWORD3>aspell.getdictinfo</KEYWORD3>
       <KEYWORD3>aspell.list</KEYWORD3>
       <KEYWORD3>aspell.new</KEYWORD3>
+      <KEYWORD3>aspell.norm</KEYWORD3>
       <KEYWORD3>aspell.path</KEYWORD3>
+      <KEYWORD3>aspell.rules</KEYWORD3>
       <KEYWORD3>aspell.suggest</KEYWORD3>
       <KEYWORD3>phones.getphonetiQs</KEYWORD3>
       <KEYWORD3>phones.phonetiQs</KEYWORD3>
       <KEYWORD3>phones.setphonetiQs</KEYWORD3>
       <KEYWORD3>phones.soundex</KEYWORD3>
       <KEYWORD3>phones.vowelsymbol</KEYWORD3>
+      <KEYWORD3>readstat.fillmissing</KEYWORD3>
+      <KEYWORD3>readstat.read</KEYWORD3>
+      <KEYWORD3>readstat.save</KEYWORD3>
     </KEYWORDS>
   </RULES>
 </MODE>

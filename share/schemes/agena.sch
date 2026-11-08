@@ -310,7 +310,7 @@ object TPersHolder
           FontID = 7
           Name = 'aspell'
           Keywords =
-            'aspell,check,close,config,getdictinfo,list,new,path,suggest'
+            'aspell,check,close,config,getdictinfo,list,new,norm,path,rules,suggest'
         end
         item
           FontID = 7
@@ -342,7 +342,7 @@ object TPersHolder
           FontID = 7
           Name = 'os'
           Keywords =
-            'os,battery,beep,bios,cachelinesize,cdrom,chdir,chmod,chown,clock,codepage,computername,countcore,cpuid,cpuinfo,cpuload,curdir,curdrive,date,' +
+            'os,battery,beep,bios,cachelinesize,cdrom,chdir,chmod,chown,clock,codepage,computername,control87,countcore,cpuid,cpuinfo,cpuload,curdir,curdrive,date,' +
             'datetosecs,difftime,dirname,drives,drivestat,endian,environ,esd,execute,exists,exit,faccess,fattrib,fcopy,filename,findinpath,freemem,' +
             'fstat,ftok,getadapter,getcommandline,getconsolemode,getdirpathsep,getextlibpath,getenv,getfullpathname,getip,getlanguage,getloadeddlls,getlocale,getmac,' +
             'getmodulefilename,getprocesses,gettemppath,getthreadid,getthreadseed,getusbdevices,getwinsysdirs,groupinfo,hasnetwork,inode,isamd,isansi,isarm,' +
@@ -798,6 +798,12 @@ object TPersHolder
           Name = 'phones'
           Keywords =
             'phones,getphonetiQs,phonetiQs,setphonetiQs,soundex,vowelsymbol'
+        end
+        item
+          FontID = 7
+          Name = 'readstat'
+          Keywords =
+            'readstat,fillmissing,read,save'
         end
         item
           FontID = 7
