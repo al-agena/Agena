@@ -6747,7 +6747,7 @@ long double cephes_j0l (long double x) {
     y *= polevll(xx, j0n, 7)/p1evll(xx, j0d, 8);
     return y;
   }
-  y = fabsl(x);
+  y = tools_fabsl(x);
   xx = 1.0/xx;
   phase = polevll(xx, phasen, 5)/p1evll(xx, phased, 6);
   z = 1.0/y;
@@ -6823,7 +6823,7 @@ long double cephes_y0l (long double x) {
     }
     return y;
   }
-  y = fabsl(x);
+  y = tools_fabsl(x);
   xx = 1.0/xx;
   phase = polevll(xx, phasen, 5)/p1evll(xx, phased, 6);
   z = 1.0/y;
@@ -6976,7 +6976,7 @@ long double cephes_j1l (long double x) {
     y *= x*polevll(xx, j1n, 8)/p1evll(xx, j1d, 8);
     return y;
   }
-  y = fabsl(x);
+  y = tools_fabsl(x);
   xx = 1.0/xx;
   phase = polevll(xx, phasenj1l, 5)/p1evll(xx, phasedj1l, 6);
   z = 1.0/y;
@@ -7139,7 +7139,7 @@ long double cephes_jnl (int n, long double x) {
     pkm1 = pkm2;
     r -= 2.0L;
   } while (--k > 0);
-  if (fabsl(pk) > fabsl(pkm1))
+  if (tools_fabsl(pk) > tools_fabsl(pkm1))
     ans = cephes_j1l(x)/pk;
   else
     ans = cephes_j0l(x)/pkm1;
@@ -7496,7 +7496,7 @@ long double MINLOGL = -1.143276959615573793352782661133116431383730E4L;
 /* exp(x*x) or exp(-x*x) */
 long double expx2l (long double x, int sign) {
   long double u, u1, m, f;
-  x = fabsl(x);
+  x = tools_fabsl(x);
   if (sign < 0) x = -x;
   /* Represent x as an exact multiple of M plus a residual.
      M is a power of 2 chosen so that exp(m * m) does not overflow
@@ -7520,7 +7520,7 @@ long double expx2l (long double x, int sign) {
 long double ndtrl (long double a) {
   long double x, y, z;
   x = a*SQRTHL;
-  z = fabsl(x);
+  z = tools_fabsl(x);
   if (z < 1.0)
     y = 0.5L + 0.5L*sun_erfl(x);
   else {
@@ -7805,7 +7805,7 @@ long double incbil (long double aa, long double bb, long double yy0) {
   x = a/(a + b*tools_expl(d));
   y = incbetl(a, b, x);
   yp = (y - y0)/y0;
-  if (fabsl(yp) < 0.2) goto newt;
+  if (tools_fabsl(yp) < 0.2) goto newt;
   /* Resort to interval halving if not close enough. */
 ihalve:
   dir = 0;
@@ -7822,9 +7822,9 @@ ihalve:
       }
       y = incbetl(a, b, x);
       yp = (x1 - x0)/(x1 + x0);
-      if (fabsl(yp) < dithresh) goto newt;
+      if (tools_fabsl(yp) < dithresh) goto newt;
       yp = (y - y0)/y0;
-      if (fabsl(yp) < dithresh) goto newt;
+      if (tools_fabsl(yp) < dithresh) goto newt;
     }
     if (y < y0) {
       x0 = x;
@@ -7934,7 +7934,7 @@ newt:
       if (xt >= 1.0L) break;
     }
     x = xt;
-    if (fabsl(d/x) < (128.0L*MACHEPL)) goto done;
+    if (tools_fabsl(d/x) < (128.0L*MACHEPL)) goto done;
   }
   /* Did not converge.  */
   dithresh = 256.0L*MACHEPL;
@@ -8088,7 +8088,7 @@ static long double pseriesl (long double a, long double b, long double x) {
   n = 2.0L;
   s = 0.0L;
   z = MACHEPL*ai;
-  while (fabsl(v) > z) {
+  while (tools_fabsl(v) > z) {
     u = (n - b)*x/n;
     t *= u;
     v = t/(a + n);
@@ -8098,7 +8098,7 @@ static long double pseriesl (long double a, long double b, long double x) {
   s += t1;
   s += ai;
   u = a * tools_logl(x);
-  if ((a + b) < MAXGAML && fabsl(u) < MAXLOGL) {
+  if ((a + b) < MAXGAML && tools_fabsl(u) < MAXLOGL) {
     t = tools_gammal(a + b)/(tools_gammal(a)*tools_gammal(b));
     s = s*t*tools_powl(x, a);
   } else {
@@ -8149,7 +8149,7 @@ static long double incbcfl (long double a, long double b, long double x) {
     if (qk != 0.0L)
 		  r = pk/qk;
     if (r != 0.0L) {
-      t = fabsl((ans - r)/r);
+      t = tools_fabsl((ans - r)/r);
       ans = r;
     } else
       t = 1.0L;
@@ -8162,13 +8162,13 @@ static long double incbcfl (long double a, long double b, long double x) {
     k6 -= 1.0L;
     k7 += 2.0L;
     k8 += 2.0L;
-    if ((fabsl(qk) + fabsl(pk)) > big) {
+    if ((tools_fabsl(qk) + tools_fabsl(pk)) > big) {
       pkm2 *= biginv;
       pkm1 *= biginv;
       qkm2 *= biginv;
       qkm1 *= biginv;
     }
-	  if ((fabsl(qk) < biginv) || (fabsl(pk) < biginv)) {
+	  if ((tools_fabsl(qk) < biginv) || (tools_fabsl(pk) < biginv)) {
       pkm2 *= big;
       pkm1 *= big;
       qkm2 *= big;
@@ -8218,7 +8218,7 @@ static long double incbdl (long double a, long double b, long double x) {
     qkm1 = qk;
     if (qk != 0.0L) r = pk/qk;
     if (r != 0.0L) {
-      t = fabsl((ans - r)/r);
+      t = tools_fabsl((ans - r)/r);
       ans = r;
     } else
       t = 1.0L;
@@ -8231,13 +8231,13 @@ static long double incbdl (long double a, long double b, long double x) {
     k6 += 1.0L;
     k7 += 2.0L;
     k8 += 2.0L;
-    if ((fabsl(qk) + fabsl(pk)) > big) {
+    if ((tools_fabsl(qk) + tools_fabsl(pk)) > big) {
       pkm2 *= biginv;
       pkm1 *= biginv;
       qkm2 *= biginv;
       qkm1 *= biginv;
     }
-    if ((fabsl(qk) < biginv) || (fabsl(pk) < biginv)) {
+    if ((tools_fabsl(qk) < biginv) || (tools_fabsl(pk) < biginv)) {
       pkm2 *= big;
       pkm1 *= big;
       qkm2 *= big;
@@ -8293,7 +8293,7 @@ long double incbetl (long double aa, long double bb, long double xx) {
       x  (1-x)   | (a+b) / ( a | (a) | (b) ) .   */
   y = a*tools_logl(x);
   t = b*tools_logl(xc);
-  if ((a+b) < MAXGAML && fabsl(y) < MAXLOGL && fabsl(t) < MAXLOGL) {
+  if ((a+b) < MAXGAML && tools_fabsl(y) < MAXLOGL && tools_fabsl(t) < MAXLOGL) {
     t = tools_powl(xc, b);
     t *= tools_powl(x, a);
     t /= a;
@@ -8326,7 +8326,7 @@ static long double LOGE2L  = 6.9314718055994530941723E-1L;
 
 void cephes_sinhcoshl (long double x, long double *sih, long double *coh) {
   long double a;
-  a = fabsl(x);
+  a = tools_fabsl(x);
   if (x > (MAXLOGL + LOGE2L) || x > -(MINLOGL-LOGE2L)) {
     *sih = (x > 0.0L) ? HUGE_VALL : -HUGE_VALL;
     *coh = HUGE_VALL;

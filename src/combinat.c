@@ -300,7 +300,7 @@ static long double bernoulli_poly (int n, lua_Number x, lua_Number eps) {  /* 7.
   int k;
   long double sum = 0.0L;
   for (k=0; k <= n; k++) {
-    long double xk = (k == 0 && fabsl(x) < 1e-10L) ? 1.0L : tools_powl(x, k);
+    long double xk = (k == 0 && tools_fabsl(x) < 1e-10L) ? 1.0L : tools_powl(x, k);
     sum += tools_binomiall(n, k)*bernoulli_number(n - k, eps)*xk;
   }
   return sum;
@@ -350,7 +350,7 @@ static long double euler_poly (int n, long double x, long double eps) {  /* 7.7.
   long double xmhalf = x - 0.5L;
   for (k=0; k <= n; k++) {
     long double xk;
-    if (fabsl(xmhalf) < 1e-10L) {  /* safe check instead of exact == */
+    if (tools_fabsl(xmhalf) < 1e-10L) {  /* safe check instead of exact == */
       xk = (k == 0) ? 1.0L : 0.0L;
     } else {
       xk = tools_powl(xmhalf, k);

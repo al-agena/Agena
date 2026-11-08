@@ -1486,10 +1486,10 @@ static int gsolve (long double *a, int n, long double *x, long double eps) {
   nn = n + 1;
   issingular = 0;
   for (j=0; j < n; j++) {  /* modified, for (j=0; j < n-1; j++) { */
-    max = fabsl(a[j*nn + j]);
+    max = tools_fabsl(a[j*nn + j]);
     maxrow = j;
     for (i=j + 1; i < n; i++)  /* find the row with the largest first value */
-      if (fabsl(a[i*nn + j]) > max) {
+      if (tools_fabsl(a[i*nn + j]) > max) {
         max = a[i*nn + j];
         maxrow = i;
       }
@@ -1500,7 +1500,7 @@ static int gsolve (long double *a, int n, long double *x, long double eps) {
       a[maxrow*nn + k] = tmp;
      }
     /* } */
-    if (issingular == 0 && fabsl(a[j*nn + j]) < eps) issingular = 1;  /* statement added to detect singular matrices */
+    if (issingular == 0 && tools_fabsl(a[j*nn + j]) < eps) issingular = 1;  /* statement added to detect singular matrices */
     for (i=j + 1; i < n; i++) {  /* eliminate the ith element of the jth row */
       tmp = a[i*nn + j]/a[j*nn + j];
       for (k=n; k >= j; k--)
@@ -1762,7 +1762,7 @@ static int linalg_scale (lua_State *L) {
   for (j=n1; j < n2; j++) {  /* traverse columns */
     s = 0.0L;
     for (i=0; i < m; i++) {  /* traverse all rows and get maximum for the column */
-      if (fabsl(a[i*n + j]) > fabsl(s)) {
+      if (tools_fabsl(a[i*n + j]) > tools_fabsl(s)) {
         s = a[i*n + j];
       }
     }
@@ -4392,10 +4392,10 @@ static int Doolittle_LU_Decomposition_with_Pivoting (long double *A, long double
   for (k=0, p_k=A; k < n; p_k += n, k++) {
     /* find the pivot row */
     pivot[k] = k;
-    max = fabsl(*(p_k + k));  /* 3.18.6 fix */
+    max = tools_fabsl(*(p_k + k));  /* 3.18.6 fix */
     for (j=k + 1, p_row=p_k + n; j < n; j++, p_row += n) {
-      if (max < fabsl(*(p_row + k))) {
-        max = fabsl(*(p_row + k));
+      if (max < tools_fabsl(*(p_row + k))) {
+        max = tools_fabsl(*(p_row + k));
         pivot[k] = j;
         p_col = p_row;
       }
@@ -4535,9 +4535,9 @@ static int linalg_ludecomp (lua_State *L) {
       while (pval == 0.0L && col < n) {
         p = r + 1;
         for (i=r + 1; i < m; i++) {
-          if (pval < fabsl(UU[i*n + col])) {
+          if (pval < tools_fabsl(UU[i*n + col])) {
             p = i;
-            pval = fabsl(UU[i*n + col]);
+            pval = tools_fabsl(UU[i*n + col]);
           }
         }
         if (pval == 0.0L) nulldim++;
@@ -4704,7 +4704,7 @@ static void rref (long double *a, int m, int n, long double eps) {
       a[rowiplusj] = temp;
     }
     div = a[r*n + lead];
-    if (fabsl(div) > eps) { /* modified */
+    if (tools_fabsl(div) > eps) { /* modified */
       for (j = 0; j < n; j++) a[rowr + j] /= div;
     }
     for (j = 0; j < m; j++) {
@@ -4719,7 +4719,7 @@ static void rref (long double *a, int m, int n, long double eps) {
   for (i=0; i < m; i++) {  /* modified, cancel out values very close to zero, leave these statements here ! */
     rowi = i*n;
     for (j=0; j < n; j++) {
-      if (fabsl(a[rowi + j]) < eps) a[rowi + j] = 0.0L;
+      if (tools_fabsl(a[rowi + j]) < eps) a[rowi + j] = 0.0L;
     }
   }
 }
@@ -4785,7 +4785,7 @@ static void forward_substitutionld (long double *a, long double *x, int m, int n
   int i, j, rowi, rowj;
   for (i=0; i < m; i++) {
     rowi = i*n;  /* 2.21.9 tuning */
-    if (fabsl(a[rowi + (n - 1)]) < eps) continue;
+    if (tools_fabsl(a[rowi + (n - 1)]) < eps) continue;
     x[i] = a[rowi + (n - 1)]/a[rowi + i];
     for (j=i + 1; j < m; j++) {
       rowj = j*n;
@@ -4798,9 +4798,9 @@ static int isuppertriangularld (long double *a, int m, int n, long double eps) {
   int i, j, row;
   for (i=0; i < m; i++) {  /* check main diagonal */
     row = i*n;  /* 2.21.9 tuning */
-    if (fabsl(a[row + i]) < eps) return 0;
+    if (tools_fabsl(a[row + i]) < eps) return 0;
     for (j=0; j < i - 1; j++) {  /* check lower half */
-      if (fabsl(a[row + j]) >= eps) return 0;
+      if (tools_fabsl(a[row + j]) >= eps) return 0;
     }
   }
   return 1;
@@ -4810,9 +4810,9 @@ static int islowertriangularld (long double *a, int m, int n, long double eps) {
   int i, j, row;
   for (i=0; i < m; i++) {  /* check main diagonal */
     row = i*n;  /* 2.21.9 tuning */
-    if (fabsl(a[row + i]) < eps) return 0;
+    if (tools_fabsl(a[row + i]) < eps) return 0;
     for (j=i + 1; j < m; j++) {  /* check upper half */
-      if (fabsl(a[row + j]) >= eps) return 0;
+      if (tools_fabsl(a[row + j]) >= eps) return 0;
     }
   }
   return 1;

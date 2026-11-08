@@ -1,6 +1,3 @@
-#define agnhlps_c
-#define LUA_LIB
-
 /* $Id: agnhlps.c $
 ** C Helper Routines
 ** See Copyright notices in this file, and - where not indicated - in agena.h
@@ -10,6 +7,9 @@
 ** 80-bit or more floating point numbers are not supported on both 32-bit and 64-bit platforms. On Raspberries, long doubles
 ** always have just 8 bytes, which is equal to C doubles.
 */
+
+#define agnhlps_c
+#define LUA_LIB
 
 #include <ctype.h>
 #include <errno.h>      /* for my_ioerror */
@@ -5575,8 +5575,8 @@ LUALIB_API int tools_approxl (long double x, long double y, long double eps) {
   if (l_unlikely((x == y) || (tools_fpisnanl(x) && tools_fpisnanl(y)))) {
     return 1;
   } else {
-    long double dist = fabsl(x - y);
-    return (dist != HUGE_VAL) && (dist <= eps || dist <= (eps*fMax(fabsl(x), fabsl(y))));
+    long double dist = tools_fabsl(x - y);
+    return (dist != HUGE_VAL) && (dist <= eps || dist <= (eps*fMax(tools_fabsl(x), tools_fabsl(y))));
   }
 }
 #endif
@@ -6919,7 +6919,7 @@ LUALIB_API double tools_matheps (double x) {
 
 #ifndef __ARMCPU  /* 2.37.1 */
 LUALIB_API long double tools_mathepsl (long double x) {
-  x = fabsl(x);
+  x = tools_fabsl(x);
   return (x < 1.0L) ? (long double)AGN_HEPSILON : x*sqrtl(nextafterl(x, HUGE_VAL) - x);
 }
 #endif
@@ -6945,7 +6945,7 @@ LUALIB_API double tools_cbrteps (double x) {  /* 4.2.5 */
 
 #ifndef __ARMCPU  /* 4.2.5 */
 LUALIB_API long double tools_cbrtepsl (long double x) {
-  x = fabsl(x);
+  x = tools_fabsl(x);
   /* 6.7.9 changed (x < 0.0123927159L) default from AGN_EPSILON to AGN_LDBL_EPSILON */
   return (x < 0.012401570721999999L) ? AGN_LDBL_EPSILON : x*cbrtl(sun_nextafterl(x, HUGE_VAL) - x);
 }
@@ -9165,7 +9165,7 @@ LTANT57 =  1.4912469681508012e-10L;		    /*  0x147edbdba6f43a.0p-85 */
 static long double aux_tanl (long double x, long double y, int odd) {
   long double z, r, v, w, s, a, t;
   int big, sign;
-  big = fabsl(x) >= 0.67434;
+  big = tools_fabsl(x) >= 0.67434;
   sign = 0;  /* to prevent compiler warnings in OS/2 */
   if (big) {
     sign = 0;
@@ -9469,7 +9469,7 @@ LUALIB_API long double sun_asinl (long double x) {
     return x + x*__invtrigl_R(x*x);
   }
   /* 1 > |x| >= 0.5 */
-  z = (1.0 - fabsl(x))*0.5;
+  z = (1.0 - tools_fabsl(x))*0.5;
   s = sqrtl(z);
   r = __invtrigl_R(z);
   if (CLOSETO1(u)) {
@@ -9672,7 +9672,7 @@ LUALIB_API long double sun_atanl (long double x) {
     }
     id = -1;
   } else {
-    x = fabsl(x);
+    x = tools_fabsl(x);
     if (expman < (0x3fff << 8) + 0x30) {  /* |x| < 1.1875 */
       if (expman < ((0x3fff - 1) << 8) + 0x60) {  /*  7/16 <= |x| < 11/16 */
         id = 0;
@@ -9768,7 +9768,7 @@ LUALIB_API long double sun_atan2l (long double y, long double x) {
   if ((m & 2) && ey + 120 < ex)  /* |y/x| < 0x1p-120, x<0 */
     z = 0.0;
   else
-  z = sun_atanl(fabsl(y/x));  /* 3.1.3 tweak */
+  z = sun_atanl(tools_fabsl(y/x));  /* 3.1.3 tweak */
   switch (m) {
     case 0: return z;               /* atan(+,+) */
     case 1: return -z;              /* atan(-,+) */
@@ -10262,7 +10262,7 @@ static long double erfinv (long double x) {
   const long double F5 = 2.611088405080593625138020e-5L;
   const long double F6 = 2.010321207683943062279931e-7L;
   const long double F7 = 2.891024605872965461538222e-15L;
-  long double abs_x = fabsl(x);
+  long double abs_x = tools_fabsl(x);
   if (abs_x <= 0.85L) {
     r = 0.180625L - 0.25L*x*x;
     num = (((((((A7*r + A6)*r + A5)*r + A4)*r + A3)*r + A2)*r + A1)*r + A0);
@@ -10560,7 +10560,7 @@ sc[] = {
 
 static long double erfc1 (long double x) {
   long double s, P, Q;
-  s = fabsl(x) - 1;
+  s = tools_fabsl(x) - 1;
   P = pa[0] + s*(pa[1] + s*(pa[2] + s*(pa[3] + s*(pa[4] + s*(pa[5] + s*(pa[6] + s*pa[7]))))));
   Q = qa[0] + s*(qa[1] + s*(qa[2] + s*(qa[3] + s*(qa[4] + s*(qa[5] + s*(qa[6] + s))))));
   return 1 - erx - P/Q;
@@ -10571,7 +10571,7 @@ static long double erfc2 (uint32_t ix, long double x) {
   long double s, z, R, S;
   if (ix < 0x3fffa000) /* 0.84375 <= |x| < 1.25 */
     return erfc1(x);
-  x = fabsl(x);
+  x = tools_fabsl(x);
   s = 1 / (x*x);
   if (ix < 0x4000b6db) { /* 1.25 <= |x| < 2.857 ~ 1/.35 */
     R = ra[0] + s*(ra[1] + s*(ra[2] + s*(ra[3] + s*(ra[4] + s*(ra[5] + s*(ra[6] + s*(ra[7] + s*ra[8])))))));
@@ -14275,9 +14275,9 @@ LUALIB_API long double tools_powl (long double x, long double y) {
   /* Test for odd integer y. */
   yoddint = 0;
   if (iyflg) {
-    ya = fabsl(y);
+    ya = tools_fabsl(y);
     ya = floorl(0.5*ya);
-    yb = 0.5*fabsl(w);
+    yb = 0.5*tools_fabsl(w);
     if (ya != yb) yoddint = 1;
   }
   if (x <= -LDBL_MAX) {
@@ -14307,7 +14307,7 @@ LUALIB_API long double tools_powl (long double x, long double y) {
     x = -x;
   }
   /* (+integer)**(integer)  */
-  if (iyflg && floorl(x) == x && fabsl(y) < 32768.0) {
+  if (iyflg && floorl(x) == x && tools_fabsl(y) < 32768.0) {
     w = tools_powil(x, (int)y);
     return nflg ? -w : w;
   }
@@ -15445,7 +15445,7 @@ LUALIB_API long double tools_exp10l (long double x) {
   };
   long double n, y = sun_modfl(x, &n);  /* 3.16.4 tweak */
   union ldshape u = {n};
-  /* fabsl(n) < 16 without raising invalid on nan */
+  /* tools_fabsl(n) < 16 without raising invalid on nan */
   if ((u.i.se & 0x7fff) < 0x3fff + 4) {
     if (!y) return p10[(int)n + 15];
     y = tools_exp2l(3.32192809488736234787031942948939L*y);
@@ -21175,13 +21175,13 @@ LUALIB_API long double tools_koaddl (volatile long double s, volatile long doubl
   v = x - *q;
   sold = s;
   s += v;
-  if (fabsl(x) < fabsl(*q)) {
+  if (tools_fabsl(x) < tools_fabsl(*q)) {
     t = x;
     x = -(*q);
     *q = t;
   }
   u = (v - x) + *q;
-  if (fabsl(sold) < fabsl(v)) {
+  if (tools_fabsl(sold) < tools_fabsl(v)) {
     t = sold;
     sold = v;
     v = t;
@@ -24741,15 +24741,8 @@ static long double stirfl (long double x) {
 }
 
 
-#ifdef _WIN32
-static unsigned int counter = 0U;
-#endif
-
 LUALIB_API long double tools_gammal (long double x) {
   long double p, q, z;
-#ifdef _WIN32
-  ENFORCE_80BIT_FPU(counter, 31U);
-#endif
   if (!isfinite(x))
     return x + INFINITY;
   else if (x == 0.0L)  /* 6.7.3 change, do not return infinity */
@@ -26441,7 +26434,7 @@ LUALIB_API int tools_msta1 (double x, double mp) {
 LUALIB_API int tools_msta1l (long double x, long double mp) {
   long double a0, f, f0, f1;
   int it, n0, n1, nn;
-  a0 = fabsl(x);
+  a0 = tools_fabsl(x);
   n0 = truncl(1.1*a0) + 1;
   f0 = tools_envjl(n0, a0) - mp;
   n1 = n0 + 5;
@@ -26449,7 +26442,7 @@ LUALIB_API int tools_msta1l (long double x, long double mp) {
   for (it=1; it < 21; it++) {
     nn = n1 - (n1 - n0)/(1.0 - f0/f1);
     f = tools_envjl(nn, a0) - mp;
-    if (fabsl(nn - n1) < 1) break;
+    if (tools_fabsl(nn - n1) < 1) break;
     n0 = n1;
     f0 = f1;
     n1 = nn;
@@ -26504,7 +26497,7 @@ LUALIB_API int tools_msta2 (double x, double n, double mp) {
 LUALIB_API int tools_msta2l (long double x, long double n, long double mp) {
   long double a0, hmp, ejn, obj, f, f0, f1;
   int it, n0, n1, nn;
-  a0 = fabsl(x);
+  a0 = tools_fabsl(x);
   hmp = 0.5*mp;
   ejn = tools_envjl(n, a0);
   if (ejn <= hmp) {
@@ -26520,7 +26513,7 @@ LUALIB_API int tools_msta2l (long double x, long double n, long double mp) {
   for (it=1; it < 21; it++) {
     nn = n1 - (n1 - n0)/(1.0 - f0/f1);
     f = tools_envjl(nn, a0) - obj;
-    if (fabsl(nn - n1) < 1) break;
+    if (tools_fabsl(nn - n1) < 1) break;
     n0 = n1;
     f0 = f1;
     n1 = nn;
@@ -27487,7 +27480,7 @@ LUALIB_API double tools_zeroin (double x, double eps) {  /* 2.30.4, 7.1.6 tweak 
 
 
 LUALIB_API long double tools_zeroinl (long double x, long double eps) {  /* 3.16.6, 7.1.6 tweak */
-  return fabsl(x) <= eps ? 0.0L : x;
+  return tools_fabsl(x) <= eps ? 0.0L : x;
 }
 
 

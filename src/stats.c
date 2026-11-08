@@ -5180,7 +5180,7 @@ static lua_Number poisson (long double k, long double t) {
     return AGN_NAN;
   else {
     long double x = 0;  /* prevent compiler warning, 7.9.12 */
-    int flag = fabsl(k*t) < 700;  /* this is a fairly good guess to try direct or logarithmic computation, 3.7.3 */
+    int flag = tools_fabsl(k*t) < 700;  /* this is a fairly good guess to try direct or logarithmic computation, 3.7.3 */
     if (flag) {  /* direct computation */
       x = tools_expl(-t)*tools_powl(t, k)/cephes_factoriall(k);  /* changed 3.16.2 */
       if (tools_fpisnanl(x)) flag = 0;  /* some cases will overflow, e.g. k=1 && t ~= -709, 3.18.4 fix */

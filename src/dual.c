@@ -227,7 +227,7 @@ static int mt_abs (lua_State *L) {
     else { createeightdual(L, 0.0L, 0.0L, 0.0L, 0.0L, 0.0L, 0.0L, 0.0L, 0.0L); }
   } else {
     /* Standard Case: f(x) = |x|, f'(x) = sgn(x), f'' = 0, f''' = 0 */
-    real = fabsl(a[0]);
+    real = tools_fabsl(a[0]);
     df = (a[0] > 0.0L) ? 1.0L : -1.0L;
     if (s == 2) {
       r[1] = agn_reggetinumber(L, 1, 2);
@@ -2124,7 +2124,7 @@ static int mt_arcsin (lua_State *L) {
   int s = checkdual(L, 1, "dual.__arcsin", 1);
   if (s == 1) { lua_settop(L, 1); return 1; }  /* 6.7.4 fix */
   a[0] = agn_reggetinumber(L, 1, 1);
-  if (fabsl(a[0]) >= 1.0L) {
+  if (tools_fabsl(a[0]) >= 1.0L) {
     lua_pushundefined(L);
     return 1;
   }
@@ -2170,7 +2170,7 @@ static int mt_arccos (lua_State *L) {
   int s = checkdual(L, 1, "dual.__arccos", 1);
   if (s == 1) { lua_settop(L, 1); return 1; }  /* 6.7.4 fix */
   a[0] = agn_reggetinumber(L, 1, 1);
-  if (fabsl(a[0]) >= 1.0L) {
+  if (tools_fabsl(a[0]) >= 1.0L) {
     lua_pushundefined(L);
     return 1;
   }
@@ -2258,7 +2258,7 @@ static int mt_arcsec (lua_State *L) {
   int s = checkdual(L, 1, "dual.__arcsec", 1);
   if (s == 1) { lua_settop(L, 1); return 1; }  /* 6.7.4 fix */
   a[0] = agn_reggetinumber(L, 1, 1);
-  abs_a1 = fabsl(a[0]);
+  abs_a1 = tools_fabsl(a[0]);
   if (abs_a1 < 1.0L) {
     lua_pushundefined(L);
     return 1;
@@ -2495,7 +2495,7 @@ static int mt_sinc (lua_State *L) {
   int s = checkdual(L, 1, "dual.__sinc", 1);
   if (s == 1) { lua_settop(L, 1); return 1; }  /* 6.7.4 fix */
   a[0] = agn_reggetinumber(L, 1, 1);
-  int nearzero = fabsl(a[0]) < 1.0e-4L;
+  int nearzero = tools_fabsl(a[0]) < 1.0e-4L;
   if (nearzero) {
     x2 = a[0]*a[0];
     real = 1.0L - x2/6.0L + (x2*x2)/120.0L;
@@ -2671,7 +2671,7 @@ int dual_tanc (lua_State *L) {
   int s = checkdual(L, 1, "dual.tanc", toconstant);
   if (s == 1) { lua_settop(L, 1); return 1; }  /* 6.7.4 fix */
   a[0] = agn_reggetinumber(L, 1, 1);
-  int nearzero = fabsl(a[0]) < 1.0e-4L;
+  int nearzero = tools_fabsl(a[0]) < 1.0e-4L;
   if (nearzero) {
     x2 = a[0]*a[0];
     real = 1.0L + x2/3.0L + (2.0L*x2*x2)/15.0L;
@@ -3008,7 +3008,7 @@ int dual_arctanh (lua_State *L) {
   if (s == 1) { lua_settop(L, 1); return 1; }  /* 6.7.4 fix */
   a[0] = agn_reggetinumber(L, 1, 1);
   /* Domain Check: atanh is only defined for |x| < 1 */
-  if (fabsl(a[0]) >= 1.0L) {
+  if (tools_fabsl(a[0]) >= 1.0L) {
     lua_pushundefined(L);
     return 1;
   }
@@ -3382,7 +3382,7 @@ int dual_arccoth (lua_State *L) {
     a[i] = agn_reggetinumber(L, 1, i + 1);
   }
   x1 = a[0];
-  if (fabsl(x1) <= 1.0L) {
+  if (tools_fabsl(x1) <= 1.0L) {
     lua_pushundefined(L);
     return 1;
   }
@@ -3567,7 +3567,7 @@ int dual_inverf (lua_State *L) {
   if (s == 1) { lua_settop(L, 1); return 1; }  /* 6.7.4 fix */
   a[0] = agn_reggetinumber(L, 1, 1);
   /* Domain Check: erf is defined on (-1, 1) */
-  if (fabsl(a[0]) >= 1.0L) {
+  if (tools_fabsl(a[0]) >= 1.0L) {
     lua_pushundefined(L);
     return 1;
   }

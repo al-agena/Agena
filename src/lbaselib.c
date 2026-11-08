@@ -7348,7 +7348,7 @@ static int mathB_hypot (lua_State *L) {  /* = sqrt(a^2 + b^2) */
       t1 = b*b;
       t2 = c*c;
       t3 = -t1 + t2;
-      t4 = sqrtl(fabsl(t3));
+      t4 = sqrtl(tools_fabsl(t3));
       t5 = tools_signuml(t3);  /* 3.16.6 fix */
       agn_pushcomplex(L, (double)(0.5L*t4*(1.0L + t5)), (double)(0.5L*t4*(1.0L - t5)));
     } else {
@@ -7398,7 +7398,7 @@ static int mathB_hypot2 (lua_State *L) {  /* = sqrt(1 + x^2) */
     } else if (c == 0) {
       t0 = d*d;
       t1 = 1.0L - t0;
-      t2 = sqrtl(fabsl(t1));
+      t2 = sqrtl(tools_fabsl(t1));
       t3 = tools_signuml(t1);  /* 3.16.6 fix */
       agn_pushcomplex(L, (double)(0.5L*t2*(1.0L + t3)), (double)(0.5L*t2*(1.0L - t3)));
     } else {
@@ -7430,7 +7430,7 @@ static int mathB_hypot3 (lua_State *L) {  /* = sqrt(1 - x^2), 2.10.4 */
     if (d == 0) {  /* 2.31.0 fix to avoid undefined in OS/2 and DOS, and to speed up */
       t0 = c*c;
       t1 = 1.0L - t0;
-      t2 = sqrtl(fabsl(t1));
+      t2 = sqrtl(tools_fabsl(t1));
       t3 = tools_signuml(t1);
       agn_pushcomplex(L, (double)(0.5L*t2*(1.0L + t3)), (double)(0.5L*t2*(1.0L - t3)));
     } else if (c == 0) {
@@ -7469,14 +7469,14 @@ static int mathB_cathet (lua_State *L) {  /* Cathetus: sqrt(a^2 - b^2), 2.11.0 R
       t2 = c*c;
       t3 = t1 - t2; */
       t3 = tools_mpytha(a, c);  /* 3.16.4 fix against underflow and overflow */
-      t5 = sqrt(fabsl(t3));
+      t5 = sqrt(tools_fabsl(t3));
       t6 = tools_signuml(t3);  /* 3.16.6 fix */
       agn_pushcomplex(L, (double)(0.5L*t5*(1.0L + t6)), (double)(0.5L*t5*(1.0L - t6)));
     } else if (a == 0 && c == 0) {
       t1 = b*b;
       t2 = d*d;
       t3 = -t1 + t2;
-      t5 = sqrtl(fabsl(t3));   /* 3.16.4 fix */
+      t5 = sqrtl(tools_fabsl(t3));   /* 3.16.4 fix */
       t6 = tools_signuml(t3);  /* 3.16.6 fix */
       agn_pushcomplex(L, (double)(0.5*t5*(1.0 + t6)), (double)(0.5*t5*(1.0 - t6)));
     } else {
@@ -7503,7 +7503,7 @@ static int mathB_cathet (lua_State *L) {  /* Cathetus: sqrt(a^2 - b^2), 2.11.0 R
       t2 = c*c;
       t3 = t1 - t2; */
       t3 = tools_mpythal(a, c);
-      t4 = sqrtl(fabsl(t3));
+      t4 = sqrtl(tools_fabsl(t3));
       t5 = tools_signuml(t3);  /* 3.16.6 fix */
       agn_pushcomplex(L, 0.5L*t4*(1.0L + t5), 0.5L*t4*(1.0L - t5));
     } else if (a == 0) {
@@ -7531,7 +7531,7 @@ static int mathB_cathet (lua_State *L) {  /* Cathetus: sqrt(a^2 - b^2), 2.11.0 R
     agn_getcmplxparts(L, 2, &c, &d);
     if (d == 0) {  /* avoid undefined in OS/2 and DOS */
       t3 = tools_mpytha(a, c);
-      t5 = sqrtl(fabsl(t3));
+      t5 = sqrtl(tools_fabsl(t3));
       t6 = tools_signuml(t3);
       agn_pushcomplex(L, (double)(0.5L*t5*(1.0 + t6)), (double)(0.5*t5*(1.0 - t6)));
     } else if (c == 0) {
@@ -8649,7 +8649,7 @@ static double invdigamma (double y) {
     tg = tools_trigammal(x_old);
     if (tools_isirregularl(tg)) return AGN_NAN;  /* better be sure than sorry */
     x_new = x_old - (tools_psil(x_old) - y)/tg;  /* trigamma is positive over the reals */
-    delta = fabsl(x_new - x_old);
+    delta = tools_fabsl(x_new - x_old);
     x_old = x_new;
   }
   return x_new;

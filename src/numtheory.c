@@ -377,12 +377,12 @@ static int numtheory_binet (lua_State *L) {  /* 3.16.6 */
   }
   t3 = sqrtl(k*k + 4.0L);
   t4 = 0.5L*(k + t3);
-  t6 = tools_logl(fabsl(t4));
+  t6 = tools_logl(tools_fabsl(t4));
   t9 = 0.5L - 0.5L*tools_signuml(t4);
   t13 = tools_expl(re*t6 - im*t9*M_PIld);
   t17 = im*t6 + re*t9*M_PIld;
   t20 = 0.5L*(k - t3);
-  t22 = tools_logl(fabsl(t20));
+  t22 = tools_logl(tools_fabsl(t20));
   t25 = 0.5L - 0.5L*tools_signuml(t20);
   t29 = tools_expl(re*t22 - im*t25*M_PIld);
   t33 = im*t22 + re*t25*M_PIld;

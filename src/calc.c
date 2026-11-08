@@ -346,7 +346,7 @@ static int calc_intde (lua_State *L) {
   r = agnL_fncall(L, 1, (a + b)*aw[noff], 4, nargs);  /* 3.11.5 change for multivariate support */
   ir = r*aw[noff + 1];
   r *= aw[noff + 2];
-  err = fabsl(r);
+  err = tools_fabsl(r);
   k = nk + noff;
   j = noff;
   do {
@@ -359,13 +359,13 @@ static int calc_intde (lua_State *L) {
     fa *= aw[j + 2];
     fb *= aw[j + 2];
     r += fa + fb;
-    err += fabsl(fa) + fabsl(fb);
+    err += tools_fabsl(fa) + tools_fabsl(fb);
   } while (aw[j] > epsh && j < k);
   errt = err*aw[3];
   errh = err*epsh;
   errd = 1.0L + 2.0L*errh;
   jtmp = j;
-  while (fabsl(fa) > errt && j < k) {  /* 2.34.10 fix against invalid array access when run in Valgrind */
+  while (tools_fabsl(fa) > errt && j < k) {  /* 2.34.10 fix against invalid array access when run in Valgrind */
     j += 3;
     if (j >= NSLOTS - 2) break;  /* 2.34.10 fix against invalid array access when run in Valgrind */
     fa = agnL_fncall(L, 1, fmal(ba, aw[j], a), 4, nargs);  /* 3.11.5 change for multivariate support */
@@ -375,7 +375,7 @@ static int calc_intde (lua_State *L) {
   }
   jm = j;
   j = jtmp;
-  while (fabsl(fb) > errt && j < k) {  /* 2.34.10 fix against invalid array access when run in Valgrind */
+  while (tools_fabsl(fb) > errt && j < k) {  /* 2.34.10 fix against invalid array access when run in Valgrind */
     j += 3;
     if (j >= NSLOTS - 2) break;  /* 2.34.10 fix against invalid array access when run in Valgrind */
     fb = agnL_fncall(L, 1, fmal(-ba, aw[j], b), 4, nargs);  /* 3.11.5 change for multivariate support */
@@ -409,7 +409,7 @@ static int calc_intde (lua_State *L) {
         ir = fmal(fa, aw[j + 1], ir);
         fa *= aw[j + 2];
         r += fa;
-      } while (fabsl(fa) > errt && j < k);
+      } while (tools_fabsl(fa) > errt && j < k);
       j = jtmp;
       do {
         j += 3;
@@ -418,15 +418,15 @@ static int calc_intde (lua_State *L) {
         ir = fmal(fb, aw[j + 1], ir);
         fb *= aw[j + 2];
         r += fb;
-      } while (fabsl(fb) > errt && j < k);
+      } while (tools_fabsl(fb) > errt && j < k);
     } while (k < klim);
-    errd = h*(fabsl(r - 2.0L*iback) + fabsl(ir - 2.0L*irback));
+    errd = h*(tools_fabsl(r - 2.0L*iback) + tools_fabsl(ir - 2.0L*irback));
     h *= 0.5L;
     m *= 2;
     klim = 2*klim - noff;
   }
   r *= h*ba;
-  err = (errd > errh) ? -errd*(m*fabsl(ba)) : err*aw[2]*(m*fabsl(ba));
+  err = (errd > errh) ? -errd*(m*tools_fabsl(ba)) : err*aw[2]*(m*tools_fabsl(ba));
   lua_pushnumber(L, (err < 0) ? AGN_NAN : r);  /* 6.7.9 change */
   lua_pushnumber(L, err);
   return 2;
@@ -719,7 +719,7 @@ static int calc_intdei (lua_State *L) {
   r = agnL_fncall(L, 1, a + aw[noff], 3, nargs);  /* 3.11.5/3.12.0 change */
   ir = r*aw[noff + 1];
   r *= aw[noff + 2];
-  err = fabsl(r);
+  err = tools_fabsl(r);
   k = nk + noff;
   j = noff;
   do {
@@ -731,13 +731,13 @@ static int calc_intdei (lua_State *L) {
     fm *= aw[j + 4];
     fp *= aw[j + 5];
     r += fm + fp;
-    err += fabsl(fm) + fabsl(fp);
+    err += tools_fabsl(fm) + tools_fabsl(fp);
   } while (aw[j] > epsh && j < k);
   errt = err*aw[3];
   errh = err*epsh;
   errd = 1.0L + 2.0L*errh;
   jtmp = j;
-  while (fabsl(fm) > errt && j < k) {
+  while (tools_fabsl(fm) > errt && j < k) {
     j += 6;
     if (j >= NSLOTS - 4) break;  /* 2.34.10 invalid array access patch */
     fm = agnL_fncall(L, 1, a + aw[j], 3, nargs);  /* 3.11.5 change for multivariate support */
@@ -747,7 +747,7 @@ static int calc_intdei (lua_State *L) {
   }
   jm = j;
   j = jtmp;
-  while (fabsl(fp) > errt && j < k) {
+  while (tools_fabsl(fp) > errt && j < k) {
     j += 6;
     if (j >= NSLOTS - 5) break;  /* 2.34.10 invalid array access patch */
     fp = agnL_fncall(L, 1, a + aw[j + 1], 3, nargs);  /* 3.11.5 change for multivariate support */
@@ -781,7 +781,7 @@ static int calc_intdei (lua_State *L) {
         ir = fmal(fm, aw[j + 2], ir);
         fm *= aw[j + 4];
         r += fm;
-      } while (fabsl(fm) > errt && j < k);
+      } while (tools_fabsl(fm) > errt && j < k);
       j = jtmp;
       do {
         j += 6;
@@ -790,9 +790,9 @@ static int calc_intdei (lua_State *L) {
         ir = fmal(fp, aw[j + 3], ir);
         fp *= aw[j + 5];
         r += fp;
-      } while (fabsl(fp) > errt && j < k);
+      } while (tools_fabsl(fp) > errt && j < k);
     } while (k < klim);
-    errd = h*(fabsl(r - 2*iback) + fabsl(ir - 2*irback));
+    errd = h*(tools_fabsl(r - 2*iback) + tools_fabsl(ir - 2*irback));
     h *= 0.5L;
     m *= 2;
     klim = 2*klim - noff;
@@ -1004,7 +1004,7 @@ void intdeieasy (lua_State *L, int nargs, long double a, long double eps, long d
   epst = tools_expl(-ehm*epsln);
   ir = agnL_fncall(L, 1, a + 1, 3, nargs);  /* ir = (*f)(a + 1);  */
   *i = ir*(2.0L*M_PIO4ld);
-  *err = fabsl(*i)*epst;
+  *err = tools_fabsl(*i)*epst;
   h = 2.0L*h0;
   m = 1;
   errh = 0.0L;
@@ -1023,7 +1023,7 @@ void intdeieasy (lua_State *L, int nargs, long double a, long double eps, long d
         fm = agnL_fncall(L, 1, a + xm, 3, nargs)*xm;  /* (*f)(a + xm)*xm; */
         ir += fp + fm;
         *i = fmal(fp + fm, ep + em, *i);
-        errt = (fabsl(fp) + fabsl(fm))*(ep + em);
+        errt = (tools_fabsl(fp) + tools_fabsl(fm))*(ep + em);
         if (m == 1) *err += errt*epst;
         ep *= ehp;
         em *= ehm;
@@ -1034,7 +1034,7 @@ void intdeieasy (lua_State *L, int nargs, long double a, long double eps, long d
       errh = (*err/epst)*epsh*h0;
       errd = 1.0L + 2.0L*errh;
     } else {
-      errd = h*(fabsl(*i - 2.0L*iback) + 4.0L*fabsl(ir - 2.0L*irback));
+      errd = h*(tools_fabsl(*i - 2.0L*iback) + 4.0L*tools_fabsl(ir - 2.0L*irback));
     }
     h *= 0.5L;
     m *= 2;
@@ -1189,13 +1189,13 @@ static int calc_intdeo (lua_State *L) {
   noff = 2*nk0 + noff0;
   lmax = (int)(aw[3] + 0.5);
   eps = aw[4];
-  per = 1.0L/fabsl(omega);
+  per = 1.0L/tools_fabsl(omega);
   w02 = 2.0L*aw[noff + 2];
   perw = per*w02;
   r = agnL_fncall(L, 1, a + aw[noff]*per, 3, nargs);  /* 3.11.5 change for multivariate support */
   ir = r*aw[noff + 1];
   r *= aw[noff + 2];
-  err = fabsl(r);
+  err = tools_fabsl(r);
   h = 2.0L;
   m = 1;
   k = noff;
@@ -1219,7 +1219,7 @@ static int calc_intdeo (lua_State *L) {
           fm *= aw[j + 2];
           fp *= w02 - aw[j + 2];
           r += fm + fp;
-          err += fabsl(fm) + fabsl(fp);
+          err += tools_fabsl(fm) + tools_fabsl(fp);
           tk += 1;
         } while (aw[j] > eps && j < k);
         errh = err*aw[5];
@@ -1251,7 +1251,7 @@ static int calc_intdeo (lua_State *L) {
       fm = agnL_fncall(L, 1, a + perw*tk, 3, nargs);  /* 3.11.5 change for multivariate support */
       s2 = w02*fm;
       r += s2;
-      if (fabsl(fp) > err || fabsl(s2) > err) {
+      if (tools_fabsl(fp) > err || tools_fabsl(s2) > err) {
         l = 0;
         for (;;) {
           l++;
@@ -1276,7 +1276,7 @@ static int calc_intdeo (lua_State *L) {
     if (m == 1) {
       errd = 1.0L + 2.0L*errh;
     } else {
-      errd = h*(fabsl(r - 2.0L*iback) + fabsl(ir - 2.0L*irback));
+      errd = h*(tools_fabsl(r - 2.0L*iback) + tools_fabsl(ir - 2.0L*irback));
     }
     h *= 0.5L;
     m *= 2;
@@ -1964,7 +1964,7 @@ static void intcc (lua_State *L, long double a, long double b, long double eps,
   w[2] = agnL_fncall(L, 1, a + x, 4, nargs);   /* ditto */
   w[4] = agnL_fncall(L, 1, b - x, 4, nargs);   /* ditto */
   w[1] = agnL_fncall(L, 1, a + ba, 4, nargs);  /* ditto */
-  eref = 0.5*(fabsl(w[0]) + fabsl(w[1]) + fabsl(w[2]) + fabsl(w[3]) + fabsl(w[4]));
+  eref = 0.5*(tools_fabsl(w[0]) + tools_fabsl(w[1]) + tools_fabsl(w[2]) + tools_fabsl(w[3]) + tools_fabsl(w[4]));
   w[0] += w[3];
   w[2] += w[4];
   ir = w[0] + w[1] + w[2];
@@ -1989,17 +1989,17 @@ static void intcc (lua_State *L, long double a, long double b, long double eps,
       w[j + l] = fx;
     }
     ss = 2.0L*w[k + 1];
-    *err = esf*l*fabsl(*i - iback);
+    *err = esf*l*tools_fabsl(*i - iback);
     hh *= 0.25L;
-    errir = hh*fabsl(ir - 2*irback);
+    errir = hh*tools_fabsl(ir - 2*irback);
     l *= 2;
     k -= l + 2;
   } while ((*err > erefh || errir > eref) && k > 4*l);
   *i *= b - a;
   if (*err > erefh || errir > eref) {
-    *err *= -fabsl(b - a);
+    *err *= -tools_fabsl(b - a);
   } else {
-    *err = eref*fabsl(b - a);
+    *err = eref*tools_fabsl(b - a);
   }
 }
 #endif
@@ -2616,7 +2616,7 @@ static double riesum (lua_State *L, long double a, long double b, int n, int wha
     /* evaluates the height of a subinterval which is added to the running total sum. The loop repeats this process for each
        subinterval, evaluating the given function at a point for each rectangle and accumulating the results in sum. */
     f = agnL_fncall(L, 1, b - x, 4, nargs);
-    sum += absolute ? fabsl(f) : f;
+    sum += absolute ? tools_fabsl(f) : f;
   }
   /* the total accumulated sum of function  evaluations is multiplied by dx. The multiplication by dx scales the sum to account
      for the width of each subinterval, making the result an approximation  of the integral over the given interval [a, b]. */
@@ -2696,7 +2696,7 @@ static double riesum64 (lua_State *L, double a, double b, int n, int what, int a
     /* evaluates the height of a subinterval which is added to the running total sum. The loop repeats this process for each
        subinterval, evaluating the given function at a point for each rectangle and accumulating the results in sum. */
     f = agnL_fncall(L, 1, b - x, 4, nargs);
-    sum = tools_kbadd(sum, absolute ? fabsl(f) : f, &cs, &ccs);
+    sum = tools_kbadd(sum, absolute ? tools_fabsl(f) : f, &cs, &ccs);
   }
   sum += cs + ccs;
   /* the total accumulated sum of function  evaluations is multiplied by dx. The multiplication by dx scales the sum to account
@@ -2943,11 +2943,11 @@ static const double auxiliary_asymptotic_cutoff = 48.0;
 static FORCE_INLINE long double xPower_Series_Cin (long double x) {
   long double sum;
   long double xx = -x*x;
-  int n = (int)(2.41*xx + 7.15*fabsl(x) + 7.00);
+  int n = (int)(2.41*xx + 7.15*tools_fabsl(x) + 7.00);
   int k = n + n;
   /* If the argument is sufficiently small use the approximation
      Cin(x) = x^2 exp(-x^2/24) / 4 */
-  if (fabsl(x) < 0.00025L) return - (tools_expl(xx/24.0L)*xx)/4.0L;
+  if (tools_fabsl(x) < 0.00025L) return - (tools_expl(xx/24.0L)*xx)/4.0L;
   /* Otherwise evaluate the power series expansion for Cin(x). */
   sum = xx/(k*k*(k - 1)) + 1.0L/(k - 2);
   for (k -= 2; k > 2; k -= 2) {
@@ -2960,11 +2960,11 @@ static FORCE_INLINE long double xPower_Series_Cin (long double x) {
 static FORCE_INLINE long double xPower_Series_Si (long double x) {
   long double sum;
   long double xx = -x*x;
-  int n = (int)(3.42*xx + 7.46*fabsl(x) + 6.95);
+  int n = (int)(3.42*xx + 7.46*tools_fabsl(x) + 6.95);
   int k = n + n;
   /* If the argument is sufficiently small use the approximation
      Si(x) = x exp(-x^2/18) */
-  if (fabsl(x) <= 0.0003L) return x*tools_expl(xx/18.0L);
+  if (tools_fabsl(x) <= 0.0003L) return x*tools_expl(xx/18.0L);
   /* Otherwise evaluate the power series expansion for Si(x). */
   sum = xx/((k + 1)*(k + 1)*k) + 1.0L/(k - 1);
   for (k--; k >= 3; k -=2) {
@@ -2978,13 +2978,13 @@ static FORCE_INLINE void xAuxiliary_Sin_Cos_Integrals_fi_gi (long double x, long
 
 static FORCE_INLINE long double Asymptotic_Series_Ci (long double x){
   long double fi, gi;
-  xAuxiliary_Sin_Cos_Integrals_fi_gi(fabsl(x), &fi, &gi);
-  return sun_sinl(fabsl(x))*fi - sun_cosl(x)*gi;
+  xAuxiliary_Sin_Cos_Integrals_fi_gi(tools_fabsl(x), &fi, &gi);
+  return sun_sinl(tools_fabsl(x))*fi - sun_cosl(x)*gi;
 }
 
 static long double xCos_Integral_Ci (long double x) {  /* GCC says not `inlinable` */
   if (x == 0.0L) return -LDBL_MAX;
-  return (fabsl(x) <= 1.0L) ? tools_logl(fabsl(x)) + EULERGAMMA - xPower_Series_Cin(x) : Asymptotic_Series_Ci(x);
+  return (tools_fabsl(x) <= 1.0L) ? tools_logl(tools_fabsl(x)) + EULERGAMMA - xPower_Series_Cin(x) : Asymptotic_Series_Ci(x);
 }
 
 static FORCE_INLINE long double Asymptotic_Series_fi (long double x) {
@@ -3002,7 +3002,7 @@ static FORCE_INLINE long double Asymptotic_Series_fi (long double x) {
     xn *= xx;
     term = factorial/xn;
     j += 2;
-  } while (fabsl(term) < fabsl(old_term));
+  } while (tools_fabsl(term) < tools_fabsl(old_term));
   return fi/x;
 }
 
@@ -3021,7 +3021,7 @@ static FORCE_INLINE long double Asymptotic_Series_gi (long double x) {
     xn *= xx;
     term = factorial/xn;
     j += 2;
-  } while (fabsl(term) < fabsl(old_term));
+  } while (tools_fabsl(term) < tools_fabsl(old_term));
   return -gi/xx;
 }
 
@@ -3055,8 +3055,8 @@ static FORCE_INLINE void xAuxiliary_Sin_Cos_Integrals_fi_gi (long double x, long
 
 static int calc_Cin (lua_State *L) {  /* 2.41.0 */
   lua_Number x = agn_checknumber(L, 1);
-  lua_pushnumber(L, (fabsl(x) <= 1.0L) ? xPower_Series_Cin(x) :
-                                         tools_logl(fabsl(x)) + EULERGAMMA - Asymptotic_Series_Ci(x));
+  lua_pushnumber(L, (tools_fabsl(x) <= 1.0L) ? xPower_Series_Cin(x) :
+                                         tools_logl(tools_fabsl(x)) + EULERGAMMA - Asymptotic_Series_Ci(x));
   return 1;
 }
 
@@ -3398,16 +3398,16 @@ static int calc_regulafalsi (lua_State *L) {  /* switched to long doubles 2.34.1
   z = AGN_NAN;
   u = agnL_fncall(L, 1, x1, 4, nargs);  /* 3.12.0 change for multivariate support */
   v = agnL_fncall(L, 1, x2, 4, nargs);  /* ditto */
-  if (fabsl(u) < eps) {
+  if (tools_fabsl(u) < eps) {
     lua_pushnumber(L, x1);
     return 1;
   }
-  if (fabsl(v) < eps) {
+  if (tools_fabsl(v) < eps) {
     lua_pushnumber(L, x2);
     return 1;
   }
   c = 0;
-  while (fabsl(u - v) > eps && c++ < iters) {
+  while (tools_fabsl(u - v) > eps && c++ < iters) {
     z = x2 - v*(x2 - x1)/(v - u);
     u = v;
     x1 = x2;
@@ -3483,25 +3483,25 @@ static int calc_zeroin (lua_State *L) {
   fa = agnL_fncall(L, 1, a, 4, nargs);
   fb = agnL_fncall(L, 1, b, 4, nargs);
   fc = fa;
-  if (fabsl(fa) < eps) {  /* root at endpoints ? */
+  if (tools_fabsl(fa) < eps) {  /* root at endpoints ? */
     lua_pushnumber(L, a);
     return 1;
   }
-  if (fabsl(fb) < eps) {
+  if (tools_fabsl(fb) < eps) {
     lua_pushnumber(L, b);
     return 1;
   }
   while (cnt--) {
     previous = b - a;
-    if (fabsl(fc) < fabsl(fb)) {
+    if (tools_fabsl(fc) < tools_fabsl(fb)) {
       a = b; b = c; c = a;
       fa = fb; fb = fc; fc = fa;
     }
-    cureps = 2.0L*DBL_EPSILON*fabsl(b) + 0.5L*eps;
+    cureps = 2.0L*DBL_EPSILON*tools_fabsl(b) + 0.5L*eps;
     next = 0.5L*(c - b);
-    if (fabsl(next) <= cureps || tools_approxl(fb, 0.0L, dbleps))
+    if (tools_fabsl(next) <= cureps || tools_approxl(fb, 0.0L, dbleps))
       break;  /* 4.12.4 change from eps to dbleps to avoid problems with 64-bit Linux around the origin, e.g. with sinc. */
-    if (fabsl(previous) >= cureps && fabsl(fa) > fabsl(fb)) {  /* can interpolation be done ? */
+    if (tools_fabsl(previous) >= cureps && tools_fabsl(fa) > tools_fabsl(fb)) {  /* can interpolation be done ? */
       register long double cmb, ux, uy, uxm1, ptwice;
       cmb = c - b;
       if (a == c) {  /* do linear interpolation */
@@ -3519,10 +3519,10 @@ static int calc_zeroin (lua_State *L) {
       if (p > 0.0L) q = -q;
       else p = -p;
       ptwice = 2.0L*p;
-      if (ptwice < (1.5L*cmb*q - fabsl(cureps*q)) && ptwice < fabsl(previous*q))
+      if (ptwice < (1.5L*cmb*q - tools_fabsl(cureps*q)) && ptwice < tools_fabsl(previous*q))
         next = p/q;
     }
-    if (fabsl(next) < cureps) {
+    if (tools_fabsl(next) < cureps) {
       next = (next > 0.0L) ? cureps : -cureps;
     }
     a = b; fa = fb;
@@ -3536,7 +3536,7 @@ static int calc_zeroin (lua_State *L) {
   cnt = 2*MAXITERS;  /* 4.12.1 emergency brake fix */
   z = AGN_NAN;
   u = fa; v = fb;
-  while (cnt-- && fabsl(u - v) > dbleps) {  /* just comparing against eps produces inaccurate results */
+  while (cnt-- && tools_fabsl(u - v) > dbleps) {  /* just comparing against eps produces inaccurate results */
     z = b - v*(b - a)/(v - u);
     u = v;
     a = b;
@@ -3546,7 +3546,7 @@ static int calc_zeroin (lua_State *L) {
   if (z != z && tools_approxl(fb, 0.0L, eps))  /* regula falsi loop has not been run */
     lua_pushnumber(L, b);
   else if (z >= origa && z <= origb)
-    lua_pushnumber(L, fabsl(z) < dbleps ? 0 : z);  /* 4.11.2 extension; z, not b */
+    lua_pushnumber(L, tools_fabsl(z) < dbleps ? 0 : z);  /* 4.11.2 extension; z, not b */
   else
     lua_pushnil(L);
   return 1;
@@ -3606,11 +3606,11 @@ static int calc_zeroab (lua_State *L) {
   }
   fl = agnL_fncall(L, 1, xl, 4, nargs);
   fu = agnL_fncall(L, 1, xu, 4, nargs);
-  if (fabsl(fl) < eps) {  /* root at endpoints ? 3.19.4 */
+  if (tools_fabsl(fl) < eps) {  /* root at endpoints ? 3.19.4 */
     lua_pushnumber(L, xl);
     return 1;
   }
-  if (fabsl(fu) < eps) {
+  if (tools_fabsl(fu) < eps) {
     lua_pushnumber(L, xu);
     return 1;
   }
@@ -3645,12 +3645,12 @@ static int calc_zeroab (lua_State *L) {
     } else {
       xl = xr; fl = fr;
     }
-    bailout = fabsl((xr - xr_prev)/xr);
+    bailout = tools_fabsl((xr - xr_prev)/xr);
   }
   /* now refine the estimate using regula falsi */
   cnt = ABMAXITERS;  /* 4.11.2 fix */
   z = AGN_NAN;
-  while (cnt-- && fabsl(fl - fr) > dbleps) {  /* just comparing against eps produces inaccurate results */
+  while (cnt-- && tools_fabsl(fl - fr) > dbleps) {  /* just comparing against eps produces inaccurate results */
     z = xr - fr*(xr - xl)/(fr - fl);
     fl = fr;
     xl = xr;
@@ -3705,7 +3705,7 @@ static int calc_chandrupatla (lua_State *L) {
   xm = xmold = x1 - 1.0L;
   xmdiff = 1.0L;
   xmdiffold = 0.0L;
-  fm = (fabsl(f2) < fabsl(f1)) ? f2 : f1;  /* to avoid GCC warning */
+  fm = (tools_fabsl(f2) < tools_fabsl(f1)) ? f2 : f1;  /* to avoid GCC warning */
   while (count++ < iters) {  /* added emergency break, may be obsolete */
     x0 = x1 + t*(x2 - x1);
     f0 = agnL_fncall(L, 1, x0, 4, nargs);
@@ -3717,15 +3717,15 @@ static int calc_chandrupatla (lua_State *L) {
     }
     /* identify the one that approximates zero */
     xmold = xm;
-    if (fabsl(f2) < fabsl(f1)) {
+    if (tools_fabsl(f2) < tools_fabsl(f1)) {
       xm = x2; fm = f2;
     } else {
       xm = x1; fm = f1;
     }
     xmdiffold = xmdiff;
     xmdiff = xm - xmold;
-    tol = 2.0L*eps*fabsl(xm) + 0.5L*delta;
-    tl = tol/fabsl(x2 - x1);
+    tol = 2.0L*eps*tools_fabsl(xm) + 0.5L*delta;
+    tl = tol/tools_fabsl(x2 - x1);
     if (tl > 0.5L || fm == 0.0L || xmdiff == xmdiffold) break;  /* check for non-convergence added */
     /* if inverse quadratic interpolation holds, use it */
     xi = (x1 - x2)/(x3 - x2);
@@ -3857,9 +3857,9 @@ static int calc_itp (lua_State *L) {
     xf = (yb*a - ya*b)/(yb - ya);
     /* truncation */
     sigma = (0.0L <= xh - xf) ? +1.0L : -1.0L;
-    xt = (delta < fabsl(xh - xf)) ? xf + sigma*delta : xh;
+    xt = (delta < tools_fabsl(xh - xf)) ? xf + sigma*delta : xh;
     /* projection */
-    xitp = (fabsl(xt - xh) <= r) ? xt : xh - sigma*r;
+    xitp = (tools_fabsl(xt - xh) <= r) ? xt : xh - sigma*r;
     /* update the interval */
     yitp = s*agnL_fncall(L, 1, xitp, 4, nargs);
     if (yitp > 0.0L) {
@@ -3939,14 +3939,14 @@ static int calc_brent (lua_State *L) {
   e = sb - sa;
   d = e;
   while (iters--) {
-    if (fabsl(fc) < fabsl(fb)) {
+    if (tools_fabsl(fc) < tools_fabsl(fb)) {
       sa = sb; sb = c;  c  = sa;
       fa = fb; fb = fc; fc = fa;
     }
-    tol = 2.0L*DBL_EPSILON*fabsl(sb) + t;
+    tol = 2.0L*DBL_EPSILON*tools_fabsl(sb) + t;
     m = 0.5L*(c - sb);
-    if (fabsl(m) <= tol || fb == 0.0L) break;
-    if (fabsl(e) < tol || fabsl(fa) <= fabsl(fb)) {
+    if (tools_fabsl(m) <= tol || fb == 0.0L) break;
+    if (tools_fabsl(e) < tol || tools_fabsl(fa) <= tools_fabsl(fb)) {
       e = m;
       d = e;
     } else {
@@ -3967,7 +3967,7 @@ static int calc_brent (lua_State *L) {
       }
       s = e;
       e = d;
-      if (2.0L*p < 3.0L*m*q - fabsl(tol*q) && p < fabsl(0.5L*s*q)) {
+      if (2.0L*p < 3.0L*m*q - tools_fabsl(tol*q) && p < tools_fabsl(0.5L*s*q)) {
         d = p/q;
       } else {
         e = m;
@@ -3976,7 +3976,7 @@ static int calc_brent (lua_State *L) {
     }
     sa = sb;
     fa = fb;
-    if (tol < fabsl(d)) {
+    if (tol < tools_fabsl(d)) {
       sb = sb + d;
     } else if (0.0L < m) {
       sb = sb + tol;
@@ -4288,8 +4288,8 @@ static int aux_minmaxbr (lua_State *L, int nargs, lua_Number sign, lua_Number a,
     long double range, middle_range, tol_act, new_step, t, fa, fb, ft;
     range = b - a;           /* range over which the minimum is seeked for */
     middle_range = 0.5L*(a + b);  /* 2.17.7 tweak */
-    tol_act = fmal(eps, fabsl(x), tol/3.0L);  /* actual tolerance; new_step: step at this iteration; 4.12.6 change */
-    if (fmal(0.5L, range, fabsl(x - middle_range)) <= 2.0L*tol_act) {  /* 2.17.7/4.12.6 tweak */
+    tol_act = fmal(eps, tools_fabsl(x), tol/3.0L);  /* actual tolerance; new_step: step at this iteration; 4.12.6 change */
+    if (fmal(0.5L, range, tools_fabsl(x - middle_range)) <= 2.0L*tol_act) {  /* 2.17.7/4.12.6 tweak */
       fa = sign*agnL_fncall(L, 1, a, 4, nargs);  /* 3.12.0 change for multivariate support */
       fb = sign*agnL_fncall(L, 1, b, 4, nargs);
       fx = sign*agnL_fncall(L, 1, x, 4, nargs);
@@ -4305,7 +4305,7 @@ static int aux_minmaxbr (lua_State *L, int nargs, lua_Number sign, lua_Number a,
     /* obtain the gold section step */
     new_step = r*(x < middle_range ? b - x : a - x);
     /* decide if the interpolation can be tried */
-    if (fabsl(x - w) >= tol_act) {  /* if x and w are distinct interpolatiom may be tried */
+    if (tools_fabsl(x - w) >= tol_act) {  /* if x and w are distinct interpolatiom may be tried */
       long double p, q, t;       /* interpolation step is calculated as p/q; division operation is delayed */
                                  /* until last moment */
       t = (x - w)*(fx - fv);
@@ -4316,14 +4316,14 @@ static int aux_minmaxbr (lua_State *L, int nargs, lua_Number sign, lua_Number a,
         p = -p;         /* posite sign; make q positive */
       else              /* and assign possible minus to */
         q = -q;         /* p */
-      if (fabsl(p) < fabsl(new_step*q) &&  /* If x+p/q falls in [a,b] */
+      if (tools_fabsl(p) < tools_fabsl(new_step*q) &&  /* If x+p/q falls in [a,b] */
         p > q*(a - x + 2.0L*tol_act) &&    /* not too close to a and */
         p < q*(b - x - 2.0L*tol_act)) {    /* b, and isn't too large */
         new_step = p/q;                    /* it is accepted */
       }
       /* If p/q is too large then the gold section procedure can reduce [a,b] range to more extent  */
     }
-    if (fabsl(new_step) < tol_act) {  /* adjust the step to be not less */
+    if (tools_fabsl(new_step) < tol_act) {  /* adjust the step to be not less */
       if (new_step > 0.0L)            /* than tolerance */
         new_step = tol_act;
       else
@@ -4572,9 +4572,9 @@ static int calc_polyfit (lua_State *L) {  /* 2.1.3 */
   for (k=0; k <= m; k++) {
     /* 1. Find the largest absolute pivot element in the current column */
     int pivot_row = k;
-    long double max_val = fabsl(a[k + n*k]);
+    long double max_val = tools_fabsl(a[k + n*k]);
     for (i = k + 1; i <= m; i++) {
-      long double current_val = fabsl(a[i + n*k]);
+      long double current_val = tools_fabsl(a[i + n*k]);
       if (current_val > max_val) {
         max_val = current_val;
         pivot_row = i;
@@ -5235,7 +5235,7 @@ static int calc_simaptive (lua_State *L) {
   errorcode = Simpsons_Rule_Update(L, nargs, pinterval, &s1, &s2);
   aux_simaptive_issueerror(L, errorcode, "calc.simaptive");  /* 7.3.4 fix */
   while (pinterval->upper_limit - pinterval->lower_limit > min_h) {
-    if (fabsl(s1 - s2) < epsilon) {
+    if (tools_fabsl(s1 - s2) < epsilon) {
       /* If the two estimates are close, then increment the integral and if we are not at the right end,
          set the left end of the new interval to the right end of the old interval and the right end of
          the new interval remains the same (as the previous right end for this interval. */
@@ -5417,7 +5417,7 @@ static int calc_gtrap (lua_State *L) {
       sum += 2.0L*agnL_fncall(L, 1, a + k*h, 4, nargs);  /* 3.12.0 change for multivariate support */
     }
     fnew = 0.5L*h*sum;  /* 2.17.7 tweak */
-    delta = fabsl((fnew - fold)/fnew);
+    delta = tools_fabsl((fnew - fold)/fnew);
     fold = fnew;
     dold = delta;
   } while (delta > eps || delta < dold);
@@ -5525,13 +5525,13 @@ static int calc_romberg (lua_State *L) {
     if (n > 3) {
       /* Check all extrapolation columns in the current row */
       for (j = 0; j < n; j++) {
-        if (fabsl(A[rowi][j] - A[rowi - 1][j]) <= eps) {
+        if (tools_fabsl(A[rowi][j] - A[rowi - 1][j]) <= eps) {
           lua_pushnumber(L, A[rowi][j]);
           return 1;
         }
         /* Determine best solution (smallest difference) */
         z = A[rowi][j] - A[rowi - 1][j];
-        if (fabsl(z) < fabsl(conv)) conv = z;
+        if (tools_fabsl(z) < tools_fabsl(conv)) conv = z;
         rowi--;
       }
     }
@@ -5950,21 +5950,21 @@ static int cheby (lua_State *L) {  /* 2.10.4, switched to longdoubles 2.34.10 */
       /* substituting call to tools_intpow with z*z*.. is not faster.
          Do not change the order of the factors in the 80-bit version ! */
       case 1:
-        lua_pushnumber(L,          2.0L*(e0 - e2)/fabsl(q - p)); break;  /* fabs(q - p)^1 = fabs(q - p) */
+        lua_pushnumber(L,          2.0L*(e0 - e2)/tools_fabsl(q - p)); break;  /* fabs(q - p)^1 = fabs(q - p) */
       case 2:
-        lua_pushnumber(L,         16.0L*(f0 - f2)/opt_pow(fabsl(q - p), 2)); break;
+        lua_pushnumber(L,         16.0L*(f0 - f2)/opt_pow(tools_fabsl(q - p), 2)); break;
       case 3:
-        lua_pushnumber(L,        192.0L*(g0 - g2)/opt_pow(fabsl(q - p), 3)); break;
+        lua_pushnumber(L,        192.0L*(g0 - g2)/opt_pow(tools_fabsl(q - p), 3)); break;
       case 4:
-        lua_pushnumber(L,       3072.0L*(h0 - h2)/opt_pow(fabsl(q - p), 4)); break;
+        lua_pushnumber(L,       3072.0L*(h0 - h2)/opt_pow(tools_fabsl(q - p), 4)); break;
       case 5:
-        lua_pushnumber(L,      61440.0L*(i0 - i2)/opt_pow(fabsl(q - p), 5)); break;
+        lua_pushnumber(L,      61440.0L*(i0 - i2)/opt_pow(tools_fabsl(q - p), 5)); break;
       case 6:  /* 3.3.2 extension */
-        lua_pushnumber(L,    1474560.0L*(j0 - j2)/opt_pow(fabsl(q - p), 6)); break;
+        lua_pushnumber(L,    1474560.0L*(j0 - j2)/opt_pow(tools_fabsl(q - p), 6)); break;
       case 7:  /* 3.3.2 extension */
-        lua_pushnumber(L,   41287680.0L*(k0 - k2)/opt_pow(fabsl(q - p), 7)); break;
+        lua_pushnumber(L,   41287680.0L*(k0 - k2)/opt_pow(tools_fabsl(q - p), 7)); break;
       case 8:  /* 3.3.2 extension */
-        lua_pushnumber(L, 1321205760.0L*(l0 - l2)/opt_pow(fabsl(q - p), 8)); break;
+        lua_pushnumber(L, 1321205760.0L*(l0 - l2)/opt_pow(tools_fabsl(q - p), 8)); break;
       default:  /* should not happen */
         luaL_error(L, "Error in " LUA_QS ": cannot compute derivative.", "calc.cheby");
     }
@@ -6692,7 +6692,7 @@ static int calc_logistic (lua_State *L) {  /* 2.10.4, 2.34.10 switch to long dou
 static int calc_softsign (lua_State *L) {  /* 2.14.1, 2.34.10 switch to long double */
   long double x;
   x = agn_checknumber(L, 1);
-  lua_pushnumber(L, x/(1 + fabsl(x)));
+  lua_pushnumber(L, x/(1 + tools_fabsl(x)));
   return 1;
 }
 
@@ -6749,7 +6749,7 @@ static int calc_weier (lua_State *L) {  /* 2.12.0 RC 4 */
   i = r = q = 0;
   while (1) {
     z = tools_powil(a, i)*sun_cosl(tools_powil(b, i)*x);
-    if (fabsl(z) < eps) break;
+    if (tools_fabsl(z) < eps) break;
     r = tools_koaddl(r, z, &q); i++; /* 2.13.0/2.34.10 change */
   }
   lua_pushnumber(L, r + q);
@@ -6972,7 +6972,7 @@ static int calc_lambda (lua_State *L) {  /* 2.20.2 */
   v = agn_checkposint(L, 1);  /* order; we won't accept fractional orders due to incorrect results */
   x = agn_checknumber(L, 2);  /* argument */
   bjv0 = 0.0L; bjv1 = 0.0L; f = 0.0L;
-  x = fabsl(x);
+  x = tools_fabsl(x);
   x2 = x*x;
   n = (int)v;
   vl = agn_malloc(L, (n + 1)*sizeof(long double), "calc.lambda", NULL);  /* the Lambda function, of order N + V0. */
@@ -6988,7 +6988,7 @@ static int calc_lambda (lua_State *L) {  /* 2.20.2 */
       for (i=1; i <= 50; i++) {
         r = -0.25L*r*x2/(i*(i + vk));
         bk += r;
-        if (fabsl(r) < fabsl(bk)*eps) break;
+        if (tools_fabsl(r) < tools_fabsl(bk)*eps) break;
       }
       vl[k]= bk;
       uk = 1.0;
@@ -6996,7 +6996,7 @@ static int calc_lambda (lua_State *L) {  /* 2.20.2 */
       for (i=1; i <= 50; i++) {
         r = -0.25L*r*x2/(i*(i + vk + 1.0));
         uk += r;
-        if (fabsl(r) < fabsl(uk)*eps) break;
+        if (tools_fabsl(r) < tools_fabsl(uk)*eps) break;
       }
       dl[k] = -0.5L*x/(vk + 1.0)*uk;
     }
@@ -7072,7 +7072,7 @@ static int calc_lambda (lua_State *L) {  /* 2.20.2 */
       f2 = f1;
       f1 = f;
     }
-    cs = (fabsl(bjv0) <= fabsl(bjv1)) ? bjv1/f2 : bjv0/f;
+    cs = (tools_fabsl(bjv0) <= tools_fabsl(bjv1)) ? bjv1/f2 : bjv0/f;
     for (k=0; k <= n; k++)
       vl[k] = cs*vl[k];
   }
@@ -7134,7 +7134,7 @@ static void gauleg (long double x1, long double x2, long double x[], long double
       pp = n*(z*p1 - p2)/(z*z - 1.0L);
       z1 = z;
       z = z1 - p1/pp;  /* Newton's method */
-    } while (fabsl(z - z1) > eps);
+    } while (tools_fabsl(z - z1) > eps);
     /* Scale the root to the desired interval and put in its symmetric counterpart. Compute the weight and its symmetric
        counterpart */
     *(x_low++)  = xm - xl*z;
@@ -7303,7 +7303,7 @@ static int adaptive_integration (lua_State *L, int idx, int nargs, long double a
   i0 = trapezoidal_rule(L, 1, nargs, a, b, n);  /* the whole integral */
   il = trapezoidal_rule(L, 1, nargs, a, c, n);  /* the left half */
   ir = trapezoidal_rule(L, 1, nargs, c, b, n);  /* the right half */
-  if (fabsl(il + ir - i0) >= eps) {  /* trigger recursion */
+  if (tools_fabsl(il + ir - i0) >= eps) {  /* trigger recursion */
     int stepsl, stepsr;
     stepsl = adaptive_integration(L, idx, nargs, a, c, n, ++steps, eps);
     stepsr = adaptive_integration(L, idx, nargs, c, b, n, ++steps, eps);
@@ -7411,10 +7411,10 @@ static int calc_aitken (lua_State *L) {
     x2 = agnL_fncall(L, 1, x1, 5, nargs);
     d1 = x2 - x1;
     denom = d1 - (x1 - x0);
-    if (fabsl(denom) < eps) break;
+    if (tools_fabsl(denom) < eps) break;
     aitken = x2 - (d1*d1)/denom;
     if (tools_approxl(aitken, x2, eps)) {
-      l = fabsl(d1/(x1 - x0));
+      l = tools_fabsl(d1/(x1 - x0));
       rc = 1; i++;
       break;
     }
@@ -7443,7 +7443,7 @@ static int calc_chebyt (lua_State *L) {
   long double x, absx, t1 = 0.0L;
   int n = agn_checknonnegint(L, 1);
   x = agn_checknumber(L, 2);
-  absx = fabsl(x);
+  absx = tools_fabsl(x);
   if (absx > 1) {  /* 2.41.3 fix,
     see `Computing Machine-Efficient Polynomial Approximations`,
     by NICOLAS BRISEBARRE, Université J. Monnet, St-Étienne and LIP-E.N.S. Lyon,

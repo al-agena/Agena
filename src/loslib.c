@@ -10034,6 +10034,71 @@ static int os_shellgeom (lua_State *L) {
   return 2;
 }
 
+/*
+In Windows gets the current CPU precision if any argument is given or sets it to 80-bit
+if necessary. In all other operating system the function does nothing and simply returns.
+
+Whenever Agena loads the MPFR or GMP binding, the Windows runtime, or the aforementioned
+third-party libraries themselves, frequently reset the CPU's x87 FPU state back to
+Microsoft's default 53-bit rounding precision mode. This silently degrades and truncates
+80-bit long double math.
+
+In no-argument mode, it runs the C function:
+
+    _control87(_PC_64, _MCW_PC);
+
+WHAT THIS DOES:
+1. _MCW_PC (Precision Control Mask):
+   This tells the function we want to modify the FPU's hardware "Precision
+   Control" bits (specifically bits 8 and 9 of the x87 FPU control word).
+   It masks out and protects all other FPU settings (like exception masks
+   or rounding direction) so they remain untouched.
+
+2. _PC_64 (64-bit Mantissa / 80-bit Float):
+   This forces the precision control bits to the hardware value '11'.
+   This explicitly commands the physical CPU to use full 64-bit mantissa
+   precision, which corresponds to the standard 80-bit 'long double'
+   extended precision layout.
+
+3. OS-Level Synchronization:
+   Unlike raw assembly (`fldcw`), `_control87` updates the internal Thread
+   Environment Block (TEB) in the Windows kernel. This ensures that even
+   if Windows performs a thread context switch or an external DLL triggers
+   a garbage collection cycle, the operating system remembers and enforces
+   our 80-bit precision setting when returning control to the Agena core. */
+
+static int os_control87 (lua_State *L) {  /* 7.12.5 */
+#ifdef _WIN32
+  if (lua_gettop(L) != 0) {
+    unsigned int current_cw = _control87(0, 0);
+    /* Isolate bits 8 and 9 using the Precision Control mask */
+    unsigned int precision = current_cw & _MCW_PC;
+    switch (precision) {
+      case _PC_64:  /* Bits are 11 */
+        lua_pushinteger(L, 80);
+        break;
+      case _PC_53:  /* Bits are 10 */
+        lua_pushinteger(L, 53);
+        break;
+      case _PC_24:  /* Bits are 00 */
+        lua_pushinteger(L, 24);
+        break;
+      default: {  /* unknown */
+        lua_pushundefined(L);
+      }
+    }
+  } else {
+    _control87(_PC_64, _MCW_PC);
+    /* Read it back to verify the hardware change stuck */
+    unsigned int current_cw = _control87(0, 0);
+    lua_pushboolean(L, (current_cw & _MCW_PC) == _PC_64);
+  }
+  return 1;
+#else
+  return 0;
+#endif
+}
+
 
 static const luaL_Reg syslib[] = {
 #if (defined(__unix__) && !defined(__DJGPP__)) || defined(__APPLE__)
@@ -10058,6 +10123,7 @@ static const luaL_Reg syslib[] = {
   {"codepage",  os_codepage},         /* 2.9.7, January 07, 2016 */
 #endif
   {"computername", os_computername},  /* 0.5.3  Sept 15, 2007 */
+  {"control87", os_control87},        /* added on November 08, 2026 */
   {"countcore", os_countcore},        /* added on March 29, 2025 */
   {"cpuinfo",   os_cpuinfo},          /* added on February 07, 2013 */
   {"cpuid",     os_cpuid},            /* added on December 24, 2018 */

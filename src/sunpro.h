@@ -21,28 +21,6 @@ extern "C" {
 #endif
 
 
-/* Whenever Agena loads or re-initializes external compiled modules, the Windows runtime (or the WOW64 emulator kernel)
-   silently resets the CPU hardware registers back to Microsoft's default 53-bit rounding precision mode (0x027f),
-   which destroys 80-bit math.
-
-   By inserting this macro at critical execution entry points (like tools_gammal), the code instantly forces the physical
-   processor back into 80-bit mode before any mathematical operations occur, preventing bit-drift and data truncation.
-
-   Placing this into luaV_execute slows down the interpreter by 15 %, so we chose agnhlps.c/tools_gammal() for a hotfix
-   as this function is called by quite a lot of arithmetic Agena functions demanding 80-bit precision. 7.12.4 */
-
-#ifdef _WIN32
-#define ENFORCE_80BIT_FPU(x, y) do { \
-  if (!((x++) & (y))) { \
-    unsigned short safe_fpu_cw = 0x037f; \
-    __asm__ __volatile__("fldcw %0" : : "m" (safe_fpu_cw)); \
-  } \
-} while(0)
-#else
-#define ENFORCE_80BIT_FPU(x, y)
-#endif
-
-
 #if BYTE_ORDER == BIG_ENDIAN
 typedef union {
   double value;

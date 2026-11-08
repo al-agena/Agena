@@ -14,6 +14,11 @@ L := readstat.read('../data/hotel.sav');
 for i, j in L do print(i, j) od
 
 readstat.save(L, 'hotelnew.sav');
+
+L := readstat.read("C:/Program Files/PSPP-TESTING/share/pspp/examples/nhtsa.sav");
+readstat.save(L, "nhtsa.new.sav");
+K := readstat.read("nhtsa.new.sav");
+L = K:
 */
 
 #ifndef _WIN64
@@ -33,7 +38,7 @@ readstat.save(L, 'hotelnew.sav');
 #include "agena.h"
 #include "agenalib.h"
 #include "agnxlib.h"
-#include "prepdefs.h"  /* for __SOLARIS */
+#include "prepdefs.h"  /* for __SOLARIS, IS32BIT */
 
 #if !(defined(__DJGPP__) || defined(__OS2__) || defined(LUA_ANSI))
 #define AGENA_READSTATLIBNAME "readstat"
@@ -45,21 +50,13 @@ LUALIB_API int (luaopen_readstat) (lua_State *L);
 #define READSTAT_HANDLER_OK 0
 #endif
 
+
 /* Context structure to keep track of our Lua state and tables */
 typedef struct {
   lua_State *L;
   int columns_count;
 } l_readstat_ctx_t;
 
-
-/* Extrem schlankes Status-Objekt: Hält nur Metadaten und die gesuchte Zeilennummer */
-typedef struct {
-  const char *filename;
-  int var_count;
-  int row_to_yield;
-  int row_found;
-  lua_State *L;
-} l_stream_state_t;
 
 /* Callback 1: Required placeholder for modern metadata sequence */
 static int handle_metadata(readstat_metadata_t *metadata, void *user_ctx) {
@@ -76,7 +73,7 @@ static int handle_metadata(readstat_metadata_t *metadata, void *user_ctx) {
   return READSTAT_HANDLER_OK;
 }
 
-/* Callback 2: Handles Metadata (Variables) - Exactly your original structure but uses string key */
+/* Callback 2: Handles Metadata (Variables) - Integrates your original layout with explicit missing information blocks */
 static int handle_variable (int index, readstat_variable_t *variable,
                             const char *val_labels, void *user_ctx) {
   l_readstat_ctx_t *ctx = (l_readstat_ctx_t *)user_ctx;
@@ -85,7 +82,7 @@ static int handle_variable (int index, readstat_variable_t *variable,
   const char *var_label = readstat_variable_get_label(variable);
   readstat_type_t var_type = readstat_variable_get_type(variable);
   /* Get 'variables' sub-table using your readable string label */
-  luaL_checkstack(L, 4, "not enough stack space");
+  luaL_checkstack(L, 6, "not enough stack space");
   lua_pushstring(L, "variables");
   lua_gettable(L, -2);
   lua_pushinteger(L, index + 1);  /* Lua 1-indexed */
@@ -113,19 +110,49 @@ static int handle_variable (int index, readstat_variable_t *variable,
   lua_pushstring(L, "value_labels");
   lua_pushstring(L, val_labels ? val_labels : "");
   lua_settable(L, -3);
+  /* 5. EXPLICIT MISSING VALUES DEFINITIONS REGION */
+  int missing_count = readstat_variable_get_missing_ranges_count(variable);
+  if (missing_count > 0) {
+    lua_pushstring(L, "missing_rules");
+    lua_newtable(L); 
+    for (int i = 0; i < missing_count; i++) {
+      readstat_value_t lo_val = readstat_variable_get_missing_range_lo(variable, i);
+      readstat_value_t hi_val = readstat_variable_get_missing_range_hi(variable, i);
+      lua_pushinteger(L, i + 1);
+      lua_newtable(L); 
+      readstat_type_t type = readstat_value_type(lo_val);
+      if (type == READSTAT_TYPE_DOUBLE || type == READSTAT_TYPE_FLOAT) {
+        double lo = readstat_double_value(lo_val);
+        double hi = readstat_double_value(hi_val);
+        if (lo == hi) {
+          lua_pushstring(L, "type");  lua_pushstring(L, "discrete"); lua_settable(L, -3);
+          lua_pushstring(L, "value"); lua_pushnumber(L, lo);         lua_settable(L, -3);
+        } else {
+          lua_pushstring(L, "type"); lua_pushstring(L, "range");    lua_settable(L, -3);
+          lua_pushstring(L, "lo");   lua_pushnumber(L, lo);         lua_settable(L, -3);
+          lua_pushstring(L, "hi");   lua_pushnumber(L, hi);         lua_settable(L, -3);
+        }
+      } else if (type == READSTAT_TYPE_STRING) {
+        lua_pushstring(L, "type");  lua_pushstring(L, "discrete"); lua_settable(L, -3);
+        lua_pushstring(L, "value"); lua_pushstring(L, readstat_string_value(lo_val)); lua_settable(L, -3);
+      }
+      lua_settable(L, -3); 
+    }
+    lua_settable(L, -3); 
+  }
   lua_settable(L, -3);
   lua_pop(L, 1);  /* Pop 'variables' sub-table */
   ctx->columns_count++;
   return READSTAT_HANDLER_OK;
 }
 
-/* Callback 3: Handles Value Labels - Exactly your original structure but uses string key */
+/* Callback 3: Handles Value Labels - Safely maps all dictionary variants using your original layout format */
 static int handle_value_label (const char *val_labels, readstat_value_t value,
                                const char *label, void *user_ctx) {
   l_readstat_ctx_t *ctx = (l_readstat_ctx_t *)user_ctx;
   lua_State *L = ctx->L;
   /* Get 'value_labels' sub-table using your readable string label */
-  luaL_checkstack(L, 4, "not enough stack space");
+  luaL_checkstack(L, 5, "not enough stack space");
   lua_pushstring(L, "value_labels");
   lua_gettable(L, -2);
   lua_pushstring(L, val_labels);
@@ -141,6 +168,8 @@ static int handle_value_label (const char *val_labels, readstat_value_t value,
   readstat_type_t type = readstat_value_type(value);
   if (type == READSTAT_TYPE_STRING) {
     lua_pushstring(L, readstat_string_value(value));
+  } else if (type == READSTAT_TYPE_INT32 || type == READSTAT_TYPE_INT16) {
+    lua_pushinteger(L, readstat_int32_value(value));
   } else {
     lua_pushnumber(L, readstat_double_value(value));
   }
@@ -150,13 +179,13 @@ static int handle_value_label (const char *val_labels, readstat_value_t value,
   return READSTAT_HANDLER_OK;
 }
 
-/* Callback 4: Handles Row Data - Exactly your original structure but uses string key */
+/* Callback 4: Handles Row Data - Safely preserves all User-Defined values inside the core matrix data array */
 static int handle_value (int row_index, readstat_variable_t *variable, readstat_value_t value, void *user_ctx) {
   l_readstat_ctx_t *ctx = (l_readstat_ctx_t *)user_ctx;
   lua_State *L = ctx->L;
   int var_index = readstat_variable_get_index(variable);
   luaL_checkstack(L, 4, "not enough stack space");
-  /* Get 'rows' sub-table using your readable string label */
+  /* Get 'data' sub-table using your readable string label */
   lua_pushstring(L, "data");
   lua_gettable(L, -2);
   lua_pushinteger(L, row_index + 1);
@@ -229,7 +258,9 @@ static int readstat_read (lua_State *L) {
 
 /* Callback: Low-level disk stream writer callback */
 
-#if (defined(_WIN32) && !defined(_WIN64)) || defined(__SOLARIS) || defined(__OS2__) || (defined(__linux__) && defined(__ILP32__))
+#if (defined(_WIN32) && !defined(_WIN64)) || defined(__SOLARIS) || defined(__OS2__) || \
+    (defined(__linux__) && defined(__ILP32__)) || \
+    (defined(__ARMCPU) && defined(__linux__) && defined(IS32BIT))
 int handle_write (const void *pos, unsigned int len, void *user_ctx) {
   FILE *f = (FILE *)user_ctx;
   return (int)fwrite(pos, 1, len, f);
@@ -260,7 +291,7 @@ static int readstat_save (lua_State *L) {
   readstat_variable_t *variables_list[1000] = { NULL };
   char variable_categories[1000][256];
   memset(variable_categories, 0, sizeof(variable_categories));
-  luaL_checkstack(L, 6, "not enough stack space");
+  luaL_checkstack(L, 10, "not enough stack space"); /* Expanded headspace for processing rules tables */
   /* --- PHASE 1: EXTRACT VARIABLES & REGISTER SCHEMA --- */
   lua_pushstring(L, "variables");
   lua_gettable(L, 1);  /* Get data.variables table */
@@ -277,22 +308,22 @@ static int readstat_save (lua_State *L) {
     for (i=1; i <= var_count; i++) {
       lua_rawgeti(L, -1, i);  /* Get variable properties table */
       if (lua_istable(L, -1)) {
-        /* Get name */
+        /* 1.1 Get name */
         lua_pushstring(L, "name");
         lua_gettable(L, -2);
         const char *v_name = lua_tostring(L, -1);
         lua_pop(L, 1);
-        /* Get type */
+        /* 1.2 Get type */
         lua_pushstring(L, "type");
         lua_gettable(L, -2);
         const char *v_type = lua_tostring(L, -1);
         lua_pop(L, 1);
-        /* Get label */
+        /* 1.3 Get label */
         lua_pushstring(L, "label");
         lua_gettable(L, -2);
         const char *v_label = lua_tostring(L, -1);
         lua_pop(L, 1);
-        /* Get categories string name */
+        /* 1.4 Get categories string name */
         lua_pushstring(L, "value_labels");
         lua_gettable(L, -2);
         const char *v_cats = lua_tostring(L, -1);
@@ -306,46 +337,116 @@ static int readstat_save (lua_State *L) {
         }
         /* Register variable pointer into tracking list */
         variables_list[i - 1] = readstat_add_variable(writer, v_name ? v_name : "UNKNOWN", rs_type, 0);
-        if (variables_list[i - 1] && v_label) {
+        if (variables_list[i - 1]) {
           if (v_label) {
             readstat_variable_set_label(variables_list[i - 1], v_label);
           }
           if (rs_type == READSTAT_TYPE_DOUBLE) {
             readstat_variable_set_format(variables_list[i - 1], "F8.4");
           }
+          /* 1.5 WRITE BACK MISSING VALUES RULES (New Section) */
+          lua_pushstring(L, "missing_rules");
+          lua_gettable(L, -2);
+          if (lua_istable(L, -1)) {
+            int rule_count = lua_rawlen(L, -1);
+            int r_idx;
+            for (r_idx = 1; r_idx <= rule_count; r_idx++) {
+              lua_rawgeti(L, -1, r_idx);
+              if (lua_istable(L, -1)) {
+                lua_pushstring(L, "type");
+                lua_gettable(L, -2);
+                const char *r_type = lua_tostring(L, -1);
+                lua_pop(L, 1);
+                if (rs_type == READSTAT_TYPE_STRING) {
+                  lua_pushstring(L, "value");
+                  lua_gettable(L, -2);
+                  const char *r_val = lua_tostring(L, -1);
+                  lua_pop(L, 1);
+                  if (r_val) {
+                    readstat_variable_add_missing_string_value(variables_list[i - 1], r_val);
+                  }
+                } else {
+                  if (r_type && strcmp(r_type, "discrete") == 0) {
+                    lua_pushstring(L, "value");
+                    lua_gettable(L, -2);
+                    double r_val = lua_tonumber(L, -1);
+                    lua_pop(L, 1);
+                    readstat_variable_add_missing_double_value(variables_list[i - 1], r_val);
+                  } else if (r_type && strcmp(r_type, "range") == 0) {
+                    lua_pushstring(L, "lo");
+                    lua_gettable(L, -2);
+                    double r_lo = lua_tonumber(L, -1);
+                    lua_pop(L, 1);
+                    
+                    lua_pushstring(L, "hi");
+                    lua_gettable(L, -2);
+                    double r_hi = lua_tonumber(L, -1);
+                    lua_pop(L, 1);
+                    
+                    readstat_variable_add_missing_double_range(variables_list[i - 1], r_lo, r_hi);
+                  }
+                }
+              }
+              lua_pop(L, 1); /* Pop single rule properties table */
+            }
+          }
+          lua_pop(L, 1); /* Pop missing_rules sub-table */
         }
       }
       lua_pop(L, 1);  /* Pop variable properties table */
     }
   }
   lua_pop(L, 1);  /* Pop data.variables sub-table */
-  /* --- PHASE 2: PARSE VALUE LABELS & BIND DIRECTLY TO VARIABLES --- */
+  /* --- PHASE 2: PARSE VALUE LABELS & BIND DIRECTLY TO VARIABLES (Deduplicated & Ordered) --- */
   lua_pushstring(L, "value_labels");
   lua_gettable(L, 1);  /* Get data.value_labels table */
   if (lua_istable(L, -1)) {
-    lua_pushnil(L);
-    while (lua_next(L, -2) != 0) {
-      if (lua_istable(L, -1)) {
-        const char *dict_name = lua_tostring(L, -2);
-        readstat_label_set_t *label_set = readstat_add_label_set(writer, READSTAT_TYPE_DOUBLE, dict_name);
-        if (label_set) {
-          lua_pushnil(L);
-          while (lua_next(L, -2) != 0) {
-            double cat_code = lua_tonumber(L, -2);
-            const char *cat_label = lua_tostring(L, -1);
-            readstat_label_double_value(label_set, cat_code, cat_label);
-            lua_pop(L, 1);
-          }
-          /* Instantly attach this label set to any variable that queries it */
-          int v;
-          for (v=0; v < var_count; v++) {
-            if (strcmp(variable_categories[v], dict_name) == 0 && variables_list[v] != NULL) {
-              readstat_variable_set_label_set(variables_list[v], label_set);
-            }
+    /* Track which dictionary names we have already added to the file */
+    char added_dicts[1000][256];
+    int added_count = 0;
+    memset(added_dicts, 0, sizeof(added_dicts));
+    int v;
+    for (v = 0; v < var_count; v++) {
+      /* Only process if the variable has a label set and it's not an empty string */
+      if (variable_categories[v][0] != '\0' && variables_list[v] != NULL) {
+        const char *dict_name = variable_categories[v];
+        /* Check if we already created this label set */
+        int already_added = 0;
+        int d;
+        for (d = 0; d < added_count; d++) {
+          if (strcmp(added_dicts[d], dict_name) == 0) {
+            already_added = 1;
+            break;
           }
         }
+        /* If it's a new dictionary, look it up in Lua and add it to the file once */
+        if (!already_added) {
+          lua_pushstring(L, dict_name);
+          lua_gettable(L, -2);
+          if (lua_istable(L, -1)) {
+            readstat_label_set_t *label_set = readstat_add_label_set(writer, READSTAT_TYPE_DOUBLE, dict_name);
+            if (label_set) {
+              lua_pushnil(L);
+              while (lua_next(L, -2) != 0) {
+                double cat_code = lua_tonumber(L, -2);
+                const char *cat_label = lua_tostring(L, -1);
+                readstat_label_double_value(label_set, cat_code, cat_label);
+                lua_pop(L, 1);
+              }
+              /* Bind this label set to EVERY variable that shares it */
+              int bind_v;
+              for (bind_v = 0; bind_v < var_count; bind_v++) {
+                if (strcmp(variable_categories[bind_v], dict_name) == 0 && variables_list[bind_v] != NULL) {
+                  readstat_variable_set_label_set(variables_list[bind_v], label_set);
+                }
+              }
+              /* Remember that we've added this dictionary */
+              strncpy(added_dicts[added_count++], dict_name, 255);
+            }
+          }
+          lua_pop(L, 1); /* Pop the specific label sub-table */
+        }
       }
-      lua_pop(L, 1);
     }
   }
   lua_pop(L, 1); /* Pop data.value_labels sub-table */
@@ -395,6 +496,7 @@ static int readstat_save (lua_State *L) {
   lua_pushboolean(L, 1);
   return 1;
 }
+
 
 /* Register the module functions for Lua 5.1 / Agena core */
 static const struct luaL_Reg readstat_funcs[] = {
