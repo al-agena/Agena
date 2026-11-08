@@ -1,1 +1,31 @@
-/* currently empty */
+package.checkclib('readstat');  # has C dynamic link library been found ?
+
+/*
+import readstat;
+L := readstat.read("C:/Program Files/PSPP-TESTING/share/pspp/examples/nhtsa.sav");
+readstat.save(L, "nhtsa.new.sav");
+K := readstat.read("nhtsa.new.sav");
+L = K:
+
+L.data[5]:
+readstat.fillmissing(L, undefined, 'NaN')
+L.data[5]:
+*/
+
+/* The function fills all empty, missing cells in the rows of the payload referred to by the 'data' field of an
+   SPSS Statistical File object with a user-defined value. */
+procedure readstat.fillmissing(dataset, numericfill, stringfill) is
+   for i, row in ipairs(dataset.data) do
+      for c, var in ipairs(dataset.variables) do
+         if row[c] = null then
+            if var['type'] = 'string' then
+               row[c] := stringfill or ''
+            else
+               row[c] := numericfill or -999
+            end
+         end
+      end
+   end;
+   return dataset
+end;
+
