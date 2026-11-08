@@ -1,8 +1,28 @@
-7.12.4 Kerberos, November 07, 2026
+7.12.5 Kerberos, November 08, 2026
 
-- In Windows only, the factorial function `fact` has been unnecessarily slowed down. This has been fixed. The Windows
-  80-bit math CPU reset will now also only be triggered every 32th time the internal Gamma function is called, also
-  speeding up arithmetic functions that use it.
+- Extended the `readstat` binding, functions `readstat.read` and `readstat.save`:
+
+  • User-Defined Missing Values: Enhanced the metadata parser to explicitly extract user-defined missing value rules 
+    (both discrete parameters and bounded intervals), isolating them into a structured 'missing_rules' array per variable
+    container while leaving the core cell payload matrix clean and unaltered.
+
+  • Bi-directional Value Labels Integration: Re-engineered the streaming event-driven value label compiler blocks. 
+    Dictionaries are now dynamically centralized under value_labels at the file's root level, perfectly matching 
+    the binary SPSS shared-dictionary profile to conserve memory.
+
+- The new function `readstat.fillmissing` fills empty fields in the 'data' payload of an SPSS Statistics Data object.
+
+- In Windows only, the factorial function `fact` had been unnecessarily slowed down and the reason for 80-bit-based math 
+  functions sometimes going berserk on some Windows flavours, and Windows flavours only, could be finally traced back to 
+  the `mpfr`, `gmp` and `mapm` packages.
+  
+  So the new function `os.control87` manually forces an 80-bit precision CPU reset when called without arguments. If called 
+  with any argument, the function returns the current precision which may be 24, 53, 80 or `undefined`.
+  
+  You should run it without arguments whenever you finished the use of the `mpfr`, `gmp` and `mapm` packages.
+
+  The `automatic` reset that has been hardwired into the internal 80-bit version of the Gamma function has been removed,
+  speeding up affiliated functions to old levels again.
 
 
 7.12.4 Kerberos, November 06, 2026
