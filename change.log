@@ -1,28 +1,36 @@
+7.12.5a Kerberos, November 09, 2026
+
+- The true culprit for 80-bit arithmetic suddenly going berserk on some 64-bit Windows flavours has finally been found:
+  
+  `os.getip` has been patched to prevent subsequent calls to 80-bit-based mathematical functions from delivering wrong 
+  results. The `mapm`, `mpfr` and `gmp` packages never caused the problems sometimes observed, as wrongfully previously 
+  claimed.
+
+
 7.12.5 Kerberos, November 08, 2026
 
 - Extended the `readstat` binding, functions `readstat.read` and `readstat.save`:
 
-  • User-Defined Missing Values: Enhanced the metadata parser to explicitly extract user-defined missing value rules 
+  • User-Defined Missing Values: Enhanced the metadata parser to explicitly extract user-defined missing value rules
     (both discrete parameters and bounded intervals), isolating them into a structured 'missing_rules' array per variable
     container while leaving the core cell payload matrix clean and unaltered.
 
-  • Bi-directional Value Labels Integration: Re-engineered the streaming event-driven value label compiler blocks. 
-    Dictionaries are now dynamically centralized under value_labels at the file's root level, perfectly matching 
+  • Bi-directional Value Labels Integration: Re-engineered the streaming event-driven value label compiler blocks.
+    Dictionaries are now dynamically centralized under value_labels at the file's root level, perfectly matching
     the binary SPSS shared-dictionary profile to conserve memory.
 
 - The new function `readstat.fillmissing` fills empty fields in the 'data' payload of an SPSS Statistics Data object.
 
-- In Windows only, the factorial function `fact` had been unnecessarily slowed down and the reason for 80-bit-based math 
-  functions sometimes going berserk on some Windows flavours, and Windows flavours only, could be finally traced back to 
-  the `mpfr`, `gmp` and `mapm` packages.
-  
-  So the new function `os.control87` manually forces an 80-bit precision CPU reset when called without arguments. If called 
-  with any argument, the function returns the current precision which may be 24, 53, 80 or `undefined`.
-  
-  You should run it without arguments whenever you finished the use of the `mpfr`, `gmp` and `mapm` packages.
+- In Windows only, the factorial function `fact` had been unnecessarily slowed down. This has been fixed.
 
-  The `automatic` reset that has been hardwired into the internal 80-bit version of the Gamma function has been removed,
-  speeding up affiliated functions to old levels again.
+  The new function `os.control87` manually forces an 80-bit precision CPU reset when called without arguments. If called
+  with any argument, the function returns the current precision which may be 24, 53, 80 or `undefined`.
+
+  You should run it without arguments whenever you encounter 80-bit arithmetic suddenly going berserk.
+
+- The `automatic` 80-bit CPU flag reset that has been hardwired into the internal 80-bit version of the Gamma function 
+  has been removed, as it is no longer needed, speeding up `fact`, `gamma` and some other function functions to old levels 
+  again.
 
 
 7.12.4 Kerberos, November 06, 2026
