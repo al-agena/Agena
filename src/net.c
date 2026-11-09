@@ -36,6 +36,7 @@ net.send(d, strings.repeat('#', 1000)):
 #include <wininet.h>   /* for InternetGetConnectedState@ */
 #include <wspiapi.h>
 #include <ws2tcpip.h>
+#include <fenv.h>  /* for fegetenv/fesetenv */
 
 #else  /* non-Windows */
 /* header files for UNIX/Linux */
@@ -2149,6 +2150,12 @@ static void netcleanup (void) {  /* 1.6.5, cleanup is not called when pressing C
   treepurge(socketattribs);
 #ifdef _WIN32
   WSACleanup();
+  /* When the package invokes WSAStartup(), Windows loads the network subsystem. During this process, a system DLL 
+     overwrites the global x87 FPU Control Word (8087CW), changing the FPU precision from 80-bit extended to 64-bit 
+     double precision.  So we save the CPU state and re-instate it when the function returns. Surprisingly, the 
+     phenomenon has not been observed when initialising the `net` package, but we proactively restore the
+     80-bit CPU flag here anyway. 7.12.5a fix */
+  _control87(_PC_64, _MCW_PC);  /* restore 80-bit CPU math precision */
 #endif
 }
 
@@ -2215,8 +2222,16 @@ LUALIB_API int luaopen_net (lua_State *L) {
     /* initialise TCP for Windows (Winsock) */
     /* wVersionRequested = MAKEWORD(1, 1); */
     wVersionRequested = MAKEWORD(2, 2);
+    /* When this function invokes WSAStartup(), Windows loads the network subsystem. During this process, a system DLL 
+       overwrites the global x87 FPU Control Word (8087CW), changing the FPU precision from 80-bit extended to 64-bit 
+       double precision.  So we save the CPU state and re-instate it when the function returns. Surprisingly, the 
+       phenomenon has not been observed when initialising the `net` package, but we proactively save and restore the
+       80-bit CPU flag here anyway. 7.12.5a fix */
+    fenv_t fpu_env;
+    fegetenv(&fpu_env); 
     if (WSAStartup(wVersionRequested, &wsaData) != 0) {
       int err = WSAGetLastError();
+      fesetenv(&fpu_env); 
       luaL_error(L, "Error in " LUA_QS " package: initialisation of Winsock failed:\n(%d) %s", "net", err, wstrerror(err));
     }
 #else
@@ -2228,6 +2243,7 @@ LUALIB_API int luaopen_net (lua_State *L) {
     if (socketattribs == NULL) {
 #ifdef _WIN32
       WSACleanup();  /* 5.1.1 fix */
+      fesetenv(&fpu_env); 
 #endif
       luaL_error(L, "Error when initialising `net` package: could not create socket administration table.");
     }

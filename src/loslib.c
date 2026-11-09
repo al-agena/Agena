@@ -87,6 +87,7 @@
 #include <winsock2.h>  /* 7.1.7a to prevent compilation errors in GCC 15.2.0 */
 #include <ws2tcpip.h>  /* ditto */
 #include <winnetwk.h>  /* net drive functions used by os.netuse */
+#include <fenv.h>      /* for fegetenv/fesetenv */
 #include <io.h>        /* for access */
 #include <ctype.h>     /* for toupper, tolower */
 #include <tchar.h>     /* for BOOL ? */
@@ -2947,6 +2948,11 @@ static int os_getip (lua_State *L) {
     WSADATA wsaData;
     wVersionRequested = MAKEWORD(1, 1);
     int pushfail = 1;
+    /* When this function invokes WSAStartup(), Windows loads the network subsystem. During this process, a system DLL 
+       overwrites the global x87 FPU Control Word (8087CW), changing the FPU precision from 80-bit extended to 64-bit 
+       double precision.  So we save the CPU state and re-instate it when the function returns. 7.12.5a fix */
+    fenv_t fpu_env;
+    fegetenv(&fpu_env);
     if (WSAStartup(wVersionRequested, &wsaData) == 0) {
       phe = gethostbyname(computername);
       if (phe && phe->h_addr_list[0]) {
@@ -2961,6 +2967,7 @@ static int os_getip (lua_State *L) {
         pushfail = 0;
       }
       WSACleanup();
+      fesetenv(&fpu_env);
     }
     if (pushfail) {
       lua_pushfail(L);
@@ -2973,6 +2980,11 @@ static int os_getip (lua_State *L) {
     char *ipv6_addr = NULL;
     init_network_api(L, "os.getip");
     WSADATA wsaData;
+    /* When this function invokes WSAStartup(), Windows loads the network subsystem. During this process, a system DLL 
+       overwrites the global x87 FPU Control Word (8087CW), changing the FPU precision from 80-bit extended to 64-bit 
+       double precision.  So we save the CPU state and re-instate it when the function returns. 7.12.5a fix */
+    fenv_t fpu_env;
+    fegetenv(&fpu_env);
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) == 0) {
       hints.ai_family = AF_UNSPEC;    /* Support both IPv4 and IPv6 */
       hints.ai_socktype = SOCK_STREAM;
@@ -2994,10 +3006,14 @@ static int os_getip (lua_State *L) {
             /* Capture the first instance */
             if (ptr->ai_family == AF_INET && !ipv4_addr) {
               ipv4_addr = strdup(ip_str);
-              if (!ipv4_addr) luaL_error(L, "Error in " LUA_QS ": memory allocation failed.", "os.getip");  /* 7.7.7 fix */
+              if (!ipv4_addr) {
+                fesetenv(&fpu_env);
+                luaL_error(L, "Error in " LUA_QS ": memory allocation failed.", "os.getip");  /* 7.7.7 fix */
+              }
             } else if (ptr->ai_family == AF_INET6 && !ipv6_addr) {
               ipv6_addr = strdup(ip_str);
               if (!ipv6_addr) {
+                fesetenv(&fpu_env);
                 luaL_error(L, "Error in " LUA_QS ": memory allocation failed.", "os.getip");  /* 7.7.7 fix */
               }
             }
@@ -3006,6 +3022,7 @@ static int os_getip (lua_State *L) {
         safe_freeaddrinfo(res);
       }
       WSACleanup();
+      fesetenv(&fpu_env);
     }
     if (ipv4_addr) { lua_pushstring(L, ipv4_addr); free(ipv4_addr); } else { lua_pushfail(L); }
     if (ipv6_addr) { lua_pushstring(L, ipv6_addr); free(ipv6_addr); } else { lua_pushfail(L); }
@@ -10034,14 +10051,10 @@ static int os_shellgeom (lua_State *L) {
   return 2;
 }
 
-/*
+
+/* 
 In Windows gets the current CPU precision if any argument is given or sets it to 80-bit
 if necessary. In all other operating system the function does nothing and simply returns.
-
-Whenever Agena loads the MPFR or GMP binding, the Windows runtime, or the aforementioned
-third-party libraries themselves, frequently reset the CPU's x87 FPU state back to
-Microsoft's default 53-bit rounding precision mode. This silently degrades and truncates
-80-bit long double math.
 
 In no-argument mode, it runs the C function:
 
