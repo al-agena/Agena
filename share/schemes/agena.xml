@@ -1415,6 +1415,8 @@
       <KEYWORD3>os.faccess</KEYWORD3>
       <KEYWORD3>os.fattrib</KEYWORD3>
       <KEYWORD3>os.fcopy</KEYWORD3>
+      <KEYWORD3>os.fegetenv</KEYWORD3>
+      <KEYWORD3>os.fesetenv</KEYWORD3>
       <KEYWORD3>os.filename</KEYWORD3>
       <KEYWORD3>os.findinpath</KEYWORD3>
       <KEYWORD3>os.freemem</KEYWORD3>

@@ -1210,6 +1210,8 @@ os.exists
 os.exit
 os.fattrib
 os.fcopy
+os.fegetenv
+os.fesetenv
 os.filename
 os.findinpath
 os.freemem
