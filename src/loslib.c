@@ -87,7 +87,6 @@
 #include <winsock2.h>  /* 7.1.7a to prevent compilation errors in GCC 15.2.0 */
 #include <ws2tcpip.h>  /* ditto */
 #include <winnetwk.h>  /* net drive functions used by os.netuse */
-#include <fenv.h>      /* for fegetenv/fesetenv */
 #include <io.h>        /* for access */
 #include <ctype.h>     /* for toupper, tolower */
 #include <tchar.h>     /* for BOOL ? */
@@ -221,6 +220,9 @@ int GetTrimFlag (HANDLE hDevice);
 #include <utime.h>  /* for utime() */
 #endif
 
+#ifndef __DJGPP__
+#include <fenv.h>      /* for fegetenv/fesetenv */
+#endif
 
 #include <dirent.h>  /* used by io_ls function */
 #include <errno.h>   /* used by io_ls function */
@@ -2948,8 +2950,8 @@ static int os_getip (lua_State *L) {
     WSADATA wsaData;
     wVersionRequested = MAKEWORD(1, 1);
     int pushfail = 1;
-    /* When this function invokes WSAStartup(), Windows loads the network subsystem. During this process, a system DLL 
-       overwrites the global x87 FPU Control Word (8087CW), changing the FPU precision from 80-bit extended to 64-bit 
+    /* When this function invokes WSAStartup(), Windows loads the network subsystem. During this process, a system DLL
+       overwrites the global x87 FPU Control Word (8087CW), changing the FPU precision from 80-bit extended to 64-bit
        double precision.  So we save the CPU state and re-instate it when the function returns. 7.12.5a fix */
     fenv_t fpu_env;
     fegetenv(&fpu_env);
@@ -2980,8 +2982,8 @@ static int os_getip (lua_State *L) {
     char *ipv6_addr = NULL;
     init_network_api(L, "os.getip");
     WSADATA wsaData;
-    /* When this function invokes WSAStartup(), Windows loads the network subsystem. During this process, a system DLL 
-       overwrites the global x87 FPU Control Word (8087CW), changing the FPU precision from 80-bit extended to 64-bit 
+    /* When this function invokes WSAStartup(), Windows loads the network subsystem. During this process, a system DLL
+       overwrites the global x87 FPU Control Word (8087CW), changing the FPU precision from 80-bit extended to 64-bit
        double precision.  So we save the CPU state and re-instate it when the function returns. 7.12.5a fix */
     fenv_t fpu_env;
     fegetenv(&fpu_env);
@@ -10052,7 +10054,7 @@ static int os_shellgeom (lua_State *L) {
 }
 
 
-/* 
+/*
 In Windows gets the current CPU precision if any argument is given or sets it to 80-bit
 if necessary. In all other operating system the function does nothing and simply returns.
 
@@ -10113,6 +10115,79 @@ static int os_control87 (lua_State *L) {  /* 7.12.5 */
 }
 
 
+#define FENV_METATABLE "Agena.FenvEnvironment"
+
+#ifndef __DJGPP__
+/* Inform the compiler to respect FPU state changes across boundaries */
+#pragma STDC FENV_ACCESS ON
+
+/* os.fegetenv(): Captures the current FPU/floating-point environment and returns it
+ * as a Lua userdata object. Written by Gemini AI, 7.12.6 */
+static int os_fegetenv (lua_State *L) {
+  /* Allocate memory for the environment block inside Lua's garbage collector */
+  fenv_t *env = (fenv_t *)lua_newuserdata(L, sizeof(fenv_t));
+  luaL_getmetatable(L, FENV_METATABLE);
+  lua_setmetatable(L, -2);
+  /* Capture the hardware FPU state */
+  if (fegetenv(env) != 0) {
+    luaL_error(L, "Error in " LUA_QS ": memory allocation failed.", "os.fegetenv");
+  }
+  return 1;
+}
+
+
+/* os.fesetenv(env_userdata): Restores a previously captured hardware FPU state returned by os.fegetenv.
+   Written by Gemini AI, 7.12.6 */
+static int os_fesetenv (lua_State *L) {
+  fenv_t *env = (fenv_t *)luaL_checkudata(L, 1, FENV_METATABLE);
+  lua_pushboolean(L, fesetenv(env) == 0);  /* Restore the hardware FPU state */
+  return 1;
+}
+
+#else
+
+typedef unsigned short fenv_t;
+
+/* os.fenvget() - DJGPP Version. Written by Gemini AI, 7.12.6 */
+static int os_fegetenv (lua_State *L) {
+  fenv_t *env = (fenv_t *)lua_newuserdata(L, sizeof(fenv_t));
+  luaL_getmetatable(L, FENV_METATABLE);
+  lua_setmetatable(L, -2);
+  /* x87 Assembler: Speicher das FPU Control Word in unsere Variable */
+  __asm__ __volatile__("fnstcw %0" : "=m" (*env));
+  return 1;
+}
+
+/* os.fenvset(env_userdata) - DJGPP Version. Written by Gemini AI, 7.12.6 */
+static int os_fesetenv (lua_State *L) {
+  fenv_t *env = (fenv_t *)luaL_checkudata(L, 1, FENV_METATABLE);
+  /* x87 Assembler: Lade das gespeicherte Control Word zurück in die FPU */
+  __asm__ __volatile__("fldcw %0" : : "m" (*env));
+  lua_pushtrue(L);
+  return 1;
+}
+
+#endif  /* of ifdef(__DJGPP__) */
+
+
+/* __tostring metamethod for the fenv userdata. Formats the raw bytes of the fenv_t block into a hexadecimal string. */
+static int L_fenv_tostring (lua_State *L) {
+  fenv_t *env = (fenv_t *)luaL_checkudata(L, 1, FENV_METATABLE);
+  unsigned char *bytes = (unsigned char *)env;
+  size_t i;
+  /* Corrected: Explicitly allocate a static character buffer size */
+  char buffer[512];
+  /* Corrected: Cast sizeof to unsigned int and use %u to satisfy older MinGW environments */
+  int offset = sprintf(buffer, "fpuenv(%p:", lua_topointer(L, 1));
+  for (i=0; i < sizeof(fenv_t) && offset < 480; i++) {
+    offset += sprintf(buffer + offset, "%02X", bytes[i]);
+  }
+  sprintf(buffer + offset, ")");
+  lua_pushstring(L, buffer);
+  return 1;
+}
+
+
 static const luaL_Reg syslib[] = {
 #if (defined(__unix__) && !defined(__DJGPP__)) || defined(__APPLE__)
   {"alarm",     os_alarm},
@@ -10136,41 +10211,43 @@ static const luaL_Reg syslib[] = {
   {"codepage",  os_codepage},         /* 2.9.7, January 07, 2016 */
 #endif
   {"computername", os_computername},  /* 0.5.3  Sept 15, 2007 */
-  {"control87", os_control87},        /* added on November 08, 2026 */
-  {"countcore", os_countcore},        /* added on March 29, 2025 */
-  {"cpuinfo",   os_cpuinfo},          /* added on February 07, 2013 */
-  {"cpuid",     os_cpuid},            /* added on December 24, 2018 */
-  {"cpuload",   os_cpuload},          /* added on January 31, 2013 */
-  {"curdir",    os_curdir},           /* added 2.17.3, February 28, 2020 */
-  {"curdrive",  os_curdrive},         /* added 2.3.3, November 30, 2014 */
-  {"date",      os_date},
+  {"control87",  os_control87},       /* added on November 08, 2026 */
+  {"countcore",  os_countcore},       /* added on March 29, 2025 */
+  {"cpuinfo",    os_cpuinfo},         /* added on February 07, 2013 */
+  {"cpuid",      os_cpuid},           /* added on December 24, 2018 */
+  {"cpuload",    os_cpuload},         /* added on January 31, 2013 */
+  {"curdir",     os_curdir},          /* added 2.17.3, February 28, 2020 */
+  {"curdrive",   os_curdrive},        /* added 2.3.3, November 30, 2014 */
+  {"date",       os_date},
   {"datetosecs", os_datetosecs},      /* added September 20, 2012 */
-  {"difftime",  os_difftime},
-  {"dirname",   os_dirname},          /* added January 11, 2017 */
-  {"drives",    os_drives},           /* 0.26.0, 05.08.2009 */
-  {"drivestat", os_drivestat},        /* 0.26.0, 05.08.2009 */
-  {"endian",    os_endian},           /* 0.8.0, added on December 11, 2007 */
-  {"environ",   os_environ},
-  {"esd",       os_esd},              /* 2.9.8  June 08, 2016 */
-  {"execute",   os_execute},          /* changed in 0.5.4 */
-  {"exists",    os_exists},           /* added on April 09, 2007 */
-  {"exit",      os_exit},
-  {"faccess",   os_faccess},          /* added on September 30, 2020 */
-  {"fattrib",   os_fattrib},          /* 0.26.0, added August 06, 2009 */
-  {"fcopy",     os_fcopy},            /* added on July 19, 2009 */
-  {"filename",  os_filename},         /* added on January 16, 2017 */
+  {"difftime",   os_difftime},
+  {"dirname",    os_dirname},         /* added January 11, 2017 */
+  {"drives",     os_drives},          /* 0.26.0, 05.08.2009 */
+  {"drivestat",  os_drivestat},       /* 0.26.0, 05.08.2009 */
+  {"endian",     os_endian},          /* 0.8.0, added on December 11, 2007 */
+  {"environ",    os_environ},
+  {"esd",        os_esd},             /* 2.9.8  June 08, 2016 */
+  {"execute",    os_execute},         /* changed in 0.5.4 */
+  {"exists",     os_exists},          /* added on April 09, 2007 */
+  {"exit",       os_exit},
+  {"faccess",    os_faccess},         /* added on September 30, 2020 */
+  {"fattrib",    os_fattrib},         /* 0.26.0, added August 06, 2009 */
+  {"fcopy",      os_fcopy},           /* added on July 19, 2009 */
+  {"fegetenv",   os_fegetenv},        /* added on Novemver 09, 2026 */
+  {"fesetenv",   os_fesetenv},        /* added on Novemver 09, 2026 */
+  {"filename",   os_filename},        /* added on January 16, 2017 */
   {"findinpath", os_findinpath},      /* added on October 19, 2026 */
-  {"freemem",   os_freemem},          /* 0.5.3  Sept 15, 2007 */
-  {"fstat",     os_fstat},            /* added on October 11, 2008 */
-  {"ftok",      os_ftok},             /* added on January 17, 2023 */
+  {"freemem",    os_freemem},         /* 0.5.3  Sept 15, 2007 */
+  {"fstat",      os_fstat},           /* added on October 11, 2008 */
+  {"ftok",       os_ftok},            /* added on January 17, 2023 */
   {"getadapter", os_getadapter},      /* 2.39.3, May 16, 2023 */
   {"getcommandline", os_getcommandline},  /* 7.8.1, July 31, 2026 */
 #ifdef _WIN32
   {"getconsolemode", os_getconsolemode},  /* 5.6.1, September 18, 2025 */
 #endif
   {"getdirpathsep", os_getdirpathsep},  /* 2.39.12, 08.06.2023 */
-  {"getenv",    os_getenv},
-  {"getip",     os_getip},            /* Added April 29, 2023 */
+  {"getenv",     os_getenv},
+  {"getip",      os_getip},            /* Added April 29, 2023 */
 #ifdef _WIN32
   {"getfullpathname", os_getfullpathname}, /* 7.6.3, June 18, 2026 */
   {"getlanguage", os_getlanguage},     /* 2.35.4, January 17, 2016 */
@@ -10304,6 +10381,12 @@ LUALIB_API int luaopen_os (lua_State *L) {
   luaL_newmetatable(L, "diriterator");        /* metatable for diriterator userdata */
   luaL_register(L, NULL, os_diriteratorlib);  /* assign C metamethods to this metatable */
   luaL_register(L, LUA_OSLIBNAME, syslib);
+   /* Bind the fenv __tostring method */
+  luaL_newmetatable(L, FENV_METATABLE);
+  lua_pushstring(L, "__tostring");
+  lua_pushcfunction(L, L_fenv_tostring);
+  lua_settable(L, -3); /* metatable.__tostring = L_fenv_tostring */
+  lua_pop(L, 1); /* Pop metatable off the stack */
   /* The the following access() mode constants have different values over operating systems, so define them here */
   lua_pushinteger(L, R_OK);
   lua_setfield(L, -2, "r_ok");  /* read access */
