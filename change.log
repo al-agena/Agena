@@ -1,9 +1,18 @@
+7.12.6 Kerberos, November 10, 2026
+
+- New `os.fegetenv` captures the current FPU/floating-point state and returns it as a userdata object. New `os.fesetenv`
+  restores a previously captured hardware FPU state. They work on all supported platforms, not just Windows.
+  
+- OS/2 users who want to update the interpreter should completely uninstall, manually remove the c:\Programs\Agena folder,
+  and then reinstall Agena as this might delete old, stale folders and files no longer needed.
+
+
 7.12.5a Kerberos, November 09, 2026
 
 - The true culprit for 80-bit arithmetic suddenly going berserk on some 64-bit Windows flavours has finally been found:
-  
-  `os.getip` has been patched to prevent subsequent calls to 80-bit-based mathematical functions from delivering wrong 
-  results. The `mapm`, `mpfr` and `gmp` packages never caused the problems sometimes observed, as wrongfully previously 
+
+  `os.getip` has been patched to prevent subsequent calls to 80-bit-based mathematical functions from delivering wrong
+  results. The `mapm`, `mpfr` and `gmp` packages never caused the problems sometimes observed, as wrongfully previously
   claimed.
 
 
@@ -28,8 +37,8 @@
 
   You should run it without arguments whenever you encounter 80-bit arithmetic suddenly going berserk.
 
-- The `automatic` 80-bit CPU flag reset that has been hardwired into the internal 80-bit version of the Gamma function 
-  has been removed, as it is no longer needed, speeding up `fact`, `gamma` and some other function functions to old levels 
+- The `automatic` 80-bit CPU flag reset that has been hardwired into the internal 80-bit version of the Gamma function
+  has been removed, as it is no longer needed, speeding up `fact`, `gamma` and some other function functions to old levels
   again.
 
 
