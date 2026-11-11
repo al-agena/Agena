@@ -59,7 +59,7 @@ typedef struct {
 
 
 /* Callback 1: Required placeholder for modern metadata sequence */
-static int handle_metadata(readstat_metadata_t *metadata, void *user_ctx) {
+static int handle_metadata (readstat_metadata_t *metadata, void *user_ctx) {
   l_readstat_ctx_t *ctx = (l_readstat_ctx_t *)user_ctx;
   lua_State *L = ctx->L;
   int obs_count = readstat_get_row_count(metadata);
@@ -69,6 +69,23 @@ static int handle_metadata(readstat_metadata_t *metadata, void *user_ctx) {
   lua_settable(L, -3);
   lua_pushstring(L, "columns");
   lua_pushinteger(L, var_count);
+  lua_settable(L, -3);
+  const char *compstr = "none";  /* 7.12.7 extension */
+  readstat_compress_t comp = readstat_get_compression(metadata);
+  switch (comp) {
+    case READSTAT_COMPRESS_ROWS:
+      compstr = "rows";
+      break;
+    case READSTAT_COMPRESS_BINARY:
+      compstr = "binary";
+      break;
+    case READSTAT_COMPRESS_NONE:
+    default:
+      compstr = "none";
+      break;
+  }
+  lua_pushstring(L, "compression");
+  lua_pushstring(L, compstr);
   lua_settable(L, -3);
   return READSTAT_HANDLER_OK;
 }
@@ -106,20 +123,29 @@ static int handle_variable (int index, readstat_variable_t *variable,
     lua_pushstring(L, "unknown");
   }
   lua_settable(L, -3);
-  /* 4. Track value label mapping dictionary name */
+  /* 4a. Track value label mapping dictionary name */
   lua_pushstring(L, "value_labels");
   lua_pushstring(L, val_labels ? val_labels : "");
   lua_settable(L, -3);
+  /* 4b. Variable Display Format (e.g. "F8.0", "F8.2", "A20", "DATE11"), 7.12.7 extension*/
+  const char *var_format = readstat_variable_get_format(variable);
+  if (var_format && var_format[0] != '\0') {
+    luaL_checkstack(L, 2, "not enough stack space");
+    lua_pushstring(L, "format");
+    lua_pushstring(L, var_format);
+    lua_settable(L, -3);
+  }
   /* 5. EXPLICIT MISSING VALUES DEFINITIONS REGION */
   int missing_count = readstat_variable_get_missing_ranges_count(variable);
   if (missing_count > 0) {
+    int i;
     lua_pushstring(L, "missing_rules");
-    lua_newtable(L); 
-    for (int i = 0; i < missing_count; i++) {
+    lua_newtable(L);
+    for (i=0; i < missing_count; i++) {
       readstat_value_t lo_val = readstat_variable_get_missing_range_lo(variable, i);
       readstat_value_t hi_val = readstat_variable_get_missing_range_hi(variable, i);
       lua_pushinteger(L, i + 1);
-      lua_newtable(L); 
+      lua_newtable(L);
       readstat_type_t type = readstat_value_type(lo_val);
       if (type == READSTAT_TYPE_DOUBLE || type == READSTAT_TYPE_FLOAT) {
         double lo = readstat_double_value(lo_val);
@@ -136,9 +162,9 @@ static int handle_variable (int index, readstat_variable_t *variable,
         lua_pushstring(L, "type");  lua_pushstring(L, "discrete"); lua_settable(L, -3);
         lua_pushstring(L, "value"); lua_pushstring(L, readstat_string_value(lo_val)); lua_settable(L, -3);
       }
-      lua_settable(L, -3); 
+      lua_settable(L, -3);
     }
-    lua_settable(L, -3); 
+    lua_settable(L, -3);
   }
   lua_settable(L, -3);
   lua_pop(L, 1);  /* Pop 'variables' sub-table */
@@ -277,9 +303,61 @@ long int handle_write (const void *pos, size_t len, void *user_ctx) {
 #endif
 
 /* Main writing wrapper: readstat.write("output.sav", data_table) */
+static int aux_checksaveoptions (lua_State *L, int pos, int *nargs, readstat_compress_t *compression, const char *procname) {
+  int checkoptions, rc;
+  rc = 0;
+  /* default compression if no option has been given or there is no compression field */
+  *compression = READSTAT_COMPRESS_ROWS;
+  lua_pushstring(L, "compression");
+  lua_gettable(L, 1);  /* Get compression field */
+  if (agn_isstring(L, -1)) {
+    const char *comp = agn_tostring(L, -1);
+    if (tools_streq(comp, "rows")) {  /* standard .sav bytecode compression */
+      *compression = READSTAT_COMPRESS_ROWS;
+    } else if (tools_streq(comp, "binary")) {  /* ZLIB block compression, typically .zsav */
+      *compression = READSTAT_COMPRESS_BINARY;
+    } else if (tools_streq(comp, "none")) {  /* Uncompressed, largest file */
+      *compression = READSTAT_COMPRESS_NONE;
+    } else {
+      luaL_error(L, "Error in " LUA_QS ": unknown compression " LUA_QS ".", procname, comp);
+    }
+  }
+  lua_pop(L, 1);
+  checkoptions = 1;  /* check n options; CHANGE THIS if you add/delete options */
+  /* check for properly allocated slots will be done by agn_pairgetiall() */
+  while (checkoptions-- && *nargs >= pos && lua_ispair(L, *nargs)) {
+    agn_pairgetiall(L, *nargs);  /* get left, right value, set to stack index -2, -1, 7.7.8 */
+    if (agn_isstring(L, -2)) {
+      const char *option = agn_tostring(L, -2);
+      if (tools_streq(option, "compression")) {
+        const char *comp = agn_checkstring(L, -1);
+        if (tools_streq(comp, "none")) {
+          *compression = READSTAT_COMPRESS_NONE;  /* no compression */
+        } else if (tools_streqx(comp, "binary", "zlib", NULL)) {  /* zlib compression */
+          *compression = READSTAT_COMPRESS_BINARY;
+        } else if (tools_streqx(comp, "rows", "default", NULL)) {
+          *compression = READSTAT_COMPRESS_ROWS;
+        } else {
+          luaL_error(L, "Error in " LUA_QS ": unknown compression " LUA_QS ".", procname, comp);
+        }
+      } else {
+        agn_poptoptwo(L);
+        luaL_error(L, "Error in " LUA_QS ": unknown option " LUA_QS ".", procname, option);
+      }
+    }
+    /* do not call lua_settop as it would corrupt the argument stack since we have already pushed values */
+    (*nargs)--;
+    agn_poptoptwo(L);
+  }
+  return rc;
+}
+
 static int readstat_save (lua_State *L) {
   const char *filename = luaL_checkstring(L, 2);
   luaL_checktype(L, 1, LUA_TTABLE);  /* Ensure parameter 2 is the data table */
+  int nargs = lua_gettop(L);
+  readstat_compress_t compression = READSTAT_COMPRESS_ROWS;
+  aux_checksaveoptions(L, 3, &nargs, &compression, "readstat.save");
   FILE *f = fopen(filename, "wb");
   if (!f) {
     luaL_error(L, "Error in " LUA_QS ": cannot open output file for writing.", "readstat.save");
@@ -341,7 +419,19 @@ static int readstat_save (lua_State *L) {
           if (v_label) {
             readstat_variable_set_label(variables_list[i - 1], v_label);
           }
-          if (rs_type == READSTAT_TYPE_DOUBLE) {
+          /* Set display format if present, otherwise fallback to F8.4 for numeric */
+          int has_format = 0;
+          lua_pushstring(L, "format");
+          lua_gettable(L, -2);
+          if (lua_isstring(L, -1)) {
+            const char *fmt = lua_tostring(L, -1);
+            if (fmt && fmt[0] != '\0') {
+              readstat_variable_set_format(variables_list[i - 1], fmt);
+              has_format = 1;
+            }
+          }
+          lua_pop(L, 1);
+          if (!has_format && rs_type == READSTAT_TYPE_DOUBLE) {
             readstat_variable_set_format(variables_list[i - 1], "F8.4");
           }
           /* 1.5 WRITE BACK MISSING VALUES RULES (New Section) */
@@ -377,12 +467,10 @@ static int readstat_save (lua_State *L) {
                     lua_gettable(L, -2);
                     double r_lo = lua_tonumber(L, -1);
                     lua_pop(L, 1);
-                    
                     lua_pushstring(L, "hi");
                     lua_gettable(L, -2);
                     double r_hi = lua_tonumber(L, -1);
                     lua_pop(L, 1);
-                    
                     readstat_variable_add_missing_double_range(variables_list[i - 1], r_lo, r_hi);
                   }
                 }
@@ -457,6 +545,7 @@ static int readstat_save (lua_State *L) {
   if (lua_istable(L, -1)) {
     row_count = lua_rawlen(L, -1);
   }
+  readstat_writer_set_compression(writer, compression);  /* 7.12.7 */
   readstat_error_t error = readstat_begin_writing_sav(writer, f, row_count);
   if (error == READSTAT_OK && row_count > 0) {
     /* --- PHASE 4: ITERATE ROWS AND WRITE CELL VALUES --- */
