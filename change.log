@@ -1,8 +1,25 @@
+7.12.7 Kerberos, November 11, 2026
+
+- `readstat.read` now returns the compression method used, in the new "compressions" field. When saving data back again to a
+  new SPSS file with `readstat.save`, this setting, if present, will be used for compression. Otherwise 'rows' compression
+  will now be used by default. `readstat.save` also allows to explicitly set the compression method for a new file with the 
+  new `compression` option:
+
+  > readstat.save(s, 'myfile.sav', compression='none');    # no compression
+  > readstat.save(s, 'myfile.sav', compression='rows');    # standard bytecode compression
+  > readstat.save(s, 'myfile.sav', compression='binary');  # ZLIB block compression
+
+- Both `readstat.read` and `readstat.save` functions now recognise display format information along with numerical data,
+  with the "format" field included in the 'variables' subtable.
+
+- `aspell.norm` has been improved a now more closely matches the return of Aspell when run with the 'soundslike' option.
+
+
 7.12.6 Kerberos, November 10, 2026
 
 - New `os.fegetenv` captures the current FPU/floating-point state and returns it as a userdata object. New `os.fesetenv`
   restores a previously captured hardware FPU state. They work on all supported platforms, not just Windows.
-  
+
 - OS/2 users who want to update the interpreter should completely uninstall, manually remove the c:\Programs\Agena folder,
   and then reinstall Agena as this might delete old, stale folders and files no longer needed.
 
