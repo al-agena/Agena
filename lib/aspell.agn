@@ -147,8 +147,8 @@ local aspellparserule := proc(pattern, replacement) is
       doublecaret ~ false,        # Set to true if the rule contains '^^'
       anchorstart ~ false,        # Set to true if the pattern applies only to the start of a word
       anchorend   ~ false,        # Set to true if the pattern applies only to the end of a word
-      priority    ~ 0,            # Dictates when this rule executes relative to others
-      slicelimit  ~ null          # Tracks partial replacement limits (e.g., German Y(AOU)-<7)
+      priority    ~ 5,            # Dictates when this rule executes relative to others
+      slicelimit  ~ 0             # Tracks partial replacement limits (e.g., German Y(AOU)-<7)
    ];
    # This working copy will be stripped down step-by-step into a pure matching string
    local cleanpat := pattern;
@@ -166,24 +166,18 @@ local aspellparserule := proc(pattern, replacement) is
       rule.anchorstart := true;
       cleanpat := cleanpat@@gsub('%^', '')
    fi
-   # 4. Extract Explicit Priorities or Slice Limits (e.g., -3^ or -7)
-   # Check if a minus sign followed by a digit exists (like -3 or -7)
-   if pattern@@find('%-%d+%^') or pattern@@find('%-%d+%$') then
-      # If attached directly to a boundary anchor, it represents execution priority
-      local p_num := pattern@@match('%-(%d+)');
-      rule.priority := -tonumber(p_num);
-      cleanpat := cleanpat@@gsub('%-%d+', '')
-   else
-      # If it is an unattached trailing number, it represents a partial slice limit
-      local s_num := cleanpat@@match('%-(%d+)');
-      if s_num then
-         rule.slicelimit := tonumber(s_num);
-         cleanpat := cleanpat@@gsub('%-%d+', '')
-      fi
-   fi;
-   # 5. Extract Low Priority Markers: '--' sets priority to -2, single '-' sets it to -1
-   if cleanpat@@find('%-%-') then rule.priority := -2; cleanpat := cleanpat@@gsub('%-%-', '') fi;
-   if cleanpat@@find('%-') then rule.priority := -1; cleanpat := cleanpat@@gsub('%-', '') fi;
+   # 4. Extract Trailing Priority Digit (0-9) at the end of the control suffix
+   local prio_digit := cleanpat@@match("(%d)$")
+   if prio_digit then
+      rule.priority := tonumber(prio_digit);
+      cleanpat := cleanpat@@gsub("%d$", "")
+   end;
+   # 5. Count Trailing Hyphens ('-') for unconsumed suffix length (slice_limit)
+   local hyphens := cleanpat@@match("(%-+)$")
+   if hyphens then
+       rule.slicelimit := size hyphens;
+       cleanpat := cleanpat@@gsub("%-+$", "")
+   end;
    # 6. Convert Bracket Groups: Translate Aspell formatting '(ABC)' into a Lua set class '[ABC]'
    cleanpat := cleanpat@@gsub('%((.-)%)', '[%1]');
    # Assign the fully cleaned native search pattern back to the object configuration
@@ -289,7 +283,13 @@ aspell.rules := proc(obj :: {string, table}, option) is
    return compiled
 end;
 
-aspell.norm := proc(word :: string, rules :: table) is
+
+/*
+import aspell
+en := aspell.rules('c:/agena/phq/phonetiqs.cfg', true);
+aspell.norm('Scheibenwischer', en):
+
+aspell.oldnorm := proc(word :: string, rules :: table) is
    # buffer: The active text canvas being mutated (starts as the input word)
    # cursor: The pointer tracking which character position we are currently evaluating
    local buffer, cursor := upper(word), 1;  # upper: prevent the function from going into infinite
@@ -312,11 +312,6 @@ aspell.norm := proc(word :: string, rules :: table) is
             if rule.phonetiQs and size rulepattern = 1 and rulepattern in '%()' then  # avoid invalid capture
                rulepattern := '%' & rulepattern[1]
             fi;
-/*
-import aspell
-en := aspell.rules('c:/agena/phq/phonetiqs.cfg', true);
-aspell.norm('Scheibenwischer', en):
-*/
             s, e := curslice@@find('^' & rulepattern);
             # Verify the match aligns perfectly at index 1 of the snapshot (directly under our active tracking cursor)
             if s = 1 then
@@ -374,6 +369,81 @@ aspell.norm('Scheibenwischer', en):
    od;
    # Return the fully transformed final text sequence
    return buffer
+end;
+*/
+
+local findmatch := proc(buf :: string, pos :: number, rules :: table) is  # new 7.12.7
+   local slice := buf@@sub(pos);
+   for i to size rules do
+      local r := rules[i];
+      if r.anchorstart and pos > 1 then next fi;
+      local pat := r.pattern;
+      if pat = '\0' or pat = '' then next fi;
+      if r.phonetiQs and size pat = 1 and pat in '%()' then
+         pat := '%' & pat
+      fi;
+      local s, e := slice@@find('^' & pat);
+      if s = 1 then
+         if r.anchorend and (pos + e - 1) <> size buf then next fi;
+         return r, s, e
+      fi
+   od;
+   return null
+end;
+
+aspell.norm := proc(word :: string, rules :: table) is  # changed 7.12.7
+   local src := upper(word);
+   local out := '';
+   local i := 1;
+   local rewinds := 0;
+   while i <= size src do
+      local rule, s, e := findmatch(src, i, rules);
+      if rule <> null then
+         local matchedstr := src@@sub(i, i + e - 1);
+         local limit := rule.slicelimit or 0;
+         local cutlength := size matchedstr;
+         if 0 < limit < size matchedstr then
+            cutlength := size matchedstr - limit
+         fi;
+         if cutlength < 1 then cutlength := 1 fi;
+         # Follow-up priority check (Aspell followup = 1)
+         #if not rule.phonetiQs and (limit > 0 or cutlength > 1) and i < size src then
+         if not rule.phonetiQs and limit > 0 and i < size src then
+            local nextrule := findmatch(src, i + 1, rules);
+            if nextrule <> null and nextrule.priority >= rule.priority then
+               # Current rule is preempted: drop current char (or apply 1-char rule if needed) and advance
+               i +:= 1;
+               next
+            fi
+         fi;
+         local repl := rule.replacement;
+         if repl = '_' then
+            repl := ''
+         elif not rule.phonetiQs and repl@@find('%*') then
+            repl := repl@@gsub('%*', if i = 1 then 'A' else '' fi)
+         fi;
+         if rule.phonetiQs and strings.find(rule.pattern, '%(%[.-%]%)') then
+            repl := strings.gsub(matchedstr, rule.pattern, repl)
+         fi;
+         if rule.doublecaret then
+            return out & repl & procname(src@@sub(i + cutlength), rules)
+         fi;
+         if rule.rewind and rewinds < 50 then
+            rewinds +:= 1;
+            src := src@@sub(1, i - 1) & repl & src@@sub(i + cutlength)
+         else
+            rewinds := 0;
+            out &:= repl;
+            i +:= cutlength
+         fi
+      else
+         # GNU Aspell phonet.cpp default: unmatched characters are silently dropped!
+         i +:= 1
+      fi
+   od;
+   # Collapse adjacent duplicate characters (Aspell collapse_result = 1)
+   out := out@@gsub('(.)%1+', '%1');
+   return out
 end;
 
 
