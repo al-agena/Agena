@@ -807,6 +807,12 @@ object TPersHolder
         end
         item
           FontID = 7
+          Name = 'xls'
+          Keywords =
+            'xls,dims,read,save,sheets'
+        end
+        item
+          FontID = 7
           Name = 'hashes'
           Keywords =
             'hashes,adler32,ap,asu,bkdr,bp,bsd,ccitt,cksum,collisions,crc16,crc32,crc7,crc8,damm,dek,derpy,digitsum,djb,djb2,' +

@@ -3646,3 +3646,7 @@ phones.vowelsymbol
 readstat.fillmissing
 readstat.read
 readstat.save
+xls.dims
+xls.read
+xls.save
+xls.sheets
