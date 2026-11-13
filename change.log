@@ -1,8 +1,43 @@
+7.12.8 Kerberos, November 13, 2026
+
+- The new `xls` package reads Microsoft Excel files, both legacy BIFF8 .xls and modern OOXML .xlsx files. It can also
+  write .xlsx files. The new library is available on all supported platforms except DOS.
+
+  > import xls;
+
+  Get all the worksheets in an Excel file:
+
+  > xls.sheets('antarct.xls'):
+  ['Antarctica']
+
+  Rows and columns in worksheet 'Antarctica':
+
+  > xls.dims('antarct.xls'):
+  439     9
+
+  Now read a legacy .xls file, first tab by default, that is 'Antarctica':
+
+  > L := xls.read('antarct.xls')
+
+  Get the first two rows:
+
+  > L.data[1], L.data[2]:
+  ['Country', 'State', 'Station', 'WMO', 'Source', 'Lati (N+/S-)', 'Long (E+/W-)', 'TZ (GMT +/-)', 'Elev (m)']
+  ['ATA', 'ARG', 'Esperanza.Base-Hope.Bay', 889630, 'Custom-889630', -63.3981, -56.9973, -4, 3]
+
+  Write the contents back to an .xlsx file:
+
+  > xls.save(L, 'antarct.xlsx')
+
+- In OS/2, you no longer have to install additional dependencies with yum - they are all included in the WarpIN installer,
+  with many updated to newer versions.
+
+
 7.12.7 Kerberos, November 11, 2026
 
-- `readstat.read` now returns the compression method used, in the new "compressions" field. When saving data back again to a
+- `readstat.read` now returns the compression method, in the new "compressions" field. When saving data back again to a
   new SPSS file with `readstat.save`, this setting, if present, will be used for compression. Otherwise 'rows' compression
-  will now be used by default. `readstat.save` also allows to explicitly set the compression method for a new file with the 
+  will now be used by default. `readstat.save` also allows to explicitly set the compression method for a new file with the
   new `compression` option:
 
   > readstat.save(s, 'myfile.sav', compression='none');    # no compression
@@ -12,7 +47,7 @@
 - Both `readstat.read` and `readstat.save` functions now recognise display format information along with numerical data,
   with the "format" field included in the 'variables' subtable.
 
-- `aspell.norm` has been improved a now more closely matches the return of Aspell when run with the 'soundslike' option.
+- `aspell.norm` has been improved and now more closely matches the return of Aspell when run with the 'soundslike' option.
 
 
 7.12.6 Kerberos, November 10, 2026
