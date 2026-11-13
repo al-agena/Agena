@@ -20,13 +20,18 @@ for i in abci.o ads.o aspell.o astro.o charbuf.o com.o cordic.o curses.o \
     ddhash.o  dcastro.o double.o fastmath.o fractals.o gmp.o iconv.o \
     interp.o luasys.o miniz.o minizip.o moon.o mpfr.o net.o phones.o \
     phq.o readstat.o skycrane.o sqlite.o sqlite3.o strhash.o sunriset.o \
-    strmap.o testlib.o zx.o
+    strmap.o testlib.o xls.o zx.o
 do
   if [ -f "$i" ]; then
     rm "$i"
   fi
 done
 
+printf "Compiling xls ... "
+gcc $OPTIONS -w -o xls.so xls.c -I/usr/local/include -L/usr/local/lib -Wl,-Bstatic -lxlsxio_read -lxlsxio_write -lxlsreader -Wl,-Bdynamic -lexpat -lzip
+strip xls.so
+mv -f xls.so $EXPORTTO
+printf "done.\n"
 
 printf "Compiling abci ... "
 gcc $OPTIONS -o abci.so abci.c

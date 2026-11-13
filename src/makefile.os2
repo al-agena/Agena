@@ -28,7 +28,7 @@ PLAT= none
 
 # ncurses can only be compiled along with ltinfo. First pass -lncurses and immediately thereafter -ltinfo, not vice versa !
 # See: https://stackoverflow.com/questions/3514852/statically-link-ncurses-to-program
-OS2SYSLIBS= -lm -lmapm -lz -lreadline -lncurses -ltinfo -lhistory -liconv -lexpat -lmpfr -lgmp -lg2 -lgd -lsqlite3 \
+OS2SYSLIBS= -lm -lmapm -lxlsreader -lxlsxio_read -lxlsxio_write -lz -lreadline -lncurses -ltinfo -lhistory -liconv -lexpat -lmpfr -lgmp -lg2 -lgd -lsqlite3 \
 	-lreadstat -lpcre2-posix -lpcre2-8 -lfi_lib -lsocket -pthread
 OS2ZFLAGS= -Zdll -Zomf -Zmt
 OS2DFLAGS= -DLUA_BUILD_AS_DLL -D_FILE_OFFSET_BITS=64 -D_DIRENT_HAVE_D_TYPE -DPCRE2_CODE_UNIT_WIDTH=8 -D__ST_MT_ERRNO__ \
@@ -63,7 +63,7 @@ CORE_O= lapi.o lcode.o ldebug.o ldo.o ldump.o lfunc.o lgc.o llex.o lmem.o lobjec
 	lpair.o
 LIB_O=  agnxlib.o mybuffer.o lbaselib.o ldblib.o liolib.o lmathlib.o loslib.o ltablib.o lrtable.o \
 	agnt64.o lstrlib.o utils.o units.o loadlib.o linit.o curses.o stats.o combinat.o numtheory.o ads.o \
-	aspell.o agnhlps.o bags.o lookup.o cephes.o calc.o linalg.o binio.o mapm.o xbase.o sqlite.o \
+	xls.o aspell.o agnhlps.o bags.o lookup.o cephes.o calc.o linalg.o binio.o mapm.o xbase.o sqlite.o \
 	lenviron.o sofa.o interp.o moon.o sunriset.o sdncal.o astro.o skycrane.o gzip.o llist.o cordic.o \
 	net.o lreglib.o xml.o hashes.o numarray.o registry.o zx.o stack.o intvec.o dblvec.o vecoff64.o \
 	bloom.o cuckoo.o clock.o factory.o bytes.o fastmath.o sema.o semalib.o dual.o utf8.o iconv.o \
@@ -323,5 +323,6 @@ uintmap.o:	uintmap.c agena.h agnxlib.h agenalib.h agnhlps.h khash.h
 dblmap.o:	dblmap.c agena.h agnxlib.h agenalib.h agnhlps.h khash.h
 aspell.o:	aspell.c agena.h agnxlib.h agenalib.h agnhlps.h
 readstat.o:	readstat.c agena.h agnxlib.h agenalib.h agnhlps.h
+xls.o:	xls.c agena.h agnxlib.h agenalib.h agnhlps.h
 
 # (end of Makefile)

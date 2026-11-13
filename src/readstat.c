@@ -246,7 +246,7 @@ static int handle_value (int row_index, readstat_variable_t *variable, readstat_
 static int readstat_read (lua_State *L) {
   const char *filename = luaL_checkstring(L, 1);
   if (!tools_exists(filename)) {
-    luaL_error(L, "Error in " LUA_QS ": file does not exist or inaccessible.", "readstat.read");
+    luaL_error(L, "Error in " LUA_QS ": file does not exist or is inaccessible.", "readstat.read");
   }
   readstat_parser_t *parser = readstat_parser_init();
   readstat_set_metadata_handler(parser, &handle_metadata);

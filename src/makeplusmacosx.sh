@@ -14,7 +14,7 @@ export DDMATHFLAGS="-fno-builtin -ffloat-store -fno-unsafe-math-optimizations"
 export EXPORTTO="../lib"
 
 # delete *.o files not deleted by make clean
-for i in abci.o ads.o aspell.o astro.o charbuf.o com.o cordic.o curses.o \
+for i in xls.o abci.o ads.o aspell.o astro.o charbuf.o com.o cordic.o curses.o \
     dcastro.o double.o fastmath.o fractals.o gmp.o iconv.o interp.o \
     luasys.o miniz.o minizip.o moon.o mpfr.o net.o phq.o \
     skycrane.o sqlite.o sqlite3.o sunriset.o testlib.o zx.o \
@@ -25,6 +25,15 @@ do
   fi
 done
 
+
+printf "Compiling xls ... "
+XLS_INC="-I/usr/local/include -I../src"
+XLS_LIBS="/usr/local/lib/libxlsreader.a /usr/local/lib/libxlsxio_read.a /usr/local/lib/libxlsxio_write.a -lexpat -lz -liconv -lm"
+gcc $OPTIONS1 $XLS_INC -o xls.o xls.c
+gcc $OPTIONS2 -o xls.so xls.o $XLS_LIBS
+rm -f xls.o
+mv -f xls.so $EXPORTTO
+printf "done.\n"
 
 printf "Compiling readstat ... "
 READSTAT_INC="-I/usr/local/include -I../src"
