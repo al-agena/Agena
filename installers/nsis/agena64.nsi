@@ -9,7 +9,7 @@ Unicode True
 !ifndef VERSION
   !define VER_MAJOR '7'
   !define VER_MINOR '12'
-  !define VER_REVISION '7'
+  !define VER_REVISION '9'
   !define NICKNAME "Kerberos"
   !define VERSION '${VER_MAJOR}.${VER_MINOR}.${VER_REVISION}'
 !endif
@@ -897,6 +897,26 @@ ${MementoSection} "minizip" SecPluginsMinizip
 ${MementoSectionEnd}
 
 
+${MementoSection} "xls" SecPluginsXls
+
+  SetDetailsPrint both
+  DetailPrint "Installing plus package xls ..."
+  SetDetailsPrint listonly
+
+  SectionIn 1
+
+  SetOutPath $INSTDIR\lib
+  File ..\..\lib\xls.dll
+  File ..\..\lib\xls.agn
+
+  SetOutPath $INSTDIR\bin
+  File ..\..\ports\gdwin64\libxlsxio_read.dll
+  File ..\..\ports\gdwin64\libxlsxio_write.dll
+  File ..\..\ports\gdwin64\libxlsreader.dll
+
+${MementoSectionEnd}
+
+
 ${MementoSection} "readstat" SecPluginsReadstat
 
   SetDetailsPrint both
@@ -1427,6 +1447,7 @@ SectionEnd
   !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsADS} "Agena Database System package, a small text data base"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsGzip} "UNIX gzip compression library"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsMinizip} "ZIP compression library"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsXls} "Excel file import/export library"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsReadstat} "SPSS file import/export readstat library"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsTar} "UNIX tape archive library"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecPluginsSqlite} "SQLite3 database library"
