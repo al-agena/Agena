@@ -2,7 +2,7 @@
 # ! build Agena in /home/proglang/agena !
 Summary: Agena Programming Language
 Name: agena
-Version: 7.12.7
+Version: 7.12.9
 Release: 1
 # change Release number in build.sh file, as well.
 #Source0: %{name}-%{version}-src.tar.gz
@@ -129,6 +129,8 @@ cp /home/proglang/agena/lib/tar.agn $RPM_BUILD_ROOT/usr/agena/lib
 cp /home/proglang/agena/lib/telex.agn $RPM_BUILD_ROOT/usr/agena/lib
 cp /home/proglang/agena/lib/testlib.so $RPM_BUILD_ROOT/usr/agena/lib
 cp /home/proglang/agena/lib/unimath.agn $RPM_BUILD_ROOT/usr/agena/lib
+cp /home/proglang/agena/lib/xls.agn $RPM_BUILD_ROOT/usr/agena/lib
+cp /home/proglang/agena/lib/xls.so $RPM_BUILD_ROOT/usr/agena/lib
 cp /home/proglang/agena/lib/zx.so $RPM_BUILD_ROOT/usr/agena/lib
 
 cp /home/proglang/agena/lib/maple.agn $RPM_BUILD_ROOT/usr/agena/lib
@@ -398,6 +400,8 @@ rm -rf $RPM_BUILD_ROOT
 /usr/agena/lib/telex.agn
 /usr/agena/lib/testlib.so
 /usr/agena/lib/unimath.agn
+/usr/agena/lib/xls.agn
+/usr/agena/lib/xls.so
 /usr/agena/lib/zx.so
 /usr/local/lib/libagena.a
 /usr/local/lib/libagena.so
