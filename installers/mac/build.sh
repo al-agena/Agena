@@ -118,6 +118,8 @@ cp $AGENAHOME/lib/tar.agn $AGENATARGET_USR/agena/lib
 cp $AGENAHOME/lib/telex.agn $AGENATARGET_USR/agena/lib
 cp $AGENAHOME/lib/testlib.so $AGENATARGET_USR/agena/lib
 cp $AGENAHOME/lib/unimath.agn $AGENATARGET_USR/agena/lib
+cp $AGENAHOME/lib/xls.agn $AGENATARGET_USR/agena/lib
+cp $AGENAHOME/lib/xls.so $AGENATARGET_USR/agena/lib
 cp $AGENAHOME/lib/zx.so $AGENATARGET_USR/agena/lib
 
 # Scheme files
