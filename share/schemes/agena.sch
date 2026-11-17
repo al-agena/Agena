@@ -809,7 +809,7 @@ object TPersHolder
           FontID = 7
           Name = 'xls'
           Keywords =
-            'xls,dims,read,save,sheets'
+            'xls,dims,iterate,read,save,sheets'
         end
         item
           FontID = 7
