@@ -77,61 +77,73 @@ static int dims_row_cb (size_t row, size_t maxcol, void *callbackdata) {
   return 0;  /* return 0 to continue processing */
 }
 
-/* Helper: read worksheet dimensions from a legacy BIFF8 .xls file */
+/* Helper: read worksheet dimensions rows and columns from a legacy BIFF8 .xls file */
+static int push_xls_row_table (lua_State *L, xlsRow *row, uint64_t max_col, int convert, int *fields, uint64_t *out_cols, const char *funcname);
+
 static int dims_xls_legacy (lua_State *L, const char *filename, const char *sheetname) {
-  WORD i, r, c;
-  size_t rows, cols;
   xls_error_t err = LIBXLS_OK;
-  xlsWorkBook *wb = xls_open_file(filename, "UTF-8", &err);
+  xlsWorkBook *wb = xls_open_file(filename, NULL, &err);
   if (!wb) {
     return luaL_error(L, "Error in " LUA_QS ": cannot open " LUA_QS " (%s).", "xls.dims", filename, xls_getError(err));
   }
-  /* Find worksheet by name, or default to sheet 0 */
-  int sheetidx = 0;
+  uint64_t sheetidx = 0;
   if (sheetname != NULL) {
-    sheetidx = -1;
-    for (i=0; i < wb->sheets.count; i++) {
+    int found = 0;
+    uint64_t i;
+    uint64_t sheet_count = (uint64_t)wb->sheets.count;
+    for (i = 0; i < sheet_count; i++) {
       if (wb->sheets.sheet[i].name && strcmp((const char *)wb->sheets.sheet[i].name, sheetname) == 0) {
         sheetidx = i;
+        found = 1;
         break;
       }
     }
-    if (sheetidx < 0) {
+    if (!found || sheetidx > (uint64_t)INT_MAX) {
       xls_close_WB(wb);
       return luaL_error(L, "Error in " LUA_QS ": cannot open worksheet " LUA_QS ".", "xls.dims", sheetname);
     }
   }
-  xlsWorkSheet *ws = xls_getWorkSheet(wb, sheetidx);
+  xlsWorkSheet *ws = xls_getWorkSheet(wb, (int)sheetidx);
   if (!ws || xls_parseWorkSheet(ws) != LIBXLS_OK) {
     if (ws) xls_close_WS(ws);
     xls_close_WB(wb);
     return luaL_error(L, "Error in " LUA_QS ": could not process worksheet.", "xls.dims");
   }
-  /* Count non-empty rows and find max column index to match xlsxio_dimensions */
-  rows = cols = 0;
-  for (r=0; r <= ws->rows.lastrow; r++) {
-    xlsRow *row = &ws->rows.row[r];
-    int has_data = 0;
-    size_t row_maxcol = 0;
-    for (c=0; c <= ws->rows.lastcol; c++) {
-      if (row->cells.cell[c].id != 0x0201) { /* 0x0201 = BLANK record */
-        has_data = 1;
-        row_maxcol = (size_t)(c + 1);
+  uint64_t rows = 0, cols = 0;
+  if (ws->rows.row) {
+    uint64_t row_limit = (uint64_t)ws->rows.lastrow + 1ULL;
+    uint64_t max_col = (uint64_t)ws->rows.lastcol;
+    uint64_t r;
+    for (r = 0; r < row_limit; r++) {
+      xlsRow *row = &ws->rows.row[r];
+      if (!row->cells.cell) {
+        continue;
       }
-    }
-    if (has_data) {
-      rows++;
-      if (row_maxcol > cols) {
-        cols = row_maxcol;
+      uint64_t cell_count = (uint64_t)row->cells.count;
+      uint64_t col_limit = ((max_col + 1ULL) < cell_count) ? (max_col + 1ULL) : cell_count;
+      int has_data = 0;
+      uint64_t row_maxcol = 0;
+      uint64_t c;
+      for (c = 0; c < col_limit; c++) {
+        if (row->cells.cell[c].id != 0x0201) { /* 0x0201 = BLANK record */
+          has_data = 1;
+          row_maxcol = c + 1ULL;
+        }
+      }
+      if (has_data) {
+        rows++;
+        if (row_maxcol > cols) {
+          cols = row_maxcol;
+        }
       }
     }
   }
   xls_close_WS(ws);
   xls_close_WB(wb);
   luaL_checkstack(L, 2, "not enough stack space");
-  lua_pushinteger(L, (lua_Integer)rows);
-  lua_pushinteger(L, (lua_Integer)cols);
-  return 2;  /* returns rows, columns */
+  lua_pushnumber(L, (lua_Number)rows);
+  lua_pushnumber(L, (lua_Number)cols);
+  return 2;
 }
 
 static int xls_dims (lua_State *L) {
@@ -175,7 +187,7 @@ static int xls_dims (lua_State *L) {
 /* Helper: list all sheet names in a legacy BIFF8 .xls file */
 static int sheets_xls_internal (lua_State *L, const char *filename) {
   xls_error_t err = LIBXLS_OK;
-  xlsWorkBook *wb = xls_open_file(filename, "UTF-8", &err);
+  xlsWorkBook *wb = xls_open_file(filename, NULL, &err);  /* 7.12.9 fix to suppress `creation of UTF-8 locale failed` warnings */
   if (!wb) {
     return luaL_error(L, "Error in " LUA_QS ": cannot open " LUA_QS " (%s).", "xls.sheets", filename, xls_getError(err));
   }
@@ -225,10 +237,11 @@ static int xls_sheets (lua_State *L) {
   return 1;
 }
 
-
-static void aux_checkreadoptions (lua_State *L, int pos, int *nargs, int *convert, const char *procname) {
+#define AGN_MAXFIELDS 16*1024
+static int *aux_checkreadoptions (lua_State *L, int pos, int *nargs, int *convert, const char *procname) {
   int checkoptions = 1;  /* check n options; CHANGE THIS if you add/delete options */
-  *convert = 1;
+  *convert = 1;    /* convert strings representing nuumbers to Agena numbers */
+  int *fields = NULL;
   while (checkoptions-- && *nargs >= pos && lua_ispair(L, *nargs)) {
     agn_pairgetiall(L, *nargs);  /* get left, right value, set to stack index -2, -1 */
     /* check for properly allocated slots will be done by agn_pairgetiall() */
@@ -236,99 +249,112 @@ static void aux_checkreadoptions (lua_State *L, int pos, int *nargs, int *conver
       const char *option = agn_tostring(L, -2);
       if (tools_streq(option, "convert")) {
         *convert = agn_checkboolean(L, -1);
+      } else if (tools_streq(option, "fields")) {
+        int i, pos;
+        if (!lua_istable(L, -1)) {
+          luaL_error(L, "Error in " LUA_QS ": table expected with " LUA_QS " option.", procname, "fields");
+        }
+        size_t size = luaL_getn(L, -1);
+        if (size == 0) {
+          luaL_error(L, "Error in " LUA_QS ": non-empty table expected with " LUA_QS " option.", procname, "fields");
+        }        
+        fields = agn_malloc(L, AGN_MAXFIELDS * sizeof(int), "xls.read", NULL);
+        memset(fields, 0, AGN_MAXFIELDS);
+        for (i=1; i <= size; i++) {
+          pos = (int)agn_getinumber(L, -1, i);
+          pos = tools_posrelat(pos, size);
+          if (pos < 1 || pos > AGN_MAXFIELDS) {
+            agn_poptoptwo(L);
+            xfree(fields);
+            luaL_error(L, "Error in " LUA_QS ": field %d is out-of-range.", procname, pos);
+            return NULL;
+          }
+          fields[pos - 1] = i;
+        }
       } else {
         agn_poptoptwo(L);
         luaL_error(L, "Error in " LUA_QS ": unknown option " LUA_QS ".", procname, option);
+        return NULL;
       }
     }
     /* do not call lua_settop as it would corrupt the argument stack since we have already pushed values */
     (*nargs)--;
-    agn_poptoptwo(L);
+    lua_pop(L, 2);
   }
+  return fields;
 }
 
-/* Helper: read legacy .xls via libxls. Legacy .xls files are technically called BIFF (Binary Interchange File Format)
+/* Helper: re legacy .xls via libxls. Legacy .xls files are technically called BIFF (Binary Interchange File Format)
   files, wrapped inside an OLE2 Compound Document container (officially known as the Compound File Binary Format,
-  or CFBF). The following function works with BIFF8 xls files as known from Microsoft Excel 97, 2000, XP, and 2003. */
-static int read_xls_legacy (lua_State *L, const char *filename, const char *sheetname, int convert) {
+  or CFBF). The following function works with BIFF8 xls files as known from Microsoft Excel 97, 2000, XP, and 2003.
+  Updated Full-Table Reader (read_xls_legacy) — Zero-Overflow Edition, 7.12.9 */
+static int read_xls_legacy (lua_State *L, const char *filename, const char *sheetname, int convert, int *fields) {
   xls_error_t err = LIBXLS_OK;
-  xlsWorkBook *wb = xls_open_file(filename, "UTF-8", &err);
+  xlsWorkBook *wb = xls_open_file(filename, NULL, &err);
   if (!wb) {
+    xfree(fields);
     return luaL_error(L, "Error in " LUA_QS ": cannot read " LUA_QS " (%s).", "xls.read", filename, xls_getError(err));
   }
-  /* Find worksheet by name, or default to sheet 0 */
-  int sheetidx = 0;
+  uint64_t sheetidx = 0;
   if (sheetname != NULL) {
-    sheetidx = -1;
-    WORD i;
-    for (i=0; i < wb->sheets.count; i++) {
+    int found = 0;
+    uint64_t i;
+    uint64_t sheet_count = (uint64_t)wb->sheets.count;
+    for (i = 0; i < sheet_count; i++) {
       if (wb->sheets.sheet[i].name && strcmp((const char *)wb->sheets.sheet[i].name, sheetname) == 0) {
         sheetidx = i;
+        found = 1;
         break;
       }
     }
-    if (sheetidx < 0) {
+    if (!found || sheetidx > (uint64_t)INT_MAX) {
       xls_close_WB(wb);
+      xfree(fields);
       return luaL_error(L, "Error in " LUA_QS ": cannot open worksheet " LUA_QS ".", "xls.read", sheetname);
     }
   }
-  xlsWorkSheet *ws = xls_getWorkSheet(wb, sheetidx);
+  xlsWorkSheet *ws = xls_getWorkSheet(wb, (int)sheetidx);
   if (!ws || xls_parseWorkSheet(ws) != LIBXLS_OK) {
     if (ws) xls_close_WS(ws);
     xls_close_WB(wb);
+    xfree(fields);
     return luaL_error(L, "Error in " LUA_QS ": cannot parse worksheet.", "xls.read");
   }
-  luaL_checkstack(L, 5, "not enough stack space");
+  luaL_checkstack(L, 6, "not enough stack space");
   lua_createtable(L, 0, 3);
   lua_pushliteral(L, "data");
   lua_newtable(L);
-  int rowidx = 0, maxcolidx = 0;
-  WORD r, c;
-  for (r=0; r <= ws->rows.lastrow; r++) {
-    xlsRow *row = &ws->rows.row[r];
-    /* Skip completely empty rows to match XLSXIOREAD_SKIP_EMPTY_ROWS */
-    int has_data = 0;
-    for (c=0; c <= ws->rows.lastcol; c++) {
-      if (row->cells.cell[c].id != 0x0201) { /* 0x0201 = BLANK record */
-        has_data = 1;
-        break;
-      }
-    }
-    if (!has_data) continue;
-    lua_newtable(L);
-    int colidx = 0;
-    for (c=0; c <= ws->rows.lastcol; c++) {
-      xlsCell *cell = &row->cells.cell[c];
-      colidx++;
-      if (cell->id == 0x0201 || cell->str == NULL) {
-        lua_pushliteral(L, "");
-      } else if (convert && (cell->id == 0x0203 || cell->id == 0x027E || cell->id == 0x00BD)) {
-        /* Numeric cell (NUMBER, RK, MULRK) */
-        lua_pushnumber(L, (lua_Number)cell->d);
-      } else {
-        lua_pushstring(L, (const char *)cell->str);
-        if (convert) {
-          int exception = 0;
-          lua_Number n = agn_tonumberx(L, -1, &exception);
-          if (!exception) {
-            lua_pop(L, 1);
-            lua_pushnumber(L, n);
-          }
+  uint64_t rowidx = 0, maxcolidx = 0;
+  if (ws->rows.row) {
+    uint64_t row_limit = (uint64_t)ws->rows.lastrow + 1ULL;
+    uint64_t max_col = (uint64_t)ws->rows.lastcol;
+    uint64_t r;
+    for (r=0; r < row_limit; r++) {
+      uint64_t colidx = 0;
+      if (push_xls_row_table(L, &ws->rows.row[r], max_col, convert, fields, &colidx, "xls.read")) {
+        if (rowidx >= (uint64_t)INT_MAX) {
+          xls_close_WS(ws);
+          xls_close_WB(wb);
+          xfree(fields);
+          return luaL_error(L, "Error in " LUA_QS ": row count exceeds Lua table limit.", "xls.read");
         }
+        if (colidx > maxcolidx) {
+          maxcolidx = colidx;
+        }
+        rowidx++;
+        lua_rawseti(L, -2, (int)rowidx);
       }
-      lua_rawseti(L, -2, colidx);
     }
-    if (colidx > maxcolidx) maxcolidx = colidx;
-    lua_rawseti(L, -2, ++rowidx);
   }
   xls_close_WS(ws);
   xls_close_WB(wb);
+  xfree(fields);
   lua_settable(L, -3);
   lua_pushliteral(L, "rows");
-  lua_pushinteger(L, rowidx);
+  lua_pushnumber(L, (lua_Number)rowidx);
   lua_settable(L, -3);
   lua_pushliteral(L, "columns");
-  lua_pushinteger(L, maxcolidx);
+  lua_pushnumber(L, (lua_Number)maxcolidx);
   lua_settable(L, -3);
   return 1;
 }
@@ -337,27 +363,30 @@ static int xls_read (lua_State *L) {
   int convert = 1, nargs = lua_gettop(L);
   const char *filename = luaL_checkstring(L, 1);
   const char *sheetname = NULL;  /* get first sheet by default */
-  aux_checkreadoptions(L, 2, &nargs, &convert, "xls.read");
   if (nargs > 1 && agn_isstring(L, 2)) {
     sheetname = agn_tostring(L, 2);
   }
   if (!tools_exists(filename)) {
     luaL_error(L, "Error in " LUA_QS ": file does not exist or is inaccessible.", "xls.read");
   }
+  int *fields = aux_checkreadoptions(L, 2, &nargs, &convert, "xls.read");  /* we do not use fields here */
   int fmt = getxlsformat(filename);
   if (fmt == 2) {  /* Excel Binary File Format (.xls) */
-    return read_xls_legacy(L, filename, sheetname, convert);
+    return read_xls_legacy(L, filename, sheetname, convert, fields);
   } else if (fmt != 1) {
+    xfree(fields);
     luaL_error(L, "Error in " LUA_QS ": unrecognised Excel file format.", "xls.read");
   }
   /* OOXML (.xlsx) via xlsxio */
   xlsxioreader xlsxioread = xlsxioread_open(filename);
   if (!xlsxioread) {
+    xfree(fields);
     luaL_error(L, "Error in " LUA_QS ": cannot read " LUA_QS ".", "xls.read", filename);
   }
   xlsxioreadersheet sheet = xlsxioread_sheet_open(xlsxioread, sheetname, XLSXIOREAD_SKIP_EMPTY_ROWS);
   if (!sheet) {
     xlsxioread_close(xlsxioread);
+    xfree(fields);
     luaL_error(L, "Error in " LUA_QS ": cannot open worksheet.", "xls.read");
   }
   luaL_checkstack(L, 5, "not enough stack space");
@@ -369,8 +398,23 @@ static int xls_read (lua_State *L) {
   while (xlsxioread_sheet_next_row(sheet)) {
     lua_newtable(L);  /* inner table for current row */
     char *value;
-    int colidx = 0;
+    int colidx = 0, pos = 0;
     while ((value = xlsxioread_sheet_next_cell(sheet)) != NULL) {
+/*
+import xls
+L := xls.read('../testall/antarct.xlsx', fields=[3, 1, 2])
+L.data[1]:
+*/
+      colidx++;
+      if (fields) {
+        if (colidx > AGN_MAXFIELDS) {
+          xfree(fields);
+          luaL_error(L, "Error in " LUA_QS ": column %d out-of-range.", "xls.read", colidx);
+        }
+        pos = fields[colidx - 1];
+        if (pos == 0) goto label;
+      }
+      /* push and store the current cell as a string, or as a number if convertible */
       lua_pushstring(L, value);
       if (convert) {
         int exception = 0;
@@ -380,7 +424,8 @@ static int xls_read (lua_State *L) {
           lua_pushnumber(L, n);
         }
       }
-      lua_rawseti(L, -2, ++colidx);
+      lua_rawseti(L, -2, (fields) ? pos : colidx);  /* set string or number into row table */
+label:
       xlsxioread_free(value);  /* free memory allocated by xlsxio */
     }
     if (colidx > maxcolidx) maxcolidx = colidx;
@@ -388,6 +433,7 @@ static int xls_read (lua_State *L) {
   }
   xlsxioread_sheet_close(sheet);
   xlsxioread_close(xlsxioread);
+  xfree(fields);
   lua_settable(L, -3);
   lua_pushliteral(L, "rows");
   lua_pushinteger(L, rowidx);
@@ -446,15 +492,324 @@ static int xls_save (lua_State *L) {
 }
 
 
+/* ********************************************************************************************* */
+/* * The iterators, added 7.12.9, created by Gemini AI * */
+
+
+#define XLSX_ITER_MT "xls.xlsx_iter"
+
+typedef struct {
+  xlsxioreader reader;
+  xlsxioreadersheet sheet;
+  int convert;
+  uint64_t rowidx;
+} xlsx_iter_t;
+
+static void xlsx_iter_cleanup (xlsx_iter_t *it) {
+  if (it->sheet) {
+    xlsxioread_sheet_close(it->sheet);
+    it->sheet = NULL;
+  }
+  if (it->reader) {
+    xlsxioread_close(it->reader);
+    it->reader = NULL;
+  }
+}
+
+static int xlsx_iter_gc (lua_State *L) {
+  xlsx_iter_t *it = (xlsx_iter_t *)luaL_checkudata(L, 1, XLSX_ITER_MT);
+  xlsx_iter_cleanup(it);
+  return 0;
+}
+
+static int xlsx_iter_next (lua_State *L) {
+  xlsx_iter_t *it = (xlsx_iter_t *)lua_touserdata(L, lua_upvalueindex(1));
+  if (!it || !it->sheet) {
+    lua_pushnil(L);
+    return 1;
+  }
+  if (!xlsxioread_sheet_next_row(it->sheet)) {
+    xlsx_iter_cleanup(it);
+    lua_pushnil(L);
+    return 1;
+  }
+  lua_newtable(L);
+  char *value;
+  uint64_t colidx = 0;
+  uint64_t last_nonempty = 0;
+  while ((value = xlsxioread_sheet_next_cell(it->sheet)) != NULL) {
+    if (colidx >= (uint64_t)INT_MAX) {
+      xlsxioread_free(value);
+      xlsx_iter_cleanup(it);
+      return luaL_error(L, "Error in " LUA_QS ": column count exceeds Lua table limit.", "xls.iterate");
+    }
+    int is_empty = (value[0] == '\0');
+    lua_pushstring(L, value);
+    if (it->convert) {
+      int exception = 0;
+      lua_Number n = agn_tonumberx(L, -1, &exception);
+      if (!exception) {
+        lua_pop(L, 1);
+        lua_pushnumber(L, n);
+        is_empty = 0;
+      }
+    }
+    colidx++;
+    if (!is_empty) {
+      last_nonempty = colidx;
+    }
+    lua_rawseti(L, -2, (int)colidx);
+    xlsxioread_free(value);
+  }
+  /* Trim any trailing empty strings at the end of the row (such as phantom J1) */
+  while (colidx > last_nonempty) {
+    lua_pushnil(L);
+    lua_rawseti(L, -2, (int)colidx);
+    colidx--;
+  }
+  if (it->rowidx == UINT64_MAX) {
+    xlsx_iter_cleanup(it);
+    return luaL_error(L, "Error in " LUA_QS ": row count overflow.", "xls.iterate");
+  }
+  it->rowidx++;
+  return 1;
+}
+
+/* ==========================================================================
+   2. Legacy .xls (libxls-1.6.4) Iterator — Zero-Overflow Edition
+   ========================================================================== */
+
+#define XLS_ITER_MT "xls.xls_iter"
+
+typedef struct {
+  xlsWorkBook *wb;
+  xlsWorkSheet *ws;
+  uint64_t curr_row;
+  int convert;
+  uint64_t rowidx;
+} xls_iter_t;
+
+static void xls_iter_cleanup (xls_iter_t *it) {
+  if (it->ws) {
+    xls_close_WS(it->ws);
+    it->ws = NULL;
+  }
+  if (it->wb) {
+    xls_close_WB(it->wb);
+    it->wb = NULL;
+  }
+}
+
+static int xls_iter_gc (lua_State *L) {
+  xls_iter_t *it = (xls_iter_t *)luaL_checkudata(L, 1, XLS_ITER_MT);
+  xls_iter_cleanup(it);
+  return 0;
+}
+
+/* Helper to safely read a single .xls row into a Lua table on top of the stack.
+   Returns 1 if the row contained data, 0 if it was completely blank. */
+static int push_xls_row_table (lua_State *L, xlsRow *row, uint64_t max_col, int convert, int *fields, uint64_t *out_cols, const char *funcname) {
+  if (!row || !row->cells.cell) return 0;
+  uint64_t cell_count = (uint64_t)row->cells.count;
+  uint64_t col_limit = (cell_count <= 65536ULL && (max_col + 1ULL) < cell_count) ? (max_col + 1ULL) : cell_count;
+  int has_data = 0;
+  uint64_t c;
+  for (c = 0; c < col_limit; c++) {
+    if (row->cells.cell[c].id != 0x0201) { /* 0x0201 = BLANK record */
+      has_data = 1;
+      break;
+    }
+  }
+  if (!has_data) return 0;
+  if (col_limit > (uint64_t)INT_MAX) {
+    return luaL_error(L, "Error in " LUA_QS ": column count exceeds Lua table limit.", funcname);
+  }
+  lua_createtable(L, (int)col_limit, 0);
+  uint64_t colidx = 0, pos = 0;
+  for (c=0; c < col_limit; c++) {
+    xlsCell *cell = &row->cells.cell[c];
+    colidx++;
+    if (fields) {
+      if (colidx > AGN_MAXFIELDS) {
+        xfree(fields);
+        luaL_error(L, "Error in " LUA_QS ": column %d out-of-range.", "xls.read", colidx);
+      }
+      pos = fields[colidx - 1];
+      if (pos == 0) continue;
+    }
+/*
+import xls
+L := xls.read('../testall/antarct.xls', fields=[3, 1, 2])
+L.data[1]:
+*/
+    if (cell->id == 0x0201 || cell->str == NULL) {
+      lua_pushliteral(L, "");
+    } else if (convert && (cell->id == 0x0203 || cell->id == 0x027E || cell->id == 0x00BD)) {
+      lua_pushnumber(L, (lua_Number)cell->d);
+    } else {
+      lua_pushstring(L, (const char *)cell->str);
+      if (convert) {
+        int exception = 0;
+        lua_Number n = agn_tonumberx(L, -1, &exception);
+        if (!exception) {
+          lua_pop(L, 1);
+          lua_pushnumber(L, n);
+        }
+      }
+    }
+    lua_rawseti(L, -2, (fields) ? (int)(pos) : (int)colidx);
+  }
+  if (out_cols) {
+    *out_cols = colidx;
+  }
+  return 1;
+}
+
+
+static int xls_iter_next (lua_State *L) {
+  xls_iter_t *it = (xls_iter_t *)lua_touserdata(L, lua_upvalueindex(1));
+  if (!it || !it->ws) {
+    lua_pushnil(L);
+    return 1;
+  }
+  if (!it->ws->rows.row) {
+    xls_iter_cleanup(it);
+    lua_pushnil(L);
+    return 1;
+  }
+  uint64_t row_limit = (uint64_t)it->ws->rows.lastrow + 1ULL;
+  uint64_t max_col = (uint64_t)it->ws->rows.lastcol;
+  while (it->curr_row < row_limit) {
+    uint64_t r = it->curr_row++;
+    if (push_xls_row_table(L, &it->ws->rows.row[r], max_col, it->convert, NULL, NULL, "xls.iterate")) {
+      if (it->rowidx == UINT64_MAX) {
+        xls_iter_cleanup(it);
+        return luaL_error(L, "Error in " LUA_QS ": row count overflow.", "xls.iterate");
+      }
+      it->rowidx++;
+      return 1;
+    }
+  }
+  xls_iter_cleanup(it);
+  lua_pushnil(L);
+  return 1;
+}
+
+static int xls_iterate_legacy (lua_State *L, const char *filename, const char *sheetname, int convert) {
+  xls_iter_t *it = (xls_iter_t *)lua_newuserdata(L, sizeof(xls_iter_t));
+  it->wb = NULL;
+  it->ws = NULL;
+  it->curr_row = 0;
+  it->convert = convert;
+  it->rowidx = 0;
+  luaL_getmetatable(L, XLS_ITER_MT);
+  lua_setmetatable(L, -2);
+  xls_error_t err = LIBXLS_OK;
+  it->wb = xls_open_file(filename, NULL, &err);
+  if (!it->wb) {
+    lua_pop(L, 1);
+    return luaL_error(L, "Error in " LUA_QS ": cannot read " LUA_QS " (%s).", "xls.iterate", filename, xls_getError(err));
+  }
+  uint64_t sheetidx = 0;
+  if (sheetname != NULL) {
+    int found = 0;
+    uint64_t i;
+    uint64_t sheet_count = (uint64_t)it->wb->sheets.count;
+    for (i = 0; i < sheet_count; i++) {
+      if (it->wb->sheets.sheet[i].name && strcmp((const char *)it->wb->sheets.sheet[i].name, sheetname) == 0) {
+        sheetidx = i;
+        found = 1;
+        break;
+      }
+    }
+    if (!found || sheetidx > (uint64_t)INT_MAX) {
+      xls_iter_cleanup(it);
+      lua_pop(L, 1);
+      return luaL_error(L, "Error in " LUA_QS ": cannot open worksheet " LUA_QS ".", "xls.iterate", sheetname);
+    }
+  }
+  it->ws = xls_getWorkSheet(it->wb, (int)sheetidx);
+  if (!it->ws || xls_parseWorkSheet(it->ws) != LIBXLS_OK) {
+    xls_iter_cleanup(it);
+    lua_pop(L, 1);
+    return luaL_error(L, "Error in " LUA_QS ": cannot parse worksheet.", "xls.iterate");
+  }
+  lua_pushcclosure(L, xls_iter_next, 1);
+  return 1;
+}
+
+/* ==========================================================================
+   3. Unified Factory Function (xls.iterate)
+   ========================================================================== */
+static int xls_iterate (lua_State *L) {
+  int convert = 1, nargs = lua_gettop(L);
+  const char *filename = luaL_checkstring(L, 1);
+  const char *sheetname = NULL;
+  int *fields = aux_checkreadoptions(L, 2, &nargs, &convert, "xls.iterate");  /* we do not use fields here */
+  if (nargs > 1 && agn_isstring(L, 2)) {
+    sheetname = agn_tostring(L, 2);
+  }
+  xfree(fields);
+  if (!tools_exists(filename)) {
+    xfree(fields);
+    return luaL_error(L, "Error in " LUA_QS ": file does not exist or is inaccessible.", "xls.iterate");
+  }
+  int fmt = getxlsformat(filename);
+  if (fmt == 2) {
+    return xls_iterate_legacy(L, filename, sheetname, convert);
+  } else if (fmt != 1) {
+    xfree(fields);
+    return luaL_error(L, "Error in " LUA_QS ": unrecognised Excel file format.", "xls.iterate");
+  }
+  xlsx_iter_t *it = (xlsx_iter_t *)lua_newuserdata(L, sizeof(xlsx_iter_t));
+  it->reader = NULL;
+  it->sheet = NULL;
+  it->convert = convert;
+  it->rowidx = 0;
+  luaL_getmetatable(L, XLSX_ITER_MT);
+  lua_setmetatable(L, -2);
+  it->reader = xlsxioread_open(filename);
+  if (!it->reader) {
+    lua_pop(L, 1);
+    xfree(fields);
+    return luaL_error(L, "Error in " LUA_QS ": cannot read " LUA_QS ".", "xls.iterate", filename);
+  }
+  it->sheet = xlsxioread_sheet_open(it->reader, sheetname, XLSXIOREAD_SKIP_EMPTY_ROWS);
+  if (!it->sheet) {
+    xlsx_iter_cleanup(it);
+    lua_pop(L, 1);
+    xfree(fields);
+    return luaL_error(L, "Error in " LUA_QS ": cannot open worksheet.", "xls.iterate");
+  }
+  xfree(fields);
+  lua_pushcclosure(L, xlsx_iter_next, 1);
+  return 1;
+}
+
+
 static const luaL_Reg xls_funcs[] = {
   {"dims",     xls_dims},
+  {"iterate",  xls_iterate},
   {"read",     xls_read},
   {"save",     xls_save},
   {"sheets",   xls_sheets},
   {NULL, NULL}
 };
 
+
 int luaopen_xls (lua_State *L) {
+  /* Metatable for .xlsx iterator userdata */
+  luaL_newmetatable(L, XLSX_ITER_MT);
+  lua_pushliteral(L, "__gc");
+  lua_pushcfunction(L, xlsx_iter_gc);
+  lua_settable(L, -3);
+  lua_pop(L, 1);  /* pop metatable */
+  /* Metatable for legacy .xls iterator userdata */
+  luaL_newmetatable(L, XLS_ITER_MT);
+  lua_pushliteral(L, "__gc");
+  lua_pushcfunction(L, xls_iter_gc);
+  lua_settable(L, -3);
+  lua_pop(L, 1);  /* pop metatable */
   luaL_register(L, AGENA_XLSLIBNAME, xls_funcs);
   return 1;
 }

@@ -11,8 +11,8 @@
 for i in abci.o ads.o aspell.o astro.o charbuf.o com.o cordic.o curses.o \
     dcastro.o double.o fastmath.o fractals.o gmp.o iconv.o \
     interp.o luasys.o miniz.o minizip.o moon.o mpfr.o net.o phq.o \
-    skycrane.o sqlite.o sqlite3.o sunriset.o testlib.o zx.o \
-    strhash.o strmap.o xls.o
+    skycrane.o sqlite.o sqlite3.o strhash.o strmap.o sunriset.o \
+    testlib.o xls.o zx.o
 do
   if [ -f "$i" ]; then
     rm "$i"
@@ -21,12 +21,6 @@ done
 
 OPTIONS="-O3 -fpic -Wno-attributes -fgnu89-inline"
 OPTFINAL="-O3 -shared -fpic"
-
-printf "Compiling xls ... "
-gcc $OPTIONS -w -o xls.so xls.c -I/usr/local/include -L/usr/local/lib -Wl,-Bstatic -lxlsxio_read -lxlsxio_write -lxlsreader -Wl,-Bdynamic -lexpat -lz -liconv
-strip xls.so
-mv -f xls.so $EXPORTTO
-printf "done.\n"
 
 printf "Compiling abci ... "
 gcc $OPTIONS -c -o abci.o abci.c
