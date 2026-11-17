@@ -1,3 +1,30 @@
+7.12.9 Kerberos, November 17, 2026
+
+- New `xls.iterate` creates an iterator that traverses legacy BIFF8 .xls or modern OOXML .xlsx files row by row. Example:
+
+  > import xls
+
+  > f := xls.iterate('antarct.xlsx');
+
+  > f():
+  ['Country', 'State', 'City/Station', 'WMO', 'Source Data', 'Latitude (N+/S-)', 'Longitude (E+/W-)', 'Time Zone (GMT +/-)', 'Elevation (m)']
+
+  > f():
+  ['ATA', 'ARG', 'Esperanza.Base-Hope.Bay', 889630, 'Custom-889630', -63.3981, -56.9973, -4, 3]
+
+- With `xls.read`, you can extract specific fields by passing the new 'fields' option along with a table of integers. Example to extract
+  columns 3, 1 and 2, in this order:
+
+  > xls.read('../testall/antarct.xlsx', fields=[3, 1, 2]):
+
+- On Windows 7 and 8.1, both 64-bit, `xls.read`, `xls.sheets` and `xls.dim` may have printed `creation of UTF-8 locale failed` warning messages
+  at stderr. This has been fixed.
+
+- The Windows 32-bit edition of `xls` has been changed internally and now uses the libxlsreader.dll dependency.
+
+- Potential problems with legacy .xls files consisting of exactly 65,536 rows have been proactively fixed in `xls.read`.
+
+
 7.12.8 Kerberos, November 13, 2026
 
 - The new `xls` package reads Microsoft Excel files, both legacy BIFF8 .xls and modern OOXML .xlsx files. It can also
