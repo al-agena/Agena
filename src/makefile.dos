@@ -36,7 +36,7 @@ DDMATHFLAGS=	-fno-builtin -ffloat-store -fno-unsafe-math-optimizations
 AR= ar rcu
 RANLIB= ranlib
 RM= rm -f
-LIBS= -lm -lmapm -lz -lreadline -lhistory -lpdcurses -lexpat -lmpfr -lgmp -liconv -lpcre2-posix -lpcre2-8\
+LIBS= -lm -lmapm -lreadline -lhistory -lpdcurses -lexpat -lmpfr -lgmp -lreadstat -lz -liconv -lpcre2-posix -lpcre2-8 \
 	-lsqlite3 -l:fi_lib.a $(MYLIBS)
 
 MYCFLAGS=
@@ -53,7 +53,7 @@ CORE_O= lapi.o lcode.o ldebug.o ldo.o ldump.o lfunc.o lgc.o llex.o lmem.o lobjec
 	agnhlps.o iniparse.o lreg.o
 LIB_O=  agnxlib.o  mybuffer.o lbaselib.o ldblib.o liolib.o lmathlib.o loslib.o ltablib.o lrtable.o \
 	agnt64.o lenviron.o lstrlib.o utils.o units.o loadlib.o linit.o stats.o combinat.o numtheory.o \
-	ads.o fractals.o bags.o lookup.o cephes.o calc.o linalg.o binio.o mapm.o sqlite.o xbase.o sofa.o \
+	readstat.o ads.o fractals.o bags.o lookup.o cephes.o calc.o linalg.o binio.o mapm.o sqlite.o xbase.o sofa.o \
 	interp.o moon.o sunriset.o sdncal.o astro.o curses.o skycrane.o gzip.o llist.o cordic.o lreglib.o \
 	xml.o hashes.o numarray.o registry.o zx.o stack.o intvec.o dblvec.o vecoff64.o bloom.o cuckoo.o \
 	clock.o factory.o bytes.o fastmath.o semalib.o sema.o dual.o utf8.o iconv.o gmp.o mpfr.o charbuf.o \
@@ -129,6 +129,7 @@ none:
 dos:
 	$(MAKE) all PLAT=dos MYCFLAGS="-O2 -DLUA_ANSI -DPROPCMPLX -DLUA_USE_READLINE -DLUA_USE_POPEN"
 	strip $(LUA_T)
+	stubedit $(LUA_T) minstack=2048k
 	strip $(LUA_A)
 
 #install:
@@ -201,6 +202,7 @@ lzio.o: lzio.c agena.h agnconf.h llimits.h lmem.h lstate.h lobject.h ltm.h \
   lzio.h
 utils.o: utils.c agena.h agnxlib.h agenalib.h
 units.o: units.c agena.h agnxlib.h agenalib.h
+readstat.o:	readstat.c agena.h agnxlib.h agenalib.h agnhlps.h
 agnhlps.o: agnhlps.c agnhlps.h agncmpt.h agnconf.h sunpro.h
 cephes.o: cephes.c cephes.h
 jbmath.o:	jbmath.c jbmath.h

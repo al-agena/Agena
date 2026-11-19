@@ -288,6 +288,9 @@ LUALIB_API int luaopen_minizip (lua_State *L);
 #define AGENA_CURSESLIBNAME "curses"
 LUALIB_API int (luaopen_curses) (lua_State *L);    /* 4.7.5 addition */
 
+#define AGENA_READSTATLIBNAME "readstat"
+LUALIB_API int (luaopen_readstat) (lua_State *L);  /* 7.12.4 */
+
 #endif
 
 #if defined(__OS2__)
@@ -300,9 +303,6 @@ LUALIB_API int (luaopen_net) (lua_State *L);
 
 #define AGENA_GDILIBNAME "gdi"
 LUALIB_API int (luaopen_gdi) (lua_State *L);       /* 2.21.11 ArcaOS change */
-
-#define AGENA_READSTATLIBNAME "readstat"
-LUALIB_API int (luaopen_readstat) (lua_State *L);  /* 7.12.4 */
 
 #define AGENA_XLSLIBNAME "xls"
 LUALIB_API int (luaopen_xls) (lua_State *L);       /* 7.12.8 */
