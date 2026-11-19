@@ -2745,15 +2745,40 @@ LUA_API void agn_values (lua_State *L, int idx, int nargs) {
     }
     case LUA_TTABLE: {
       Table *h, *newtable;
+      int order = 0;  /* default: do _not_ return a `reshuffled` table with no holes */
+      if (nargs > 2 && lua_ispair(L, nargs)) {  /* 7.12.10 extension */
+        agn_pairgetiall(L, nargs);  /* get left, right value, set to stack index -2, -1 */
+        if (agn_isstring(L, -2)) {
+          const char *option = agn_tostring(L, -2);
+          if (tools_streq(option, "order")) {
+            order = agn_checkboolean(L, -1);
+          } else {
+            agn_poptoptwo(L);
+            luaL_error(L, "Error in " LUA_QS ": unknown option " LUA_QS ".", "values", option);
+          }
+        }
+        lua_pop(L, 2);
+      }
       h = hvalue(base);
       /* stack must be increased to avoid `invalid key to next` errors */
-      newtable = luaH_new(L, 0, 0);  /* 2.8.0 fix to avoid problems with the strict equality check (`==` operator) */
+      newtable = luaH_new(L, order*(nargs - 2), 0);  /* 2.8.0 fix to avoid problems with the strict equality check (`==` operator) */
       /* traverse first table */
-      for (i=1; i < nargs; i++) {
-        const TValue *k = luaH_get(h, base + i);  /* do a primitive get */
-        TValue *oldval = luaH_set(L, newtable, base + i);  /* do a primitive set */
-        setobj2t(L, oldval, k);
-        luaC_barriert(L, newtable, k);
+      if (order) {  /* 7.12.10 extension, prevent tables with holes */
+        if (nargs < 3) {
+          luaL_error(L, "Error in " LUA_QS ": need at least a table and an index.", "values");
+        }
+        for (i=1; i < nargs - 1; i++) {
+          TValue *val = (TValue *)luaH_get(h, base + i);  /* do a primitive get */
+          luaH_setint(L, newtable, i, val);
+          luaC_barriert(L, newtable, val);
+        }
+      } else {
+        for (i=1; i < nargs; i++) {
+          const TValue *val = luaH_get(h, base + i);  /* do a primitive get */
+          TValue *newslot = luaH_set(L, newtable, base + i);  /* do a primitive set */
+          setobj2t(L, newslot, val);
+          luaC_barriert(L, newtable, val);
+        }
       }
       /* prepare table for return to Agena environment */
       sethvalue(L, base, newtable);

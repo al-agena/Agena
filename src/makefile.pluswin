@@ -85,7 +85,7 @@ endif
 
 # --- Target Lists ---
 DLLS = abci.dll ads.dll aspell.dll astro.dll com.dll cordic.dll curses.dll \
-	ddhash.dll double.dll fastmath.dll fractals.dll gmp.dll gzip.dll iconv.dll \
+	double.dll fastmath.dll fractals.dll gmp.dll gzip.dll iconv.dll \
 	ival.dll mapm.dll minizip.dll mpfr.dll net.dll phones.dll readstat.dll \
 	skycrane.dll strhash.dll strmap.dll testlib.dll xls.dll zx.dll
 
@@ -142,12 +142,6 @@ curses.dll: curses.o
 	$(STRIP) $@
 	@mv -f $@ $(LIB_DIR)
 	rm -f $<
-
-ddhash.dll: ddhash.c
-	@rm -f $@
-	$(CC) $(CFLAGS_DLL) -o $@ $< $(AG_LIBS)
-	$(STRIP) $@
-	@mv -f $@ $(LIB_DIR)
 
 double.dll: double.c
 	@rm -f $@

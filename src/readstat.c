@@ -51,10 +51,59 @@ LUALIB_API int (luaopen_readstat) (lua_State *L);
 #endif
 
 
+#define AGN_MAXFIELDS 16*1024
+/* Theoretically an SPSS .sav file can have 2,147,483,647 = 2^31-1 columns */
+static int *aux_checkreadoptions (lua_State *L, int pos, int *nargs, const char *procname) {
+  int checkoptions = 1;  /* check n options; CHANGE THIS if you add/delete options */
+  int *fields = NULL;
+  while (checkoptions-- && *nargs >= pos && lua_ispair(L, *nargs)) {
+    agn_pairgetiall(L, *nargs);  /* get left, right value, set to stack index -2, -1 */
+    /* check for properly allocated slots will be done by agn_pairgetiall() */
+    if (agn_isstring(L, -2)) {
+      const char *option = agn_tostring(L, -2);
+      if (tools_streq(option, "fields")) {
+        int i, pos;
+        if (!lua_istable(L, -1)) {
+          luaL_error(L, "Error in " LUA_QS ": table expected with " LUA_QS " option.", procname, "fields");
+        }
+        size_t size = luaL_getn(L, -1);
+        if (size == 0) {
+          luaL_error(L, "Error in " LUA_QS ": non-empty table expected with " LUA_QS " option.", procname, "fields");
+        }
+        fields = agn_malloc(L, AGN_MAXFIELDS * sizeof(int), "xls.read", NULL);
+        memset(fields, 0, AGN_MAXFIELDS);
+        for (i=1; i <= size; i++) {
+          pos = (int)agn_getinumber(L, -1, i);
+          pos = tools_posrelat(pos, size);
+          if (pos < 1 || pos > AGN_MAXFIELDS) {
+            agn_poptoptwo(L);
+            xfree(fields);
+            luaL_error(L, "Error in " LUA_QS ": field %d is out-of-range.", procname, pos);
+            return NULL;
+          }
+          fields[pos - 1] = i;
+        }
+        /* > readstat.read('../testall/hotel.sav', fields=[20 (invalid), 5 (valid), 1 (valid), 2 (valid)]) yields:
+           fields[19]=1, fields[4]=2, fields[0]=3, fields[1]=4 */
+      } else {
+        agn_poptoptwo(L);
+        luaL_error(L, "Error in " LUA_QS ": unknown option " LUA_QS ".", procname, option);
+        return NULL;
+      }
+    }
+    /* do not call lua_settop as it would corrupt the argument stack since we have already pushed values */
+    (*nargs)--;
+    lua_pop(L, 2);
+  }
+  return fields;
+}
+
+
 /* Context structure to keep track of our Lua state and tables */
 typedef struct {
   lua_State *L;
   int columns_count;
+  int *fields;
 } l_readstat_ctx_t;
 
 
@@ -64,6 +113,14 @@ static int handle_metadata (readstat_metadata_t *metadata, void *user_ctx) {
   lua_State *L = ctx->L;
   int obs_count = readstat_get_row_count(metadata);
   int var_count = readstat_get_var_count(metadata);
+  if (ctx->fields) {
+    int i, valid_count = 0;
+    int limit = (var_count < AGN_MAXFIELDS) ? var_count : AGN_MAXFIELDS;
+    for (i=0; i < limit; i++) {
+      if (ctx->fields[i] > 0) valid_count++;
+    }
+    var_count = valid_count;
+  }
   lua_pushstring(L, "rows");
   lua_pushinteger(L, obs_count);
   lua_settable(L, -3);
@@ -93,8 +150,19 @@ static int handle_metadata (readstat_metadata_t *metadata, void *user_ctx) {
 /* Callback 2: Handles Metadata (Variables) - Integrates your original layout with explicit missing information blocks */
 static int handle_variable (int index, readstat_variable_t *variable,
                             const char *val_labels, void *user_ctx) {
+  int idx;
   l_readstat_ctx_t *ctx = (l_readstat_ctx_t *)user_ctx;
   lua_State *L = ctx->L;
+  idx = index + 1;
+  if (ctx->fields) {
+    if (idx > AGN_MAXFIELDS) {
+      xfree(ctx->fields);
+      luaL_error(L, "Error in " LUA_QS ": column %d out-of-range.", "readstat.read", idx);
+    }
+    int pos = ctx->fields[idx - 1];
+    if (pos == 0) return READSTAT_HANDLER_OK;
+    idx = pos;
+  }
   const char *var_name = readstat_variable_get_name(variable);
   const char *var_label = readstat_variable_get_label(variable);
   readstat_type_t var_type = readstat_variable_get_type(variable);
@@ -102,7 +170,7 @@ static int handle_variable (int index, readstat_variable_t *variable,
   luaL_checkstack(L, 6, "not enough stack space");
   lua_pushstring(L, "variables");
   lua_gettable(L, -2);
-  lua_pushinteger(L, index + 1);  /* Lua 1-indexed */
+  lua_pushinteger(L, idx);  /* Lua 1-indexed */
   lua_newtable(L);
   /* 1. Variable Name */
   lua_pushstring(L, "name");
@@ -172,7 +240,7 @@ static int handle_variable (int index, readstat_variable_t *variable,
   return READSTAT_HANDLER_OK;
 }
 
-/* Callback 3: Handles Value Labels - Safely maps all dictionary variants using your original layout format */
+/* Callback 3: Handles Value Labels - maps all dictionary variants using original layout format */
 static int handle_value_label (const char *val_labels, readstat_value_t value,
                                const char *label, void *user_ctx) {
   l_readstat_ctx_t *ctx = (l_readstat_ctx_t *)user_ctx;
@@ -205,14 +273,25 @@ static int handle_value_label (const char *val_labels, readstat_value_t value,
   return READSTAT_HANDLER_OK;
 }
 
-/* Callback 4: Handles Row Data - Safely preserves all User-Defined values inside the core matrix data array */
-static int handle_value (int row_index, readstat_variable_t *variable, readstat_value_t value, void *user_ctx) {
+/* Callback 4: Handles Row Data - Safely preserves all user-defined values inside the core matrix data array */
+static int handle_data (int row_index, readstat_variable_t *variable, readstat_value_t value, void *user_ctx) {
+  int idx;
   l_readstat_ctx_t *ctx = (l_readstat_ctx_t *)user_ctx;
   lua_State *L = ctx->L;
   int var_index = readstat_variable_get_index(variable);
+  idx = var_index + 1;
+  if (ctx->fields) {
+    if (idx > AGN_MAXFIELDS) {
+      xfree(ctx->fields);
+      luaL_error(L, "Error in " LUA_QS ": column %d out-of-range.", "readstat.read", idx);
+    }
+    int pos = ctx->fields[idx - 1];
+    if (pos == 0) return READSTAT_HANDLER_OK;
+    idx = pos;
+  }
   luaL_checkstack(L, 4, "not enough stack space");
-  /* Get 'data' sub-table using your readable string label */
-  lua_pushstring(L, "data");
+  /* Get 'data' sub-table using readable string label */
+  lua_pushliteral(L, "data");
   lua_gettable(L, -2);
   lua_pushinteger(L, row_index + 1);
   lua_rawget(L, -2);
@@ -224,15 +303,15 @@ static int handle_value (int row_index, readstat_variable_t *variable, readstat_
     lua_pushvalue(L, -2);
     lua_rawset(L, -4);
   }
-  lua_pushinteger(L, var_index + 1);
+  lua_pushinteger(L, idx); // var_index + 1);
   readstat_type_t type = readstat_value_type(value);
   if (readstat_value_is_system_missing(value)) {
     lua_pushnil(L);
-  } else if (type == READSTAT_TYPE_STRING) {
+  } else if (type == READSTAT_TYPE_STRING || type == READSTAT_TYPE_STRING_REF) {  /* extended 7.12.10 */
     lua_pushstring(L, readstat_string_value(value));
   } else if (type == READSTAT_TYPE_DOUBLE || type == READSTAT_TYPE_FLOAT) {
     lua_pushnumber(L, readstat_double_value(value));
-  } else if (type == READSTAT_TYPE_INT32 || type == READSTAT_TYPE_INT16) {
+  } else if (type == READSTAT_TYPE_INT32 || type == READSTAT_TYPE_INT16 || type == READSTAT_TYPE_INT8) {  /* extended 7.12.10 */
     lua_pushinteger(L, readstat_int32_value(value));
   } else {
     lua_pushnil(L);
@@ -244,14 +323,16 @@ static int handle_value (int row_index, readstat_variable_t *variable, readstat_
 
 /* Main parsing wrapper: readstat.read("file.sav") */
 static int readstat_read (lua_State *L) {
+  int *fields, nargs = lua_gettop(L);
   const char *filename = luaL_checkstring(L, 1);
   if (!tools_exists(filename)) {
     luaL_error(L, "Error in " LUA_QS ": file does not exist or is inaccessible.", "readstat.read");
   }
+  fields = aux_checkreadoptions(L, 2, &nargs, "readstat.read");
   readstat_parser_t *parser = readstat_parser_init();
   readstat_set_metadata_handler(parser, &handle_metadata);
   readstat_set_variable_handler(parser, &handle_variable);
-  readstat_set_value_handler(parser, &handle_value);
+  readstat_set_value_handler(parser, &handle_data);
   readstat_set_value_label_handler(parser, &handle_value_label);
   /* Create master return table: data = [] */
   luaL_checkstack(L, 3, "not enough stack space");
@@ -268,9 +349,10 @@ static int readstat_read (lua_State *L) {
   lua_pushstring(L, "value_labels");
   lua_newtable(L);
   lua_settable(L, -3);
-  l_readstat_ctx_t ctx = { .L = L, .columns_count = 0 };
+  l_readstat_ctx_t ctx = { .L = L, .columns_count = 0, .fields = fields };
   readstat_error_t error = readstat_parse_sav(parser, filename, &ctx);
   readstat_parser_free(parser);
+  xfree(fields);
   if (error != READSTAT_OK) {
     lua_pushnil(L);
     lua_pushstring(L, readstat_error_message(error));
@@ -280,7 +362,7 @@ static int readstat_read (lua_State *L) {
 }
 
 
-/* Main writing wrapper: readstat.write("output.sav", data_table) */
+/* Main writing wrapper: readstat.save(data_table, "output.sav") */
 
 /* Callback: Low-level disk stream writer callback */
 
@@ -587,11 +669,138 @@ static int readstat_save (lua_State *L) {
 }
 
 
+/* ********************************************************************************************* */
+/* * The iterator, added 7.12.10, created by Gemini AI                                         * */
+/* ********************************************************************************************* */
+
+typedef struct {
+  lua_State *L;
+  int cells_idx;   /* Stack index of the flat 1D Lua table holding all cell strings */
+  int col_count;
+  int max_cell;
+} l_flat_ctx_t;
+
+/* Callback 1: Determine total number of columns */
+static int iter_handle_variable (int index, readstat_variable_t *variable,
+                                 const char *val_labels, void *user_ctx) {
+  l_flat_ctx_t *ctx = (l_flat_ctx_t *)user_ctx;
+  if (index >= ctx->col_count) {
+    ctx->col_count = index + 1;
+  }
+  return READSTAT_HANDLER_OK;
+}
+
+static int iter_handle_data (int row_index, readstat_variable_t *variable,
+                             readstat_value_t value, void *user_ctx) {
+  l_flat_ctx_t *ctx = (l_flat_ctx_t *)user_ctx;
+  lua_State *L = ctx->L;
+  int var_index = readstat_variable_get_index(variable);
+  if (row_index < 0 || var_index < 0 || ctx->col_count <= 0) {
+    return READSTAT_HANDLER_OK;
+  }
+  /* Always update max_cell first so trailing empty cells in the last row don't truncate row_count */
+  int flat_idx = (row_index * ctx->col_count) + var_index + 1;
+  if (flat_idx > ctx->max_cell) {
+    ctx->max_cell = flat_idx;
+  }
+  if (readstat_value_is_system_missing(value)) {
+    return READSTAT_HANDLER_OK;
+  }
+  readstat_type_t type = readstat_value_type(value);
+  if (type == READSTAT_TYPE_STRING || type == READSTAT_TYPE_STRING_REF) {
+    const char *raw = readstat_string_value(value);
+    const char *p = raw;
+    /* Skip leading whitespace to detect empty or space-padded SPSS strings */
+    while (p && (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n')) p++;
+    if (!p || *p == '\0') {
+      return READSTAT_HANDLER_OK; /* Whitespace-only or empty -> leave hole */
+    }
+    lua_pushinteger(L, flat_idx);
+    lua_pushstring(L, raw);
+    lua_rawset(L, ctx->cells_idx);
+  } else if (type == READSTAT_TYPE_DOUBLE || type == READSTAT_TYPE_FLOAT) {
+    lua_pushinteger(L, flat_idx);
+    lua_pushnumber(L, readstat_double_value(value));
+    lua_rawset(L, ctx->cells_idx);
+  } else if (type == READSTAT_TYPE_INT32 || type == READSTAT_TYPE_INT16 || type == READSTAT_TYPE_INT8) {
+    lua_pushinteger(L, flat_idx);
+    lua_pushinteger(L, readstat_int32_value(value));
+    lua_rawset(L, ctx->cells_idx);
+  }
+  return READSTAT_HANDLER_OK;
+}
+
+/* Iterator closure: builds one sparse row table with holes for nil cells */
+static int iter (lua_State *L) {
+  int col_count   = (int)lua_tointeger(L, lua_upvalueindex(2));
+  int row_count   = (int)lua_tointeger(L, lua_upvalueindex(3));
+  int current_row = (int)lua_tointeger(L, lua_upvalueindex(4));
+  if (current_row >= row_count || col_count <= 0) {  /* End of rows -> returns null */
+    lua_pushnil(L);
+    return 1;
+  }
+  lua_pushinteger(L, current_row + 1);
+  lua_replace(L, lua_upvalueindex(4));
+  lua_createtable(L, col_count, 0);
+  int c, base = current_row * col_count;
+  for (c=1; c <= col_count; c++) {
+    lua_rawgeti(L, lua_upvalueindex(1), base + c);
+    if (lua_isnil(L, -1)) {
+      lua_pop(L, 1); /* Leave hole at key c */
+    } else {
+      lua_rawseti(L, -2, c);
+    }
+  }
+  return 1;
+}
+
+/* Factory: f := readstat.iterate("file.sav") */
+static int readstat_iterate (lua_State *L) {
+  const char *filename = luaL_checkstring(L, 1);
+  if (!tools_exists(filename)) {
+    luaL_error(L, "Error in " LUA_QS ": file does not exist or is inaccessible.", "readstat.iterate");
+    return 0;
+  }
+  /* 1. Create the table ONCE (sits at stack slot 2) */
+  lua_newtable(L);
+  int cells_idx = lua_gettop(L);
+  l_flat_ctx_t ctx = {
+    .L = L,
+    .cells_idx = cells_idx,
+    .col_count = 0,
+    .max_cell = 0
+  };
+  readstat_parser_t *parser = readstat_parser_init();
+  if (!parser) {
+    luaL_error(L, "Error in " LUA_QS ": failed to initialise parser.", "readstat.iterate");
+    return 0;
+  }
+  readstat_set_variable_handler(parser, &iter_handle_variable);
+  readstat_set_value_handler(parser, &iter_handle_data);
+  readstat_error_t error = readstat_parse_sav(parser, filename, &ctx);
+  readstat_parser_free(parser);
+  if (error != READSTAT_OK) {
+    luaL_error(L, "Error in " LUA_QS ": got readstat error %s.", "readstat.iterate", 
+      readstat_error_message(error));
+    return 0;
+  }
+  int row_count = (ctx.col_count > 0) ? (ctx.max_cell / ctx.col_count) : 0;
+  /* 2. Push the 3 numbers on top of the table (slots 3, 4, 5) */
+  lua_pushinteger(L, ctx.col_count);
+  lua_pushinteger(L, row_count);
+  lua_pushinteger(L, 0);
+  /* 3. Consume slots 2, 3, 4, 5 (table + 3 numbers) and return the iterator */
+  lua_pushcclosure(L, iter, 4);
+  return 1;
+}
+
+
 /* Register the module functions for Lua 5.1 / Agena core */
 static const struct luaL_Reg readstat_funcs[] = {
-  {"read",  readstat_read},
-  {"save",  readstat_save},
-  {NULL,    NULL}
+  {"iterate", readstat_iterate},
+  {"read",    readstat_read},
+  {"save",    readstat_save},
+  {NULL,      NULL}
 };
 
 int luaopen_readstat(lua_State *L) {

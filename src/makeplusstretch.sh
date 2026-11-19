@@ -17,7 +17,7 @@ export EXPORTTO="../lib"
 
 # delete *.o files not deleted by make clean
 for i in abci.o ads.o aspell.o astro.o charbuf.o com.o cordic.o curses.o \
-    ddhash.o  dcastro.o double.o fastmath.o fractals.o gmp.o iconv.o \
+    dcastro.o double.o fastmath.o fractals.o gmp.o iconv.o \
     interp.o luasys.o miniz.o minizip.o moon.o mpfr.o net.o phones.o \
     phq.o readstat.o skycrane.o sqlite.o sqlite3.o strhash.o sunriset.o \
     strmap.o testlib.o xls.o zx.o
@@ -84,12 +84,6 @@ strip curses.so
 mv -f curses.so $EXPORTTO
 printf "done.\n"
 
-printf "Compiling ddhash ... "
-gcc $OPTIONS -o ddhash.so ddhash.c
-strip ddhash.so
-mv -f ddhash.so $EXPORTTO
-printf "done.\n"
-
 printf "Compiling double ... "
 gcc $OPTIONS -o double.so double.c
 strip double.so
@@ -130,6 +124,12 @@ printf "Compiling minizip ... "
 gcc $OPTIONS -o minizip.so minizip.c miniz.c -lagena
 strip minizip.so
 mv -f minizip.so $EXPORTTO
+printf "done.\n"
+
+printf "Compiling mpfr ... "
+gcc $OPTIONS -o mpfr.so mpfr.c -lmpfr -lgmp
+strip mpfr.so
+mv -f mpfr.so $EXPORTTO
 printf "done.\n"
 
 printf "Compiling net ... "
