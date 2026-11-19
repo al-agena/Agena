@@ -3627,6 +3627,7 @@
       <KEYWORD3>phones.soundex</KEYWORD3>
       <KEYWORD3>phones.vowelsymbol</KEYWORD3>
       <KEYWORD3>readstat.fillmissing</KEYWORD3>
+      <KEYWORD3>readstat.iterate</KEYWORD3>
       <KEYWORD3>readstat.read</KEYWORD3>
       <KEYWORD3>readstat.save</KEYWORD3>
       <KEYWORD3>xls.dims</KEYWORD3>

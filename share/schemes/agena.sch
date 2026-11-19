@@ -803,7 +803,7 @@ object TPersHolder
           FontID = 7
           Name = 'readstat'
           Keywords =
-            'readstat,fillmissing,read,save'
+            'readstat,fillmissing,iterate,read,save'
         end
         item
           FontID = 7

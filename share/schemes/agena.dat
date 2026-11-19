@@ -3644,6 +3644,7 @@ phones.setphonetiqs
 phones.soundex
 phones.vowelsymbol
 readstat.fillmissing
+readstat.iterate
 readstat.read
 readstat.save
 xls.dims
