@@ -38,11 +38,11 @@
   > values([10, 20, 30, 40, 50], 3, 1, 5, order = true):
   [30, 10, 50]
 
-- Agena for DOS only: 
+- Agena for DOS only:
 
-  • The `readstat` package is now fully supported.
+  • The `readstat` and `xls` packages are now fully supported.
 
-  • Increased the default executable stack size from 512 KB to 2048 KB to prevent stack overflows and DPMI crashes 
+  • Increased the default executable stack size from 512 KB to 2048 KB to prevent stack overflows and DPMI crashes
     when using deeply nested calls or external libraries such as `readstat` or `iconv`.
 
 
