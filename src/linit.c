@@ -106,12 +106,12 @@ static const luaL_Reg lualibs[] = {
   {AGENA_IVALLIBNAME, luaopen_ival},          /* 5.0.0 */
   {AGENA_SQLITELIBNAME, luaopen_sqlite},      /* 5.2.1 */
   {AGENA_READSTATLIBNAME, luaopen_readstat},  /* 7.12.4 */
+  {AGENA_XLSLIBNAME, luaopen_xls},            /* 7.12.8 */
 #endif
 #if defined(__OS2__)
   {AGENA_ASPELLLIBNAME, luaopen_aspell},      /* 7.11.1 ArcaOS */
   {AGENA_GDILIBNAME, luaopen_gdi},            /* 2.21.11 ArcaOS */
   {AGENA_NETLIBNAME, luaopen_net},            /* 2.21.11 ArcaOS */
-  {AGENA_XLSLIBNAME, luaopen_xls},            /* 7.12.8 */
 #endif
   {NULL, NULL}
 };
