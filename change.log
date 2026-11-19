@@ -1,6 +1,6 @@
 7.12.10 Kerberos, November 19, 2026
 
-- New `readstat.iterate` creates an iterator that traverses SPSS Statistics Data files files row by row. Example:
+- New `readstat.iterate` creates an iterator that traverses SPSS Statistics Data files row by row. Example:
 
   > import readstat;
 
@@ -12,7 +12,7 @@
   > f():
   [1, 1, 4, 1, 1]
 
-- With `readstat.read`, you can extract specific fields by passing the new 'fields' option along with a table of field 
+- With `readstat.read`, you can extract specific fields by passing the new 'fields' option along with a table of field
   positions. Example to extract columns 3, 1 and 2, in this order:
 
   > readstat.read('antarct.sav', fields = [3, 1, 2]):
@@ -37,6 +37,13 @@
 
   > values([10, 20, 30, 40, 50], 3, 1, 5, order = true):
   [30, 10, 50]
+
+- Agena for DOS only: 
+
+  • The `readstat` package is now fully supported.
+
+  • Increased the default executable stack size from 512 KB to 2048 KB to prevent stack overflows and DPMI crashes 
+    when using deeply nested calls or external libraries such as `readstat` or `iconv`.
 
 
 7.12.9 Kerberos, November 17, 2026
