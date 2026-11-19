@@ -1,3 +1,44 @@
+7.12.10 Kerberos, November 19, 2026
+
+- New `readstat.iterate` creates an iterator that traverses SPSS Statistics Data files files row by row. Example:
+
+  > import readstat;
+
+  > f := readstat.iterate('hotel.sav');
+
+  > f():
+  [4, 2, 3, 4, 1]
+
+  > f():
+  [1, 1, 4, 1, 1]
+
+- With `readstat.read`, you can extract specific fields by passing the new 'fields' option along with a table of field 
+  positions. Example to extract columns 3, 1 and 2, in this order:
+
+  > readstat.read('antarct.sav', fields = [3, 1, 2]):
+
+- If you pass the new 'fields' option along with a table of field positions to `xls.iterate`, then the resulting iterator
+  will only extract the given fields from an Excel file, in the order given by the user.
+
+  > import xls;
+
+  > f := xls.iterate('antarct.xls', fields = [3, 1, 2])
+
+  > f():
+  ['City/Station', 'Country', 'State']
+
+- If you pass a table and the new `order` option as the last argument to `values`, the resulting table will not include any
+  hole and the table values will be returned in the order given by the user. Compare:
+
+  > values([10, 20, 30, 40, 50], 3, 1, 5):
+  [1 ~ 10, 3 ~ 30, 5 ~ 50]
+
+  versus
+
+  > values([10, 20, 30, 40, 50], 3, 1, 5, order = true):
+  [30, 10, 50]
+
+
 7.12.9 Kerberos, November 17, 2026
 
 - New `xls.iterate` creates an iterator that traverses legacy BIFF8 .xls or modern OOXML .xlsx files row by row. Example:
@@ -15,7 +56,7 @@
 - With `xls.read`, you can extract specific fields by passing the new 'fields' option along with a table of integers. Example to extract
   columns 3, 1 and 2, in this order:
 
-  > xls.read('../testall/antarct.xlsx', fields=[3, 1, 2]):
+  > xls.read('antarct.xlsx', fields=[3, 1, 2]):
 
 - On Windows 7 and 8.1, both 64-bit, `xls.read`, `xls.sheets` and `xls.dim` may have printed `creation of UTF-8 locale failed` warning messages
   at stderr. This has been fixed.
