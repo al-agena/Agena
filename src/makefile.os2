@@ -1,6 +1,12 @@
 # makefile for building Agena in OS/2 with Paul Smedly's GCC 9.2.0 or higher
 # It has been created with the help of Gemini AI on April 08, 2026.
 
+# For dependencies, use the graphical tool pmdll, do not use chkdll32 as this might corrupt .dll files. Check both
+# agena.exe and agena.dll, readln?.dll, tinfo?.dll:
+# pmdll agena.exe
+# pmdll agena.dll
+# etc.
+
 # Rename this file from `makefile.os2` to `makefile` and then compile Agena in the
 # src directory with the following two statements (make -f makefile.os2 will not work !):
 #      del *.o
