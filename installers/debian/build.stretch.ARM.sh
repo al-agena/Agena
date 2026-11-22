@@ -2,7 +2,7 @@
 
 # 1. Configuration
 set -e
-export AGENAVER="7.12.9"
+export AGENAVER="7.12.11"
 export BUILD_USER="pi"
 export AGENAHOME="/home/$BUILD_USER/agena"
 
