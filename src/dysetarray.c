@@ -5,7 +5,6 @@
 ** Created mostly by Gemini AI.
 */
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

@@ -9,7 +9,17 @@
  *
  * Overview:
  *   This module implements a two-tier data structure designed to map non-negative
- *   0-based sparse indices to ordered singly-linked lists of (key, value) integer pairs.
+ *   0-based sparse indices to ordered singly-linked lists of (key, value) integer pairs:
+ *
+ *    [0] ------- [1] ------- [9] -------- [11] ------ NULL
+ *     |           |           |            |
+ *    10 - 11     10- 11      900 - 901    111 - 112
+ *     |           |           |            |
+ *    30 - 31     30 - 32     NULL         ...
+ *     |           |
+ *    20 - 20     NULL
+ *     |
+ *   NULL
  *
  * Architecture & Behavior:
  *   - Sparse Indexing: Rather than allocating empty slots for unused indices, active
@@ -35,14 +45,14 @@ typedef struct Node {
 } Node;
 
 typedef struct {
-  size_t index;   // The logical sparse index (e.g., 1, 2, 5000)
-  Node *head;     // Head of the singly-linked list for this index
+  size_t index;   /* The logical sparse index (e.g., 1, 2, 5000) */
+  Node *head;     /* Head of the singly-linked list for this index */
 } Bucket;
 
 typedef struct {
-  Bucket *buckets; // Sorted dynamic array of active buckets
-  size_t count;    // Number of active indices currently stored
-  size_t capacity; // Allocated capacity of `buckets`
+  Bucket *buckets;  /* Sorted dynamic array of active buckets */
+  size_t count;     /* Number of active indices currently stored */
+  size_t capacity;  /* Allocated capacity of `buckets` */
 } DynamicSetArray;
 
 /* Lifecycle */

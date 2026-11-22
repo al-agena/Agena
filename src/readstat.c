@@ -415,7 +415,7 @@ static int aux_checksaveoptions (lua_State *L, int pos, int *nargs, readstat_com
     agn_pairgetiall(L, *nargs);  /* get left, right value, set to stack index -2, -1, 7.7.8 */
     if (agn_isstring(L, -2)) {
       const char *option = agn_tostring(L, -2);
-      if (tools_streq(option, "compression")) {
+      if (tools_streqx(option, "compression", "compress", NULL)) {  /* 7.12.12 "compress" extension */
         const char *comp = agn_checkstring(L, -1);
         if (tools_streq(comp, "none")) {
           *compression = READSTAT_COMPRESS_NONE;  /* no compression */
