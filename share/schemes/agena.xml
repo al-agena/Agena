@@ -3630,6 +3630,7 @@
       <KEYWORD3>readstat.iterate</KEYWORD3>
       <KEYWORD3>readstat.read</KEYWORD3>
       <KEYWORD3>readstat.save</KEYWORD3>
+      <KEYWORD3>readstat.write</KEYWORD3>
       <KEYWORD3>xls.dims</KEYWORD3>
       <KEYWORD3>xls.iterate</KEYWORD3>
       <KEYWORD3>xls.read</KEYWORD3>

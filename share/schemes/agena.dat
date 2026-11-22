@@ -3647,6 +3647,7 @@ readstat.fillmissing
 readstat.iterate
 readstat.read
 readstat.save
+readstat.write
 xls.dims
 xls.iterate
 xls.read
