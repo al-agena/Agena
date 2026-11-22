@@ -29,3 +29,52 @@ procedure readstat.fillmissing(dataset, numericfill, stringfill) is
    return dataset
 end;
 
+
+procedure readstat.save(obj :: table, ?) is  # new 7.12.11
+   if tables.isrectangular(obj) then
+      local L := [];
+      L.data := obj;
+      return procname(L, op(?))
+   fi;
+   if unassigned obj.data then
+      error('Error in `readstat.save`: table does not have a `data` field.')
+   fi;
+   local rc, rows, cols := tables.isrectangular(obj.data);
+   if not rc then
+      error('Error in `readstat.save`: `data` field is corrupt.')
+   fi;
+   if unassigned obj.variables then
+      local types := tables.col(obj.data, 'types');
+      local L := [];
+      for c to size types do
+         local coldata, spsstype, format := types[c];
+         if size coldata <> 1 then
+            error('Error in `readstat.save`: `data` field contains a column of mixed types.')
+         fi;
+         coldata := op(coldata);  # unpack pair from set
+         case left coldata
+            of number then
+               spsstype := 'numeric';
+               format := if right coldata = 0 then 'F8.0' else 'F12.6' fi
+            of string then
+               spsstype := 'string';
+               format := 'A' & max(1, right coldata)  # 'A0' for an empty string is invalid, 'A1' is valid.
+            of boolean then
+               for r to rows do  # replace every Boolean with 0 or 1 in-place
+                  if obj.data[r, c] :: boolean then
+                     obj.data[r, c] := abs obj.data[r, c]
+                  fi
+               od;
+               spsstype := 'numeric';
+               format := 'F8.0'
+            else
+               error('Error in `readstat.save`: `data` field has data of type ' & left coldata & '.')
+            esle
+         esac;
+         insert ['name' ~ 'v' & c, 'type' ~ spsstype, 'format' ~ format] into L
+      od;
+      obj.variables := L
+   fi;
+   return readstat.write(obj, op(?))
+end;
+
