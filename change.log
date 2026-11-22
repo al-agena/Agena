@@ -1,3 +1,60 @@
+7.12.11 Kerberos, November 21, 2026
+
+- `readstat.save` has been renamed to `readstat.write` and its new substitute is a wrapper written in the Agena language 
+  around the latter function. It augments the input structure if mandatory metadata is missing. It also allows for a 
+  simple 2-dimensional rectangular table with numbers or strings, with Booleans automatically converted to zeros and
+  ones:
+  
+  > import readstat;
+
+  > L := [
+  >    [4, 3,  'abc',  1, true],
+  >    [1, 4,  'def',  1, true],
+  >    [4, Pi, 'ghij', 0, false]
+  > ];
+
+  > readstat.save(L, 'mydata.sav')
+
+  The new `readstat.save` wrapper is fully compatible to the former version so you do not have to change your code.
+
+- Strings are now correctly written to SPSS Statistics Data Files, they are no longer scrambled.
+
+- Streamlined internal `readstat` functions to properly recognise signed 8-bit integers in read operations.
+
+- Extended `tables.col`: When given the string 'types' as the very last argument, the function collects type information 
+  about the values in the columns of a rectangular 2-dimensional table. You can examine one or more specific columns or 
+  all of them. Consider this rectangular table:
+
+  > L := [
+  >    [4, 3, '4',  1],
+  >    [1, 4, '10', 1],
+  >    [4, Pi, '3', 'agena']
+  > ]
+
+  To check all columns, execute:
+
+  > tables.col(L, 'types'):
+  [{number:0}, {number:1}, {string:2}, {number:0, string:5}]
+
+  From left to right, {number:0} indicates that all the values in column #1 are integers, {number:1} indicates that all 
+  the values in column #2 are numbers with at least one being fractional, {string:2} indicates that all the values in 
+  column #3 are strings with a maximum length of 2, and {number:0, string:5} means that column #4 has both integers 
+  and strings, the latter with a maximum length of 5.
+
+  To examine columns 2 and 4 only, issue:
+
+  > tables.col(L, 2, 4, 'types'):
+  [{number:1}, {number:0, string:5}]  
+
+- If you pass any second argument to `tables.getdim`, then the function will return `null` instead of throwing an error
+  with a corrupt input table.
+
+- `tables.issquare` and `tables.isrectangular` returned `true` with an empty table array. This has been fixed.
+
+- The OS/2 dependencies have been re-examined, with required .dll files added to the WarpIN installer and unnecessary ones 
+  removed.
+
+
 7.12.10 Kerberos, November 19, 2026
 
 - New `readstat.iterate` creates an iterator that traverses SPSS Statistics Data files row by row. Example:
