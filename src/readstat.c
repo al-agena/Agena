@@ -1,6 +1,6 @@
 /*
 ** $Id: readstat.c, initiated November 04, 2026 $
-** SPSS sav readstat binding
+** readstat binding for .sav SPSS Statistics Data Files
 ** See Copyright Notice in agena.h
 ** Created mostly by Gemini AI.
 */
@@ -182,10 +182,13 @@ static int handle_variable (int index, readstat_variable_t *variable,
   lua_settable(L, -3);
   /* 3. Variable Value Type */
   lua_pushstring(L, "type");
-  if (var_type == READSTAT_TYPE_STRING) {
+  /* READSTAT_TYPE_STRING_REF represents the variable-size string type in Stata files which are not read here.
+     Just included in case the package is extended in the future. Extended 7.12.11. */
+  if (var_type == READSTAT_TYPE_STRING || var_type == READSTAT_TYPE_STRING_REF) {
     lua_pushstring(L, "string");
   } else if (var_type == READSTAT_TYPE_DOUBLE || var_type == READSTAT_TYPE_FLOAT ||
-         var_type == READSTAT_TYPE_INT32  || var_type == READSTAT_TYPE_INT16) {
+             var_type == READSTAT_TYPE_INT32  || var_type == READSTAT_TYPE_INT16 ||
+             var_type == READSTAT_TYPE_INT8) {  /* added 7.12.11 */
     lua_pushstring(L, "numeric");
   } else {
     lua_pushstring(L, "unknown");
@@ -260,9 +263,10 @@ static int handle_value_label (const char *val_labels, readstat_value_t value,
     lua_rawset(L, -4);
   }
   readstat_type_t type = readstat_value_type(value);
-  if (type == READSTAT_TYPE_STRING) {
+  if (type == READSTAT_TYPE_STRING || type == READSTAT_TYPE_STRING_REF) {  /* added 7.12.11 */
     lua_pushstring(L, readstat_string_value(value));
-  } else if (type == READSTAT_TYPE_INT32 || type == READSTAT_TYPE_INT16) {
+  } else if (type == READSTAT_TYPE_INT32 || type == READSTAT_TYPE_INT16 ||
+             type == READSTAT_TYPE_INT8) {  /* added 7.12.11 */
     lua_pushinteger(L, readstat_int32_value(value));
   } else {
     lua_pushnumber(L, readstat_double_value(value));
@@ -303,7 +307,7 @@ static int handle_data (int row_index, readstat_variable_t *variable, readstat_v
     lua_pushvalue(L, -2);
     lua_rawset(L, -4);
   }
-  lua_pushinteger(L, idx); // var_index + 1);
+  lua_pushinteger(L, idx);
   readstat_type_t type = readstat_value_type(value);
   if (readstat_value_is_system_missing(value)) {
     lua_pushnil(L);
@@ -434,15 +438,15 @@ static int aux_checksaveoptions (lua_State *L, int pos, int *nargs, readstat_com
   return rc;
 }
 
-static int readstat_save (lua_State *L) {
+static int readstat_write (lua_State *L) {
   const char *filename = luaL_checkstring(L, 2);
   luaL_checktype(L, 1, LUA_TTABLE);  /* Ensure parameter 2 is the data table */
   int nargs = lua_gettop(L);
   readstat_compress_t compression = READSTAT_COMPRESS_ROWS;
-  aux_checksaveoptions(L, 3, &nargs, &compression, "readstat.save");
+  aux_checksaveoptions(L, 3, &nargs, &compression, "readstat.write");
   FILE *f = fopen(filename, "wb");
   if (!f) {
-    luaL_error(L, "Error in " LUA_QS ": cannot open output file for writing.", "readstat.save");
+    luaL_error(L, "Error in " LUA_QS ": cannot open output file for writing.", "readstat.write");
     return 1;
   }
   readstat_writer_t *writer = readstat_writer_init();
@@ -456,16 +460,18 @@ static int readstat_save (lua_State *L) {
   lua_pushstring(L, "variables");
   lua_gettable(L, 1);  /* Get data.variables table */
   int var_count = 0;
-  if (lua_istable(L, -1)) {
+  if (!lua_istable(L, -1)) {  /* 7.12.11 */
+    luaL_error(L, "Error in " LUA_QS ": input table is missing the " LUA_QS " field.", "readstat.write", "variables");
+  } else {
     var_count = lua_rawlen(L, -1);
     if (var_count > 1000) {  /* Hard boundary safety check */
       readstat_writer_free(writer);
       fclose(f);
-      luaL_error(L, "Error in " LUA_QS ": only 1,000 columns allowed, got %d.", "readstat.save", var_count);
+      luaL_error(L, "Error in " LUA_QS ": only 1,000 columns allowed, got %d.", "readstat.write", var_count);
       return 1;
     }
     int i;
-    for (i=1; i <= var_count; i++) {
+    for (i = 1; i <= var_count; i++) {
       lua_rawgeti(L, -1, i);  /* Get variable properties table */
       if (lua_istable(L, -1)) {
         /* 1.1 Get name */
@@ -473,50 +479,79 @@ static int readstat_save (lua_State *L) {
         lua_gettable(L, -2);
         const char *v_name = lua_tostring(L, -1);
         lua_pop(L, 1);
+
         /* 1.2 Get type */
         lua_pushstring(L, "type");
         lua_gettable(L, -2);
         const char *v_type = lua_tostring(L, -1);
         lua_pop(L, 1);
+
         /* 1.3 Get label */
         lua_pushstring(L, "label");
         lua_gettable(L, -2);
         const char *v_label = lua_tostring(L, -1);
         lua_pop(L, 1);
+
         /* 1.4 Get categories string name */
         lua_pushstring(L, "value_labels");
         lua_gettable(L, -2);
         const char *v_cats = lua_tostring(L, -1);
         if (v_cats) {
           strncpy(variable_categories[i - 1], v_cats, 255);
+          variable_categories[i - 1][255] = '\0';
         }
         lua_pop(L, 1);
+
+        /* 1.5 Get display format BEFORE readstat_add_variable */
+        lua_pushstring(L, "format");
+        lua_gettable(L, -2);
+        const char *v_format = lua_tostring(L, -1);
+        lua_pop(L, 1);
+
         readstat_type_t rs_type = READSTAT_TYPE_DOUBLE;
+        size_t storage_width = 0;
+
         if (v_type && strcmp(v_type, "string") == 0) {
           rs_type = READSTAT_TYPE_STRING;
+
+          /* Parse byte width from SPSS string format like "A4" -> 4 */
+          if (v_format && (v_format[0] == 'A' || v_format[0] == 'a') && v_format[1] != '\0') {
+            long parsed = strtol(v_format + 1, NULL, 10);
+            if (parsed > 0) {
+              storage_width = (size_t)parsed;
+            }
+          }
+          /* Fallback if no valid "A#" format was provided */
+          if (storage_width == 0) {
+            storage_width = 255;
+          }
         }
-        /* Register variable pointer into tracking list */
-        variables_list[i - 1] = readstat_add_variable(writer, v_name ? v_name : "UNKNOWN", rs_type, 0);
+
+        /* Register variable pointer into tracking list with proper storage_width */
+        variables_list[i - 1] = readstat_add_variable(
+            writer,
+            v_name ? v_name : "UNKNOWN",
+            rs_type,
+            storage_width
+        );
+
         if (variables_list[i - 1]) {
           if (v_label) {
             readstat_variable_set_label(variables_list[i - 1], v_label);
           }
-          /* Set display format if present, otherwise fallback to F8.4 for numeric */
-          int has_format = 0;
-          lua_pushstring(L, "format");
-          lua_gettable(L, -2);
-          if (lua_isstring(L, -1)) {
-            const char *fmt = lua_tostring(L, -1);
-            if (fmt && fmt[0] != '\0') {
-              readstat_variable_set_format(variables_list[i - 1], fmt);
-              has_format = 1;
-            }
-          }
-          lua_pop(L, 1);
-          if (!has_format && rs_type == READSTAT_TYPE_DOUBLE) {
+
+          /* Set display format if present, otherwise assign a valid default */
+          if (v_format && v_format[0] != '\0') {
+            readstat_variable_set_format(variables_list[i - 1], v_format);
+          } else if (rs_type == READSTAT_TYPE_DOUBLE) {
             readstat_variable_set_format(variables_list[i - 1], "F8.4");
+          } else if (rs_type == READSTAT_TYPE_STRING) {
+            char default_fmt[32];
+            snprintf(default_fmt, sizeof(default_fmt), "A%zu", storage_width);
+            readstat_variable_set_format(variables_list[i - 1], default_fmt);
           }
-          /* 1.5 WRITE BACK MISSING VALUES RULES (New Section) */
+
+          /* 1.6 WRITE BACK MISSING VALUES RULES */
           lua_pushstring(L, "missing_rules");
           lua_gettable(L, -2);
           if (lua_istable(L, -1)) {
@@ -624,13 +659,15 @@ static int readstat_save (lua_State *L) {
   lua_pushstring(L, "data");
   lua_gettable(L, 1);  /* Get data.rows table */
   int row_count = 0;
-  if (lua_istable(L, -1)) {
+  if (!lua_istable(L, -1)) {  /* 7.12.11 */
+    luaL_error(L, "Error in " LUA_QS ": input table is missing the " LUA_QS " field.", "readstat.write", "data");
+  } else {
     row_count = lua_rawlen(L, -1);
   }
   readstat_writer_set_compression(writer, compression);  /* 7.12.7 */
   readstat_error_t error = readstat_begin_writing_sav(writer, f, row_count);
   if (error == READSTAT_OK && row_count > 0) {
-    /* --- PHASE 4: ITERATE ROWS AND WRITE CELL VALUES --- */
+    /* --- PHASE 4: ITERATE ROWS AND WRITE CELL VALUES ---, fixed 7.12.11 to properly write strings */
     int r;
     for (r=1; r <= row_count; r++) {
       lua_rawgeti(L, -1, r);
@@ -780,7 +817,7 @@ static int readstat_iterate (lua_State *L) {
   readstat_error_t error = readstat_parse_sav(parser, filename, &ctx);
   readstat_parser_free(parser);
   if (error != READSTAT_OK) {
-    luaL_error(L, "Error in " LUA_QS ": got readstat error %s.", "readstat.iterate", 
+    luaL_error(L, "Error in " LUA_QS ": got readstat error %s.", "readstat.iterate",
       readstat_error_message(error));
     return 0;
   }
@@ -799,7 +836,7 @@ static int readstat_iterate (lua_State *L) {
 static const struct luaL_Reg readstat_funcs[] = {
   {"iterate", readstat_iterate},
   {"read",    readstat_read},
-  {"save",    readstat_save},
+  {"write",   readstat_write},
   {NULL,      NULL}
 };
 

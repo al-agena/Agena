@@ -78,7 +78,7 @@ LIB_O=  agnxlib.o mybuffer.o lbaselib.o ldblib.o liolib.o lmathlib.o loslib.o lt
 	vecint.o bloom.o bimaps.o fzy.o jbmath.o ival.o miniz.o minizip.o fifo.o lifo.o trie.o ints.o \
 	dblhash.o numcuckoo.o numfilter.o dcastro.o dd.o ddmath.o getaddrinfo.o pbl.o pblhash.o pblkf.o \
 	keyfile.o abci.o strhash.o strmap.o intmap.o uintmap.o dblmap.o iniparse.o divsufsort.o sssort.o \
-	trsort.o suffix.o binpack.o phones.o readstat.o
+	trsort.o suffix.o binpack.o phones.o readstat.o dysetarray.o
 
 LUA_T=  agena.exe
 LUA_O=  agena.o
@@ -231,6 +231,7 @@ agnt64.o: agnt64.c agnt64_l.h agnt64_c.h
 iniparse.o: iniparse.c iniparse.h
 intvec.o:	intvec.c intvec.h agnhlps.h
 dblvec.o:	dblvec.c dblvec.h agnhlps.h
+dysetarray.o:	dysetarray.c dysetarray.h
 vecoff64.o: vecoff64.c vecoff64.h agnhlps.h agncmpt.h
 charbuf.o:	charbuf.c charbuf.h agnhlps.h
 sofa.o: sofa.c sofa.h

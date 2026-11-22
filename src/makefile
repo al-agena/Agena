@@ -89,7 +89,7 @@ LIB_O= agnxlib.o mybuffer.o lbaselib.o ldblib.o liolib.o lmathlib.o loslib.o \
   sema.o semalib.o vecint.o jbmath.o trie.o regex.o regex_f.o regexcom.o hashes.o \
   bloom.o cuckoo.o fifo.o lifo.o rbtree.o clock.o bimaps.o heaps.o dblhash.o \
   numcuckoo.o numfilter.o dd.o ddmath.o network.o uintmap.o intmap.o dblmap.o \
-  suffix.o divsufsort.o sssort.o trsort.o
+  suffix.o divsufsort.o sssort.o trsort.o dysetarray.o
 
 LUA_T= agena
 LUA_O= agena.o
@@ -401,6 +401,7 @@ sofa.o: sofa.c sofa.h
 sdncal.o: sdncal.c sdncal.h
 intvec.o:	intvec.c intvec.h agnhlps.h
 dblvec.o:	dblvec.c dblvec.h agnhlps.h
+dysetarray.o:	dysetarray.c dysetarray.h
 charbuf.o:	charbuf.c charbuf.h
 iniparse.o:	iniparse.c iniparse.h
 lset.o: lset.c agena.h ldebug.h lstate.h lobject.h \

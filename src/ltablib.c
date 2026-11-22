@@ -15,6 +15,7 @@
 
 #include "agenalib.h"
 #include "agnxlib.h"
+#include "dysetarray.h"
 #include "linalg.h"
 #include "lopcodes.h"
 
@@ -565,14 +566,19 @@ static int aux_getdim (lua_State *L, int idx, int *rows, int *cols) {
 }
 
 static int tbl_getdim (lua_State *L) {  /* 3.17.8 */
-  int rows, cols;
-  if (aux_getdim(L, 1, &rows, &cols)) {
+  int rows, cols, nooption, rc;
+  nooption = lua_gettop(L) == 1;
+  rc = aux_getdim(L, 1, &rows, &cols);
+  if (nooption && rc) {
     luaL_error(L, "Error in " LUA_QS ": table is not 2-dimensional.", "tables.getdim");
+  } else if (rc) {
+    lua_pushnil(L);
+  } else {
+    luaL_checkstack(L, 2, "not enough stack space");
+    lua_pushinteger(L, rows);
+    lua_pushinteger(L, cols);
   }
-  luaL_checkstack(L, 2, "not enough stack space");
-  lua_pushinteger(L, rows);
-  lua_pushinteger(L, cols);
-  return 2;
+  return 1 + (rc == 0);
 }
 
 
@@ -585,7 +591,7 @@ static int tbl_issquare (lua_State *L) {
   rc = aux_getdim(L, 1, &rows, &cols);
   nrets = 1 + 2*(rc == 0);
   luaL_checkstack(L, nrets, "not enough stack space");
-  lua_pushboolean(L, rc == 0 && rows == cols);
+  lua_pushboolean(L, rc == 0 && rows != 0 && rows == cols);  /* 7.12.11 fix */
   if (!rc) {
     lua_pushinteger(L, rows);
     lua_pushinteger(L, cols);
@@ -602,7 +608,7 @@ static int tbl_isrectangular (lua_State *L) {
   rc = aux_getdim(L, 1, &rows, &cols);
   nrets = 1 + 2*(rc == 0);
   luaL_checkstack(L, nrets, "not enough stack space");
-  lua_pushboolean(L, rc == 0);
+  lua_pushboolean(L, rc == 0 && rows != 0);  /* 7.12.11 fix */
   if (!rc) {
     lua_pushinteger(L, rows);
     lua_pushinteger(L, cols);
@@ -833,10 +839,12 @@ static int tbl_swapcol (lua_State *L) {
 
 
 static int tbl_col (lua_State *L) {  /* 7.3.7 */
-  int i, j, c, l, u, m, n, idx, nargs, ncols;
+  int i, j, c, l, u, m, n, idx, nargs, ncols, gettype;
   luaL_checkany(L, 2);
   nargs = lua_gettop(L);
   m = n = ncols = 0;
+  gettype = nargs > 1 && agn_isstring(L, nargs) && tools_streq(lua_tostring(L, nargs), "types");
+  nargs -= gettype;
   if (aux_getdim(L, 1, &m, &n))  /* checks input structure for correct type, too */
     luaL_error(L, "Error in " LUA_QS ": table is not two-dimensional.", "tables.col");
   for (i=2; i <= nargs && agn_isinteger(L, i); i++, ncols++) {
@@ -844,11 +852,90 @@ static int tbl_col (lua_State *L) {  /* 7.3.7 */
     if (idx < 1 || idx > n)
       luaL_error(L, "Error in " LUA_QS ": column %d does not exist.", "tables.col", agn_tointeger(L, i));
   }
-  if (ncols == 0)
+  if (!gettype && ncols == 0)
     luaL_error(L, "Error in " LUA_QS ": need at least one index.", "tables.col");
   l = 1; u = m;
   la_getrange(L, 2 + ncols, nargs, &l, &u, m, "tables.col");
   c = 0;
+  if (gettype) {
+    /* When given the string 'types' as the very last argument, the function collects type information about 
+       the values in the columns of a rectangular 2-dimensional table. You can either query one or more 
+       specific columns, by passing their indices i, ... or all columns by omitting index positions. 
+       
+       The return is a table of sets with the first set including information on the first column examined, 
+       the second set including information on the second column checked, etc. The respective sets include 
+       one or more pairs with the left-hand side representing the Agena type found and the right-hand side 
+       representing additional information on this type: 
+       - with strings, the maximum string length of all the strings in the respective column is given;
+       - with numbers 0 indicates that all numbers in the column are integral, and 1 indicates that at least 
+         one of the numbers in the column is fractional;
+       - with all other types the right-hand side is meaningless and always set to 0.
+       
+       L := [
+         [4, 3, '4',  1],
+         [1, 4, '10', 1],
+         [4, Pi, '3', 'agena']
+       ]
+
+       To check all columns, execute:
+
+       tables.col(L, 'types'):
+       [{number:0}, {number:1}, {string:2}, {number:0, string:5}]
+       
+       {number:0} indicates that all the values in the column are integers, {number:1} indicates that all the
+       values in the column are numbers with at least one being fractional, {string:2} indicates that all the
+       values in the column are strings with a maximum length of 2, and {number:0, string:5} means that the 
+       column has both integers and strings (with a maximum length of 5).
+
+       To examine columns 2 and 4 only, issue:
+
+       tables.col(L, 2, 4, 'types'):
+       [{number:1}, {number:0, string:5}] */
+    int start, stop, narray;
+    size_t k;
+    narray = (ncols == 0) ? n : ncols;
+    start = 2; stop = 2 + narray;
+    luaL_checkstack(L, 3, "not enough stack space");
+    DynamicSetArray *dsa = dsa_create(narray);
+    for (i=l; i <= u; i++) {   /* for each row vector i in range */
+      lua_rawgeti(L, 1, i);  /* push l-th row vector in matrix at idx */
+      checkvector(L, -1, "tables.col");
+      for (j=start; j < stop; j++) {  /* scan argument list: for each column j */
+        lua_rawgeti(L, -1, (ncols) ? tools_posrelat(agn_tointeger(L, j), n) : j - 1);  /* get value at column j */
+        int type = lua_type(L, -1);
+        switch (type) {
+          case LUA_TNUMBER:
+            dsa_insert(dsa, j - 2, LUA_TNUMBER, tools_isfrac(agn_tonumber(L, -1)), 1);
+            break;
+          case LUA_TSTRING:
+            dsa_insert(dsa, j - 2, LUA_TSTRING, lua_strlen(L, -1), 1);
+            break;
+          default:
+            dsa_insert(dsa, j - 2, type, 0, 0);
+        }
+        agn_poptop(L);  /* pop column value */
+      }
+      agn_poptop(L);  /* drop row vector */
+    }
+    lua_createtable(L, narray, 0);
+    narray = (ncols) ? ncols : n;
+    for (i=0; i < narray; i++) {
+      agn_createset(L, 1);
+      lua_rawseti(L, -2, i + 1);
+    }
+    for (k=0; k < dsa->count; k++) {
+      lua_rawgeti(L, -1, dsa_getidx(k) + 1);  /* get set */
+      Node *curr = dsa->buckets[k].head;
+      while (curr != NULL) {
+        agn_createpairstringnumber(L, lua_typename(L, curr->key), (lua_Number)curr->value);
+        lua_srawset(L, -2);
+        curr = curr->next;
+      }
+      agn_poptop(L);
+    }
+    dsa_destroy(dsa);
+    return 1;
+  }
   luaL_checkstack(L, 3 + (ncols != 1), "not enough stack space");
   lua_createtable(L, u - l + 1, 0);
   if (ncols == 1) {

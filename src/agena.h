@@ -10,7 +10,6 @@
 ** valgrind --track-origins=yes --leak-check=full --show-leak-kinds=all ./agena
 ** drmemory -logdir ./logs -suppress drmemory.cfg -debug -brief -- agena.exe
 */
-
 #if defined(__GNUC__) && (__GNUC___ > 5 || (__GNUC__ == 5 && __GNUC_MINOR__ >= 1))
 /* just a template/TEMPLATE */
 #endif
@@ -31,7 +30,7 @@
 #define agena_h
 
 #define AGENA_VERSION     "agena 7.12"
-#define AGENA_EDITION     "7.12.10"
+#define AGENA_EDITION     "7.12.11"
 #define AGENA_MOTTO       "kerberos"
 #define AGENA_NAME        "agena"
 #define AGENA_LOGO        ">>"
