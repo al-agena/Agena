@@ -1,3 +1,16 @@
+7.12.12 Kerberos, November 23, 2026
+
+- `readstat.write` now detects Booleans in the input and automatically converts them to integers. Consequentially,
+  `readstat.save` no longer alters the input structure when it includes Booleans, but still beautifies their display
+  for the data view in SPSS and PSPP.
+
+- You can use the 'compression' and the new 'compress' option to `readstat.save` and `readstat.write` interchangeably.
+
+- Safeguards for unsupported data have been added to `readstat.write`, treating it as `missing values`.
+
+- `tables.col` in 'types' mode has been sped up by 8 %, also benefitting `readstat.save`.
+
+
 7.12.11 Kerberos, November 21, 2026
 
 - `readstat.save` has been renamed to `readstat.write` and its new substitute is a wrapper written in the Agena language
