@@ -60,13 +60,9 @@ procedure readstat.save(obj :: table, ?) is  # new 7.12.11
                spsstype := 'string';
                format := 'A' & max(1, right coldata)  # 'A0' for an empty string is invalid, 'A1' is valid.
             of boolean then
-               for r to rows do  # replace every Boolean with 0 or 1 in-place
-                  if obj.data[r, c] :: boolean then
-                     obj.data[r, c] := abs obj.data[r, c]
-                  fi
-               od;
                spsstype := 'numeric';
                format := 'F8.0'
+               # readstat.write will convert the boolean to integers -1 (fail), 0 or 1
             else
                error('Error in `readstat.save`: `data` field has data of type ' & left coldata & '.')
             esle
