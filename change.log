@@ -1,7 +1,28 @@
+7.12.13 Kerberos, November 24, 2026
+
+- `xls.save` has been renamed to `xls.write` and its new substitute is a wrapper written in the Agena language
+  around the latter function. It allows for a simple 1-dimensional table with numbers, Booleans, `null` or strings, 
+  a 2-dimensional table or a table with a 'data' section. You do not have to change your code.
+
+- In OS/2, Windows, Linux, macOS and Solaris 10, `xls.write` can now create legacy BIFF8 .xls files as used by 
+  Microsoft Excel 97, 2000, XP, and 2003.
+
+- Error messages of `xls.write` have become more self-explanatory.
+
+- With legacy BIFF8 .xls files `xls.read` now correctly reads in Booleans, instead of returning the string 'bool'.
+
+- `tables.isall` accepts pseudo type 'basic' which represents numbers, strings, booleans and `null`.
+
+- OS/2 only: After a major update of the OS/2 development environment, the names of the codepages used by the `iconv` 
+  package have significantly changed. You may check the supported codepages with their proper spelling by calling 
+  iconv.list(). For frequently used codepages, however, a mapping has been implemented so that you may not have to 
+  change your code at all.
+
+
 7.12.12 Kerberos, November 23, 2026
 
 - `readstat.write` now detects Booleans in the input and automatically converts them to integers. Consequentially,
-  `readstat.save` no longer alters the input structure when it includes Booleans, but still beautifies their display
+  `readstat.save` no longer alters the input structure when it has Booleans, but still beautifies their display
   for the data view in SPSS and PSPP.
 
 - You can use the 'compression' and the new 'compress' option to `readstat.save` and `readstat.write` interchangeably.
