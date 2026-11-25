@@ -27,6 +27,13 @@ do
   fi
 done
 
+printf "Compiling xls ... "
+gcc $OPTIONS -w -o xls.so xls.c -I/usr/local/include -I/usr/local/include/xlslib -L/usr/local/lib \
+	-Wl,-Bstatic -lxls -lxlsxio_read -lxlsxio_write -lxlsreader -Wl,-Bdynamic -lexpat -liconv -lzip -lstdc++ -lm
+strip xls.so
+mv -f xls.so $EXPORTTO
+printf "done.\n"
+
 printf "Compiling abci ... "
 gcc $OPTIONS -o abci.so abci.c
 strip abci.so
@@ -181,12 +188,6 @@ printf "Compiling testlib ... "
 gcc $OPTIONS -o testlib.so testlib.c
 strip testlib.so
 mv -f testlib.so $EXPORTTO
-printf "done.\n"
-
-printf "Compiling xls ... "
-gcc $OPTIONS -w -o xls.so xls.c -I/usr/local/include -L/usr/local/lib -Wl,-Bstatic -lxlsxio_read -lxlsxio_write -lxlsreader -Wl,-Bdynamic -lexpat -lzip
-strip xls.so
-mv -f xls.so $EXPORTTO
 printf "done.\n"
 
 printf "Compiling zx ... "

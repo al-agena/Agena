@@ -19,7 +19,7 @@ rem 1. Kompilieren des Quellcodes in die Objektdatei
 gcc %offs% %gccopts% -c -o xls.o xls.c
 
 rem 2. Linken zu einer TEMPORÄREN DLL, um "file truncated" zu verhindern
-gcc -O3 -shared -static-libgcc -fgnu89-inline -fpic -o xls_temp.dll xls.o -L. -lagena -lxlsreader -lxlsxio_read -lxlsxio_write -lminizip -lexpat -lz
+gcc -O3 -shared -static-libgcc -fgnu89-inline -fpic -o xls_temp.dll xls.o -L. -lagena -lxls -lxlsreader -lxlsxio_read -lxlsxio_write -lminizip -lexpat -lz
 
 echo.
 echo Slimming and moving xls package...

@@ -34,7 +34,9 @@ PLAT= none
 
 # ncurses can only be compiled along with ltinfo. First pass -lncurses and immediately thereafter -ltinfo, not vice versa !
 # See: https://stackoverflow.com/questions/3514852/statically-link-ncurses-to-program
-OS2SYSLIBS= -lm -lmapm -lxlsreader -lxlsxio_read -lxlsxio_write -lz -lreadline -lncurses -ltinfo -lhistory -liconv -lexpat -lmpfr -lgmp -lg2 -lgd -lsqlite3 \
+OS2SYSLIBS= -lm -lmapm -lxlsreader -lxlsxio_read -lxlsxio_write -lz \
+	-lreadline -lncurses -ltinfo -lhistory \
+	-lxls -liconv -lstdc++ -lexpat -lmpfr -lgmp -lg2 -lgd -lsqlite3 \
 	-lreadstat -lpcre2-posix -lpcre2-8 -lfi_lib -lsocket -pthread
 OS2ZFLAGS= -Zdll -Zomf -Zmt
 OS2DFLAGS= -DLUA_BUILD_AS_DLL -D_FILE_OFFSET_BITS=64 -D_DIRENT_HAVE_D_TYPE -DPCRE2_CODE_UNIT_WIDTH=8 -D__ST_MT_ERRNO__ \
@@ -78,7 +80,7 @@ LIB_O=  agnxlib.o mybuffer.o lbaselib.o ldblib.o liolib.o lmathlib.o loslib.o lt
 	vecint.o bloom.o bimaps.o fzy.o jbmath.o ival.o miniz.o minizip.o fifo.o lifo.o trie.o ints.o \
 	dblhash.o numcuckoo.o numfilter.o dcastro.o dd.o ddmath.o getaddrinfo.o pbl.o pblhash.o pblkf.o \
 	keyfile.o abci.o strhash.o strmap.o intmap.o uintmap.o dblmap.o iniparse.o divsufsort.o sssort.o \
-	trsort.o suffix.o binpack.o phones.o readstat.o dysetarray.o
+	trsort.o suffix.o binpack.o phones.o readstat.o stsetarray.o
 
 LUA_T=  agena.exe
 LUA_O=  agena.o
@@ -231,7 +233,7 @@ agnt64.o: agnt64.c agnt64_l.h agnt64_c.h
 iniparse.o: iniparse.c iniparse.h
 intvec.o:	intvec.c intvec.h agnhlps.h
 dblvec.o:	dblvec.c dblvec.h agnhlps.h
-dysetarray.o:	dysetarray.c dysetarray.h
+stsetarray.o:	stsetarray.c stsetarray.h
 vecoff64.o: vecoff64.c vecoff64.h agnhlps.h agncmpt.h
 charbuf.o:	charbuf.c charbuf.h agnhlps.h
 sofa.o: sofa.c sofa.h

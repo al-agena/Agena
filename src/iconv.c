@@ -33,8 +33,12 @@
 
 #include <errno.h>
 #include <iconv.h>
+
 #include <stdlib.h>
 #include <string.h>  /* for strdup */
+#ifdef __OS2__
+#include <strings.h>  /* for strcasecmp */
+#endif
 
 #include "agena.h"
 
@@ -91,6 +95,89 @@ static iconv_t get_iconv_t (lua_State *L, int i) {
 }
 
 
+#ifdef __OS2__  /* 7.12.13, created by Gemini AI */
+static const char *mapos2encoding (const char *enc) {
+  size_t i;
+  static const struct {
+    const char *alias;
+    const char *os2_name;
+  } map[] = {
+    /* ISO Latin aliases -> OS/2 ULS names */
+    { "LATIN1",       "ISO-8859-1"  },
+    { "LATIN-1",      "ISO-8859-1"  },
+    { "L1",           "ISO-8859-1"  },
+    { "LATIN2",       "ISO-8859-2"  },
+    { "LATIN-2",      "ISO-8859-2"  },
+    { "L2",           "ISO-8859-2"  },
+    { "LATIN3",       "ISO-8859-3"  },
+    { "LATIN-3",      "ISO-8859-3"  },
+    { "L3",           "ISO-8859-3"  },
+    { "LATIN4",       "ISO-8859-4"  },
+    { "LATIN-4",      "ISO-8859-4"  },
+    { "L4",           "ISO-8859-4"  },
+    { "CYRILLIC",     "ISO-8859-5"  },
+    { "ARABIC",       "ISO-8859-6"  },
+    { "GREEK",        "ISO-8859-7"  },
+    { "HEBREW",       "ISO-8859-8"  },
+    { "LATIN5",       "ISO-8859-9"  },
+    { "LATIN-5",      "ISO-8859-9"  },
+    { "L5",           "ISO-8859-9"  },
+    { "LATIN6",       "ISO-8859-10" },
+    { "LATIN-6",      "ISO-8859-10" },
+    { "L6",           "ISO-8859-10" },
+    { "THAI",         "ISO-8859-11" },
+    { "LATIN7",       "ISO-8859-13" },
+    { "LATIN-7",      "ISO-8859-13" },
+    { "L7",           "ISO-8859-13" },
+    { "LATIN8",       "ISO-8859-14" },
+    { "LATIN-8",      "ISO-8859-14" },
+    { "L8",           "ISO-8859-14" },
+    { "LATIN9",       "ISO-8859-15" },
+    { "LATIN-9",      "ISO-8859-15" },
+    { "LATIN0",       "ISO-8859-15" },
+    { "L9",           "ISO-8859-15" },
+    { "LATIN10",      "ISO-8859-16" },
+    { "LATIN-10",     "ISO-8859-16" },
+    /* Common Windows / DOS codepages -> IBM-* */
+    { "WINDOWS-1250", "IBM-1250"    },
+    { "CP1250",       "IBM-1250"    },
+    { "WINDOWS-1251", "IBM-1251"    },
+    { "CP1251",       "IBM-1251"    },
+    { "WINDOWS-1252", "IBM-1252"    },
+    { "CP1252",       "IBM-1252"    },
+    { "WINDOWS-1253", "IBM-1253"    },
+    { "CP1253",       "IBM-1253"    },
+    { "WINDOWS-1254", "IBM-1254"    },
+    { "CP1254",       "IBM-1254"    },
+    { "WINDOWS-1255", "IBM-1255"    },
+    { "CP1255",       "IBM-1255"    },
+    { "WINDOWS-1256", "IBM-1256"    },
+    { "CP1256",       "IBM-1256"    },
+    { "WINDOWS-1257", "IBM-1257"    },
+    { "CP1257",       "IBM-1257"    },
+    { "CP437",        "IBM-437"     },
+    { "CP850",        "IBM-850"     },
+    { "CP852",        "IBM-852"     },
+    { "CP866",        "IBM-866"     },
+    /* Miscellaneous standard aliases */
+    { "ASCII",        "IBM-367"     },
+    { "US-ASCII",     "IBM-367"     },
+    { "UTF8",         "UTF-8"       },
+    { "UTF16",        "UCS-2"       },
+    { "UTF-16",       "UCS-2"       },
+    { "UTF-16LE",     "UCS-2LE"     },
+    { "UTF-16BE",     "UCS-2BE"     }
+  };
+  if (enc == NULL) return NULL;
+  for (i=0; i < sizeof(map) / sizeof(map[0]); i++) {
+    if (strcasecmp(enc, map[i].alias) == 0) {
+      return map[i].os2_name;
+    }
+  }
+  return enc;
+}
+#endif
+
 static int Liconv_open (lua_State *L) {
   /* order of arguments changed in Agena to `from` -> `to` */
   const char *fromcode, *tocode;
@@ -98,6 +185,12 @@ static int Liconv_open (lua_State *L) {
   size_t i, l_from, l_to;
   fromcode = luaL_checklstring(L, 1, &l_from);
   tocode = luaL_checklstring(L, 2, &l_to);
+#ifdef __OS2__  /* 7.12.13 */
+  fromcode = mapos2encoding(fromcode);
+  l_from = strlen(fromcode);
+  tocode = mapos2encoding(tocode);
+  l_to = strlen(tocode);
+#endif
   if (fromcode == NULL || tocode == NULL) {
     luaL_error(L, "Error in `iconv.open`: empty string not allowed.");
   }
@@ -148,7 +241,11 @@ static int Liconv_convert (lua_State *L) {
   }
   luaL_buffinit(L, &b);
   do {
+#ifdef __OS2__
+    ret = iconv(cd, (char **)&inbuf, &ibleft, &outbuf, &obleft);
+#else
     ret = iconv(cd, &inbuf, &ibleft, &outbuf, &obleft);
+#endif
     if (ret == (size_t)(-1)) {
       luaL_addlstring(&b, outbufs, CONV_BUF_SIZE - obleft);
       if (errno == EILSEQ) {
@@ -176,6 +273,7 @@ static int Liconv_convert (lua_State *L) {
 
 
 /* a GNU extension */
+#ifndef __OS2__
 static int push_one (unsigned int cnt, const char * const *names, void *data) {
   int i, n;
   lua_State *L = (lua_State*) data;
@@ -193,15 +291,36 @@ static int push_one (unsigned int cnt, const char * const *names, void *data) {
   /* Stack: <tbl> n */
   return 0;
 }
+#endif
 
 static int Liconv_list (lua_State *L) {
   luaL_checkstack(L, 3, "");  /* 2.31.6/7 fix */
   lua_newtable(L);
+#ifdef __OS2__  /* 7.12.13, after an update of the development environment GNU iconv has gone ... */
+  int idx = 1;
+  FILE *fp = fopen("C:\\LANGUAGE\\CODEPAGE\\ucstbl.lst", "r");
+  if (fp != NULL) {
+    char line[256], alias[128], target[128];
+    while (fgets(line, sizeof(line), fp) != NULL) {
+      char *p = line;
+      while (*p == ' ' || *p == '\t') p++;
+      if (*p == '#' || *p == '\r' || *p == '\n' || *p == '\0') continue;
+      if (sscanf(p, "%127s %127s", alias, target) == 2) {
+        lua_pushstring(L, alias);
+        lua_rawseti(L, -2, idx++);
+        lua_pushstring(L, target);
+        lua_rawseti(L, -2, idx++);
+      }
+    }
+    fclose(fp);
+  }
+#else
   lua_pushnumber(L, 1);
   /* Stack:   <tbl> 1 */
   iconvlist(push_one, (void*)L);
   /* Stack:   <tbl> n */
   agn_poptop(L);
+#endif
   /* Agena extension */
   lua_getglobal(L, "sort");
   if (!lua_isfunction(L, -1))

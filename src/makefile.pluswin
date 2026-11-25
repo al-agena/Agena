@@ -251,7 +251,7 @@ testlib.dll: testlib.c
 
 xls.dll: xls.c
 	@rm -f $@.tmp
-	$(CC) $(CFLAGS_DLL) -o $@.tmp $< -lxlsreader -lxlsxio_read -lxlsxio_write -lminizip -lexpat -lz $(AG_LIBS)
+	$(CC) $(CFLAGS_DLL) -o $@.tmp $< -lxls -lxlsreader -lxlsxio_read -lxlsxio_write -lminizip -lexpat -lz $(AG_LIBS)
 	$(STRIP) $@.tmp
 	@mv -f $@.tmp $(LIB_DIR)/$@
 

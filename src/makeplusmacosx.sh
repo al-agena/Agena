@@ -27,8 +27,8 @@ done
 
 
 printf "Compiling xls ... "
-XLS_INC="-I/usr/local/include -I../src"
-XLS_LIBS="/usr/local/lib/libxlsreader.a /usr/local/lib/libxlsxio_read.a /usr/local/lib/libxlsxio_write.a -lexpat -lz -liconv -lm"
+XLS_INC="-I/usr/local/include -I/usr/local/include/xlslib -I../src"
+XLS_LIBS="/usr/local/lib/libxls.a /usr/local/lib/libxlsreader.a /usr/local/lib/libxlsxio_read.a /usr/local/lib/libxlsxio_write.a -lexpat -lz -liconv -lstdc++ -lm"
 gcc $OPTIONS1 $XLS_INC -o xls.o xls.c
 gcc $OPTIONS2 -o xls.so xls.o $XLS_LIBS
 rm -f xls.o
@@ -44,7 +44,6 @@ gcc $OPTIONS2 -o readstat.so readstat.o $READSTAT_STATIC
 rm -f readstat.o
 mv -f readstat.so $EXPORTTO
 printf "done.\n"
-
 
 printf "Compiling abci ... "
 gcc $OPTIONS1 -o abci.o abci.c

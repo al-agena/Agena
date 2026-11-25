@@ -30,7 +30,7 @@
 #define agena_h
 
 #define AGENA_VERSION     "agena 7.12"
-#define AGENA_EDITION     "7.12.11"
+#define AGENA_EDITION     "7.12.13"
 #define AGENA_MOTTO       "kerberos"
 #define AGENA_NAME        "agena"
 #define AGENA_LOGO        ">>"
@@ -441,6 +441,7 @@ LUA_API int    (agn_tisnonnegative) (lua_State *L, int idx, int integralkeysonly
 LUA_API int    (agn_tiscomplex) (lua_State *L, int idx, int integralkeysonly);  /* 3.10.2 */
 LUA_API int    (agn_tisstring) (lua_State *L, int idx, int integralkeysonly);  /* 3.10.2 */
 LUA_API int    (agn_tisboolean) (lua_State *L, int idx, int integralkeysonly);  /* 3.10.2 */
+LUA_API int    (agn_tisbasic) (lua_State *L, int idx, int integralkeysonly);  /* 7.12.13 */
 
 LUA_API int    (agn_usisnumber) (lua_State *L, int idx);  /* 3.10.2 */
 LUA_API int    (agn_usisintegral) (lua_State *L, int idx);  /* 3.10.2 */

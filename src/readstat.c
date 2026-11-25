@@ -330,7 +330,7 @@ static int readstat_read (lua_State *L) {
   int *fields, nargs = lua_gettop(L);
   const char *filename = luaL_checkstring(L, 1);
   if (!tools_exists(filename)) {
-    luaL_error(L, "Error in " LUA_QS ": file does not exist or is inaccessible.", "readstat.read");
+    luaL_error(L, "Error in " LUA_QS ": file does not exist, is inaccessible or of wrong format.", "readstat.read");
   }
   fields = aux_checkreadoptions(L, 2, &nargs, "readstat.read");
   readstat_parser_t *parser = readstat_parser_init();
@@ -471,7 +471,7 @@ static int readstat_write (lua_State *L) {
       return 1;
     }
     int i;
-    for (i = 1; i <= var_count; i++) {
+    for (i=1; i <= var_count; i++) {
       lua_rawgeti(L, -1, i);  /* Get variable properties table */
       if (lua_istable(L, -1)) {
         /* 1.1 Get name */
@@ -479,19 +479,16 @@ static int readstat_write (lua_State *L) {
         lua_gettable(L, -2);
         const char *v_name = lua_tostring(L, -1);
         lua_pop(L, 1);
-
         /* 1.2 Get type */
         lua_pushstring(L, "type");
         lua_gettable(L, -2);
         const char *v_type = lua_tostring(L, -1);
         lua_pop(L, 1);
-
         /* 1.3 Get label */
         lua_pushstring(L, "label");
         lua_gettable(L, -2);
         const char *v_label = lua_tostring(L, -1);
         lua_pop(L, 1);
-
         /* 1.4 Get categories string name */
         lua_pushstring(L, "value_labels");
         lua_gettable(L, -2);
@@ -501,19 +498,15 @@ static int readstat_write (lua_State *L) {
           variable_categories[i - 1][255] = '\0';
         }
         lua_pop(L, 1);
-
         /* 1.5 Get display format BEFORE readstat_add_variable */
         lua_pushstring(L, "format");
         lua_gettable(L, -2);
         const char *v_format = lua_tostring(L, -1);
         lua_pop(L, 1);
-
         readstat_type_t rs_type = READSTAT_TYPE_DOUBLE;
         size_t storage_width = 0;
-
         if (v_type && strcmp(v_type, "string") == 0) {
           rs_type = READSTAT_TYPE_STRING;
-
           /* Parse byte width from SPSS string format like "A4" -> 4 */
           if (v_format && (v_format[0] == 'A' || v_format[0] == 'a') && v_format[1] != '\0') {
             long parsed = strtol(v_format + 1, NULL, 10);
@@ -526,7 +519,6 @@ static int readstat_write (lua_State *L) {
             storage_width = 255;
           }
         }
-
         /* Register variable pointer into tracking list with proper storage_width */
         variables_list[i - 1] = readstat_add_variable(
             writer,
@@ -534,12 +526,10 @@ static int readstat_write (lua_State *L) {
             rs_type,
             storage_width
         );
-
         if (variables_list[i - 1]) {
           if (v_label) {
             readstat_variable_set_label(variables_list[i - 1], v_label);
           }
-
           /* Set display format if present, otherwise assign a valid default */
           if (v_format && v_format[0] != '\0') {
             readstat_variable_set_format(variables_list[i - 1], v_format);
@@ -550,14 +540,13 @@ static int readstat_write (lua_State *L) {
             snprintf(default_fmt, sizeof(default_fmt), "A%zu", storage_width);
             readstat_variable_set_format(variables_list[i - 1], default_fmt);
           }
-
           /* 1.6 WRITE BACK MISSING VALUES RULES */
           lua_pushstring(L, "missing_rules");
           lua_gettable(L, -2);
           if (lua_istable(L, -1)) {
             int rule_count = lua_rawlen(L, -1);
             int r_idx;
-            for (r_idx = 1; r_idx <= rule_count; r_idx++) {
+            for (r_idx=1; r_idx <= rule_count; r_idx++) {
               lua_rawgeti(L, -1, r_idx);
               if (lua_istable(L, -1)) {
                 lua_pushstring(L, "type");
@@ -608,17 +597,16 @@ static int readstat_write (lua_State *L) {
   if (lua_istable(L, -1)) {
     /* Track which dictionary names we have already added to the file */
     char added_dicts[1000][256];
-    int added_count = 0;
+    int v, added_count = 0;
     memset(added_dicts, 0, sizeof(added_dicts));
-    int v;
-    for (v = 0; v < var_count; v++) {
+    for (v=0; v < var_count; v++) {
       /* Only process if the variable has a label set and it's not an empty string */
       if (variable_categories[v][0] != '\0' && variables_list[v] != NULL) {
         const char *dict_name = variable_categories[v];
         /* Check if we already created this label set */
         int already_added = 0;
         int d;
-        for (d = 0; d < added_count; d++) {
+        for (d=0; d < added_count; d++) {
           if (strcmp(added_dicts[d], dict_name) == 0) {
             already_added = 1;
             break;
@@ -640,7 +628,7 @@ static int readstat_write (lua_State *L) {
               }
               /* Bind this label set to EVERY variable that shares it */
               int bind_v;
-              for (bind_v = 0; bind_v < var_count; bind_v++) {
+              for (bind_v=0; bind_v < var_count; bind_v++) {
                 if (strcmp(variable_categories[bind_v], dict_name) == 0 && variables_list[bind_v] != NULL) {
                   readstat_variable_set_label_set(variables_list[bind_v], label_set);
                 }
@@ -680,9 +668,20 @@ static int readstat_write (lua_State *L) {
           if (lua_isnil(L, -1)) {
             readstat_insert_missing_value(writer, variable);
           } else if (readstat_variable_get_type(variable) == READSTAT_TYPE_STRING) {
-            readstat_insert_string_value(writer, variable, lua_tostring(L, -1));
-          } else {
-            readstat_insert_double_value(writer, variable, lua_tonumber(L, -1));
+            const char *str = lua_tostring(L, -1);  /* 7.12.12 safeguard, better be sure than sorry */
+            if (str == NULL) {  /* did we get a non-convertible type ? */
+              readstat_insert_missing_value(writer, variable);
+            } else {
+              readstat_insert_string_value(writer, variable, str);
+            }
+          } else {  /* 7.12.12 extension for Booleans and non-convertible data */
+            int exception = 0;
+            lua_Number n = (lua_isboolean(L, -1)) ? lua_toboolean(L, -1) : agn_tonumberx(L, -1, &exception);
+            if (exception) {
+              readstat_insert_missing_value(writer, variable);
+            } else {
+              readstat_insert_double_value(writer, variable, n);
+            }
           }
           lua_pop(L, 1);
         }

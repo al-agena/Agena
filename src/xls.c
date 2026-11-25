@@ -5,18 +5,13 @@
 ** Created mostly by Gemini AI.
 */
 
-/*
-import xls
-xls.sheets('../antarct.xlsx')
-L := xls.read('../antarct.xlsx')
-K := xls.read('../antarct.xls')
-*/
-
 #define xls_c
 #define LUA_LIB
 
 #include <ctype.h>
 #include <errno.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>   /* for access */
@@ -24,6 +19,25 @@ K := xls.read('../antarct.xls')
 #include <xlsxio_read.h>
 #include <xlsxio_write.h>
 #include <xls.h>
+
+#ifndef _WIN32
+#ifdef unsigned64_t
+#undef unsigned64_t
+#endif
+#ifdef signed64_t
+#undef signed64_t
+#endif
+#define unsigned64_t xlslib_unsigned64_t
+#define signed64_t   xlslib_signed64_t
+#endif
+#include <stdbool.h>
+#if !defined(__DJGPP__) && !defined(LUA_ANSI)
+#include <xlslib/xlslib.h>
+#endif
+#ifndef _WIN32
+#undef unsigned64_t
+#undef signed64_t
+#endif
 
 #include "agena.h"
 #include "agenalib.h"
@@ -442,49 +456,107 @@ label:
 }
 
 
-/* Helper: write a 2D Lua table to a new .xlsx file */
-static int xls_save (lua_State *L) {
+/* write a 2D Lua table to a new .xls or .xlsx file, renamed from xls.save to xls.write 7.12.13 */
+static int xls_write (lua_State *L) {
+  size_t l;
   int r, c, num_rows, num_cols;
   luaL_checktype(L, 1, LUA_TTABLE);
-  const char *filename = luaL_checkstring(L, 2);
+  const char *filename = luaL_checklstring(L, 2, &l);
   const char *sheetname = luaL_optstring(L, 3, "Sheet1");
   luaL_checkstack(L, 2, "not enough stack space");
   lua_getfield(L, 1, "data");
-  if (!lua_istable(L, -1)) {
-    luaL_error(L, "Error in " LUA_QS ": input table is malformed.", "xls.save");
+  if (lua_isnil(L, -1)) {  /* 7.12.13 improvement of error message */
+    agn_poptop(L);
+    luaL_error(L, "Error in " LUA_QS ": input table is malformed, " LUA_QS " section is missing.",
+      "xls.write", "data");
   }
-  xlsxiowriter handle = xlsxiowrite_open(filename, sheetname);
-  if (!handle) {
-    luaL_error(L, "Error in " LUA_QS ": cannot create " LUA_QS ".", "xls.save", filename);
+  if (!lua_istable(L, -1)) {  /* 7.12.13 improvement of error message */
+    luaL_error(L, "Error in " LUA_QS ": input table is malformed, " LUA_QS " section is of type %s.",
+      "xls.write", "data", luaL_typename(L, -1));
   }
-  num_rows = luaL_getn(L, -1);
-  for (r=1; r <= num_rows; r++) {
-    lua_rawgeti(L, -1, r);  /* push row table */
-    if (!lua_istable(L, -1)) {
-      lua_pop(L, 2);
-      xlsxiowrite_close(handle);
-      luaL_error(L, "Error in " LUA_QS ": input table is malformed.", "xls.save");
+  if (l >= 4 && strcasecmp(filename + l - 4, ".xls") == 0) {  /* write legacy Release 1.2 BIFF8 XLS file, 7.12.13 */
+#if defined(__DJGPP__) || defined(LUA_ANSI)
+    luaL_error(L, "Error in " LUA_QS ": cannot create legacy XLS files on this platform.", "xls.write");
+#else
+    workbook *wb = xlsNewWorkbook();
+    if (!wb) {
+      luaL_error(L, "Error in " LUA_QS ": cannot allocate workbook.", "xls.write");
     }
-    num_cols = luaL_getn(L, -1);
-    for (c=1; c <= num_cols; c++) {
-      lua_rawgeti(L, -1, c);  /* push cell in row */
-      int t = lua_type(L, -1);
-      if (t == LUA_TNUMBER) {
-        xlsxiowrite_add_cell_float(handle, agn_tonumber(L, -1));
-      } else if (t == LUA_TBOOLEAN) {
-        xlsxiowrite_add_cell_int(handle, lua_toboolean(L, -1));
-      } else if (t == LUA_TSTRING) {
-        xlsxiowrite_add_cell_string(handle, agn_tostring(L, -1));
-      } else {  /* null or unsupported type -> empty cell */
-        xlsxiowrite_add_cell_string(handle, "");
+    worksheet *ws = xlsWorkbookSheet(wb, sheetname);
+    if (!ws) {
+      xlsDeleteWorkbook(wb);
+      luaL_error(L, "Error in " LUA_QS ": cannot create worksheet " LUA_QS ".", "xls.write", sheetname);
+    }
+    num_rows = luaL_getn(L, -1);
+    for (r=1; r <= num_rows; r++) {
+      lua_rawgeti(L, -1, r);  /* push row table */
+      if (!lua_istable(L, -1)) {
+        xlsDeleteWorkbook(wb);
+        luaL_error(L, "Error in " LUA_QS ": row %d is of invalid type %s.", "xls.write", r,
+          luaL_typename(L, -1));  /* 7.12.13 improvement of error message */
       }
-      lua_pop(L, 1);  /* pop cell value */
+      num_cols = luaL_getn(L, -1);
+      for (c=1; c <= num_cols; c++) {
+        lua_rawgeti(L, -1, c);  /* push cell in row */
+        int t = lua_type(L, -1);
+        unsigned32_t row_idx = (unsigned32_t)(r - 1);
+        unsigned32_t col_idx = (unsigned32_t)(c - 1);
+        if (t == LUA_TNUMBER) {
+          xlsWorksheetNumberDbl(ws, row_idx, col_idx, (double)agn_tonumber(L, -1), NULL);
+        } else if (t == LUA_TBOOLEAN) {
+          xlsWorksheetBoolean(ws, row_idx, col_idx, lua_toboolean(L, -1), NULL);
+        } else if (t == LUA_TSTRING) {
+          xlsWorksheetLabel(ws, row_idx, col_idx, agn_tostring(L, -1), NULL);
+        } else {  /* null or unsupported type -> leave empty (or emit blank cell) */
+          /* Nothing needed for truly empty cells; optionally use:
+             xlsWorksheetBlank(ws, row_idx, col_idx, NULL); */
+        }
+        lua_pop(L, 1);  /* pop cell value */
+      }
+      lua_pop(L, 1);  /* pop row table */
     }
-    xlsxiowrite_next_row(handle);
-    lua_pop(L, 1);  /* pop row table */
+    lua_pop(L, 1);  /* pop "data" table */
+    int err = xlsWorkbookDump(wb, filename);
+    xlsDeleteWorkbook(wb);
+    if (err != 0) {
+      luaL_error(L, "Error in " LUA_QS ": cannot write " LUA_QS " (error code %d).",
+        "xls.write", filename, err);
+    }
+#endif
+  } else {  /* write OOXML .xlsx file */
+    xlsxiowriter handle = xlsxiowrite_open(filename, sheetname);
+    if (!handle) {
+      luaL_error(L, "Error in " LUA_QS ": cannot create " LUA_QS ".", "xls.write", filename);
+    }
+    num_rows = luaL_getn(L, -1);
+    for (r=1; r <= num_rows; r++) {
+      lua_rawgeti(L, -1, r);  /* push row table */
+      if (!lua_istable(L, -1)) {
+        xlsxiowrite_close(handle);
+        luaL_error(L, "Error in " LUA_QS ": row %d is of invalid type %s.", "xls.write", r,
+          luaL_typename(L, -1));  /* 7.12.13 improvement of error message */
+      }
+      num_cols = luaL_getn(L, -1);
+      for (c=1; c <= num_cols; c++) {
+        lua_rawgeti(L, -1, c);  /* push cell in row */
+        int t = lua_type(L, -1);
+        if (t == LUA_TNUMBER) {
+          xlsxiowrite_add_cell_float(handle, agn_tonumber(L, -1));
+        } else if (t == LUA_TBOOLEAN) {
+          xlsxiowrite_add_cell_int(handle, lua_toboolean(L, -1));
+        } else if (t == LUA_TSTRING) {
+          xlsxiowrite_add_cell_string(handle, agn_tostring(L, -1));
+        } else {  /* null or unsupported type -> do not emit XML <c> element for that cell, just create an empty cell */
+          xlsxiowrite_add_cell_string(handle, NULL);
+        }
+        lua_pop(L, 1);  /* pop cell value */
+      }
+      xlsxiowrite_next_row(handle);
+      lua_pop(L, 1);  /* pop row table */
+    }
+    lua_pop(L, 1);  /* pop "data" table */
+    xlsxiowrite_close(handle);
   }
-  lua_pop(L, 1);  /* pop "data" table */
-  xlsxiowrite_close(handle);
   return 0;
 }
 
@@ -657,6 +729,12 @@ static int push_xls_row_table (lua_State *L, xlsRow *row, int max_col, int conve
     }
     if (cell->id == 0x0201 || cell->str == NULL) {
       lua_pushliteral(L, "");
+    } else if ((cell->id == 0x0205 || cell->id == 0x0006) && strcmp((const char *)cell->str, "bool") == 0) {  /* 7.12.13 fix */
+      if (convert) {
+        lua_pushboolean(L, cell->d != 0.0);
+      } else {
+        lua_pushstring(L, (cell->d != 0.0) ? "TRUE" : "FALSE");
+      }
     } else if (convert && (cell->id == 0x0203 || cell->id == 0x027E || cell->id == 0x00BD)) {
       lua_pushnumber(L, (lua_Number)cell->d);
     } else {
@@ -804,7 +882,7 @@ static const luaL_Reg xls_funcs[] = {
   {"dims",     xls_dims},
   {"iterate",  xls_iterate},
   {"read",     xls_read},
-  {"save",     xls_save},
+  {"write",    xls_write},
   {"sheets",   xls_sheets},
   {NULL, NULL}
 };

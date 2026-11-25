@@ -5241,6 +5241,29 @@ LUA_API int agn_tisboolean (lua_State *L, int idx, int integralkeysonly) {
 }
 
 
+LUA_API int agn_tisbasic (lua_State *L, int idx, int integralkeysonly) {  /* 7.12.13 */
+  int i, rc;
+  TValue *key, *val;
+  Node *g;
+  Table *t = hvalue(index2adr(L, idx));
+  lua_lock(L);
+  rc = 1;
+  for (i=0; rc && i < t->sizearray; i++) {
+    val = &t->array[i];
+    rc = (ttisnil(val) || ttisnumber(val) || ttisboolean(val) || ttisstring(val));
+  }
+  for (i=0; rc && i < sizenode(t); i++) {
+    g = gnode(t, i);
+    key = key2tval(g);
+    if (integralkeysonly && (!ttisnumber(key) || tools_isfrac(nvalue(key)))) continue;
+    val = gval(g);
+    rc = (ttisnil(val) || ttisnumber(val) || ttisboolean(val) || ttisstring(val));
+  }
+  lua_unlock(L);
+  return rc;
+}
+
+
 /* Checks whether all elements in a set are of type number. 3.10.2 */
 LUA_API int agn_usisnumber (lua_State *L, int idx) {
   int i, c;
@@ -5755,6 +5778,9 @@ LUA_API int agn_tblisall (lua_State *L, int idx, const char *procname) {
     lua_pushboolean(L, agn_tisnonnegative(L, idx, integralkeysonly));
   else if (tools_streq(type, "numeric"))  /* 3.19.2 extension */
     lua_pushboolean(L, agn_tisnumeric(L, idx, integralkeysonly));
+  else if (tools_streq(type, "basic")) {  /* 7.12.13 extension */
+    lua_pushboolean(L, agn_tisbasic(L, idx, integralkeysonly));
+  }
   else
     luaL_error(L, "Error in " LUA_QS ": unsupported type " LUA_QS ".", procname, type);
   return 1;

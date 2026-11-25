@@ -178,7 +178,10 @@ rm -f testlib.o
 printf "done.\n"
 
 printf "Compiling xls ... "
-gcc $OPTIONS $OPTFINAL -w -o xls.so xls.c -I/usr/local/include -L/usr/local/lib -Wl,-Bstatic -lxlsxio_read -lxlsxio_write -lxlsreader -Wl,-Bdynamic -lexpat -lz -liconv
+gcc $OPTIONS $OPTFINAL -w -o xls.so xls.c -I/usr/local/include -I/usr/local/include/xlslib \
+	-L/usr/local/lib \
+	-Wl,-Bstatic -lxls -lxlsxio_read -lxlsxio_write -lxlsreader \
+	-Wl,-Bdynamic -lexpat -lz -liconv -lstdc++ -lm
 printf "done.\n"
 
 printf "Compiling zx ... "
