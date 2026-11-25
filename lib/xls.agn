@@ -1,1 +1,22 @@
-/* empty for now */
+package.checkclib('xls');  # has C dynamic link library been found ?
+
+procedure xls.save(obj :: table, ?) is  # new 7.12.13
+   if tables.isrectangular(obj) then
+      return procname([data ~ obj], op(?))
+   elif tables.isarray(obj) and tables.isall(obj, basic) then
+      # simple table with numbers, strings, Booleans and null only ? -> make it rectangular
+      local L := [data ~ []];
+      for i to size obj do
+         insert [obj[i]] into L.data
+      od;
+      return procname(L, op(?))
+   fi;
+   if unassigned obj.data then
+      error('Error in `xls.save`: table does not have a `data` field.')
+   fi;
+   local rc, rows, cols := tables.isrectangular(obj.data);
+   if not rc then
+      error('Error in `xls.save`: `data` field is corrupt.')
+   fi;
+   return xls.write(obj, op(?))
+end;

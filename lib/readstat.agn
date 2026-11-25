@@ -1,17 +1,5 @@
 package.checkclib('readstat');  # has C dynamic link library been found ?
 
-/*
-import readstat;
-L := readstat.read("C:/Program Files/PSPP-TESTING/share/pspp/examples/nhtsa.sav");
-readstat.save(L, "nhtsa.new.sav");
-K := readstat.read("nhtsa.new.sav");
-L = K:
-
-L.data[5]:
-readstat.fillmissing(L, undefined, 'NaN')
-L.data[5]:
-*/
-
 /* The function fills all empty, missing cells in the rows of the payload referred to by the 'data' field of an
    SPSS Statistical File object with a user-defined value. */
 procedure readstat.fillmissing(dataset, numericfill, stringfill) is
@@ -32,8 +20,13 @@ end;
 
 procedure readstat.save(obj :: table, ?) is  # new 7.12.11
    if tables.isrectangular(obj) then
-      local L := [];
-      L.data := obj;
+      return procname([data ~ obj], op(?))
+   elif tables.isarray(obj) and tables.isall(obj, basic) then
+      # simple table with numbers, strings, Booleans and null only ? -> make it rectangular, 7.12.13
+      local L := [data ~ []];
+      for i to size obj do
+         insert [obj[i]] into L.data
+      od;
       return procname(L, op(?))
    fi;
    if unassigned obj.data then
