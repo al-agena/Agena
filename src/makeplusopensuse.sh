@@ -8,8 +8,8 @@ export MYFLAGS="-fgnu89-inline -DOPENSUSE"
 
 # delete *.o files not deleted by make clean
 for i in abci.o ads.o aspell.o astro.o charbuf.o com.o cordic.o curses.o \
-    dcastro.o double.o fastmath.o fractals.o gmp.o iconv.o interp.o \
-    luasys.o miniz.o minizip.o moon.o mpfr.o net.o phq.o \
+    readstat.o dcastro.o double.o fastmath.o fractals.o gmp.o iconv.o interp.o \
+    luasys.o miniz.o minizip.o moon.o mpfr.o net.o phq.o phones.o \
     skycrane.o sqlite.o sqlite3.o sunriset.o testlib.o zx.o \
     strhash.o strmap.o intmap.o
 do
@@ -17,6 +17,25 @@ do
     rm "$i"
   fi
 done
+
+printf "Compiling xls ... "
+#gcc $OPTIONS -w -o xls.so xls.c -I/usr/local/include -I/usr/local/include/xlslib -L/usr/local/lib \
+#	-Wl,-Bstatic -lxls -lxlsxio_read -lxlsxio_write -lminizip -lxlsreader -Wl,-Bdynamic -lexpat -liconv -lz -lstdc++ -lm
+gcc $OPTIONS -w -o xls.so xls.c -I/usr/local/include -I/usr/local/include/xlslib -L/usr/local/lib \
+	-Wl,-Bstatic -Wl,--start-group -lxls -lxlsxio_read -lxlsxio_write /usr/local/lib/libminizip.a -lxlsreader -Wl,--end-group \
+	-Wl,-Bdynamic -lexpat -liconv -lz -lstdc++ -lm
+strip xls.so
+mv -f xls.so $EXPORTTO
+printf "done.\n"
+
+printf "Compiling readstat ... "
+READSTAT_INCLUDES="-I/usr/local/include -I../src"
+READSTAT_LIBS="-Wl,-Bstatic -L/usr/local/lib -lreadstat -lz -Wl,-Bdynamic -liconv"
+gcc $MYFLAGS $READSTAT_INCLUDES -c -o readstat.o readstat.c
+gcc -shared $MYFLAGS -o readstat.so readstat.o $READSTAT_LIBS
+rm -f readstat.o
+mv -f readstat.so $EXPORTTO
+printf "done.\n"
 
 printf "Compiling abci ... "
 gcc $OPTIONS -o abci.so abci.c
@@ -142,6 +161,12 @@ if [ -f ../phq/phq.c ]; then
    mv -f phq.so ../phq
    printf "done.\n"
 fi
+
+printf "Compiling phones ... "
+gcc $OPTIONS -o phones.so phones.c
+strip phones.so
+mv -f phones.so $EXPORTTO
+printf "done.\n"
 
 printf "Compiling strhash ... "
 gcc $OPTIONS -o strhash.so strhash.c

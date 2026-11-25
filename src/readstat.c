@@ -371,7 +371,7 @@ static int readstat_read (lua_State *L) {
 /* Callback: Low-level disk stream writer callback */
 
 #if (defined(_WIN32) && !defined(_WIN64)) || defined(__SOLARIS) || defined(__OS2__) || \
-    (defined(__linux__) && defined(__ILP32__)) || \
+    (defined(__linux__) && (defined(__i386__) || defined(__ILP32__))) || \
     (defined(__ARMCPU) && defined(__linux__) && defined(IS32BIT))
 int handle_write (const void *pos, unsigned int len, void *user_ctx) {
   FILE *f = (FILE *)user_ctx;
