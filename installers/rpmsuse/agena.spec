@@ -2,7 +2,7 @@
 # ! build Agena in /home/proglang/agena !
 Summary: Agena Programming Language
 Name: agena
-Version: 7.12.9
+Version: 7.12.13
 Release: 1
 # change Release number in build.sh file, as well.
 #Source0: %{name}-%{version}-src.tar.gz
@@ -118,6 +118,8 @@ cp /home/proglang/agena/lib/mpfr.agn $RPM_BUILD_ROOT/usr/agena/lib
 cp /home/proglang/agena/lib/mpfr.so $RPM_BUILD_ROOT/usr/agena/lib
 cp /home/proglang/agena/lib/net.agn $RPM_BUILD_ROOT/usr/agena/lib
 cp /home/proglang/agena/lib/net.so $RPM_BUILD_ROOT/usr/agena/lib
+cp /home/proglang/agena/lib/phones.agn $RPM_BUILD_ROOT/usr/agena/lib
+cp /home/proglang/agena/lib/phones.so $RPM_BUILD_ROOT/usr/agena/lib
 cp /home/proglang/agena/lib/readstat.agn $RPM_BUILD_ROOT/usr/agena/lib
 cp /home/proglang/agena/lib/readstat.so $RPM_BUILD_ROOT/usr/agena/lib
 cp /home/proglang/agena/lib/skycrane.agn $RPM_BUILD_ROOT/usr/agena/lib
@@ -313,13 +315,13 @@ cp /home/proglang/agena/src/libagena.a $RPM_BUILD_ROOT/usr/local/lib
 cp /home/proglang/agena/src/libagena.so $RPM_BUILD_ROOT/usr/local/lib
 cp /home/proglang/agena/src/licence $RPM_BUILD_ROOT/usr/agena
 # Srglue/Sragena
-cp /home/proglang/agena/ports/sragena-105/src/srglue $RPM_BUILD_ROOT/usr/local/bin
-cp /home/proglang/agena/ports/sragena-105/src/sragena $RPM_BUILD_ROOT/usr/local/bin
-cp /home/proglang/agena/ports/sragena-105/README.srglue $RPM_BUILD_ROOT/usr/agena
+#cp /home/proglang/agena/ports/sragena-105/src/srglue $RPM_BUILD_ROOT/usr/local/bin
+#cp /home/proglang/agena/ports/sragena-105/src/sragena $RPM_BUILD_ROOT/usr/local/bin
+#cp /home/proglang/agena/ports/sragena-105/README.srglue $RPM_BUILD_ROOT/usr/agena
 chmod -R 755 $RPM_BUILD_ROOT/usr/agena
 chmod 755 $RPM_BUILD_ROOT/usr/local/bin/agena
-chmod 755 $RPM_BUILD_ROOT/usr/local/bin/srglue
-chmod 755 $RPM_BUILD_ROOT/usr/local/bin/sragena
+#chmod 755 $RPM_BUILD_ROOT/usr/local/bin/srglue
+#chmod 755 $RPM_BUILD_ROOT/usr/local/bin/sragena
 chmod 755 $RPM_BUILD_ROOT/usr/local/lib/libagena.a
 chmod 755 $RPM_BUILD_ROOT/usr/local/lib/libagena.so
 chmod 755 $RPM_BUILD_ROOT/usr/lib/pkgconfig/agena.pc
@@ -348,6 +350,7 @@ rm -rf $RPM_BUILD_ROOT
 /usr/agena/data/cities.txt
 /usr/agena/data/country.csv
 /usr/agena/data/timezone.csv
+/usr/agena/data
 
 # Libraries
 /usr/agena/lib/abci.agn
@@ -389,6 +392,8 @@ rm -rf $RPM_BUILD_ROOT
 /usr/agena/lib/mpfr.so
 /usr/agena/lib/net.agn
 /usr/agena/lib/net.so
+/usr/agena/lib/phones.agn
+/usr/agena/lib/phones.so
 /usr/agena/lib/readstat.agn
 /usr/agena/lib/readstat.so
 /usr/agena/lib/strhash.so
@@ -407,8 +412,8 @@ rm -rf $RPM_BUILD_ROOT
 /usr/local/lib/libagena.so
 /usr/lib/pkgconfig/agena.pc
 /usr/local/bin/agena
-/usr/local/bin/srglue
-/usr/local/bin/sragena
+#/usr/local/bin/srglue
+#/usr/local/bin/sragena
 #/usr/local/bin/agenaedit
 #%doc /usr/local/info/agena.info
 #%doc %attr(0444,root,root) /usr/local/man/man1/indent.1
