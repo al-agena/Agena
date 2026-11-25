@@ -3653,3 +3653,4 @@ xls.iterate
 xls.read
 xls.save
 xls.sheets
+xls.write

@@ -3636,6 +3636,7 @@
       <KEYWORD3>xls.read</KEYWORD3>
       <KEYWORD3>xls.save</KEYWORD3>
       <KEYWORD3>xls.sheets</KEYWORD3>
+      <KEYWORD3>xls.write</KEYWORD3>
     </KEYWORDS>
   </RULES>
 </MODE>
